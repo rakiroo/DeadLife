@@ -82,7 +82,7 @@ export function advanceOneDay(state: GameState): GameState {
   }
 
   // 4. Rain collection
-  if (newWeather === 'heavy_rain' || newWeather === 'thunderstorm') {
+  if (state.shelter.isEstablished && (newWeather === 'heavy_rain' || newWeather === 'thunderstorm')) {
     const collected = Math.min(state.shelter.maxRainwater - storedRainwater, state.shelter.waterCollectorLevel * 3 + 2);
     if (collected > 0) {
       storedRainwater += collected;
@@ -133,7 +133,7 @@ export function advanceOneDay(state: GameState): GameState {
   }
 
   // Daily summary journal log
-  newLogs.unshift({
+  newLogs.push({
     id: `log_day_${currentDay}_${Date.now()}`,
     day: currentDay,
     text: `Day ${currentDay} survived. Weather: ${newWeather.replace('_', ' ')}. Vitals: HP ${Math.max(0, health)}% | Water: ${daysWithoutWater === 0 ? 'Adequate' : 'CRITICAL'} | Food: ${daysWithoutFood === 0 ? 'Adequate' : 'Depleted'}.`,
@@ -172,7 +172,7 @@ export function advanceOneDay(state: GameState): GameState {
       isDead,
       deathCause
     },
-    logs: [...newLogs, ...state.logs].slice(0, 100),
+    logs: [...state.logs, ...newLogs].slice(-150),
     activeDilemma: nextDilemma,
     stats: {
       ...state.stats,
@@ -225,6 +225,6 @@ export function advanceOneWeek(state: GameState): GameState {
 
   return {
     ...currentState,
-    logs: [recapLog, ...currentState.logs].slice(0, 100)
+    logs: [...currentState.logs, recapLog].slice(-150)
   };
 }

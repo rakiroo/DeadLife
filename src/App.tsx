@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, EventChoice, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord } from './types/game';
+import { GameState, EventChoice, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career } from './types/game';
 import { DAY_ONE_EVENT } from './data/events';
 import { advanceOneDay, advanceOneWeek } from './utils/simulation';
 import { HeaderVitals } from './components/HeaderVitals';
 import { JournalFeed } from './components/JournalFeed';
+import { StartingLocationTab } from './components/StartingLocationTab';
+import { getRandomSpawnStory } from './data/spawnStories';
 import { DilemmaModal } from './components/DilemmaModal';
 import { DilemmaResultModal } from './components/DilemmaResultModal';
 import { BottomActionBar, ActiveTab } from './components/BottomActionBar';
@@ -21,44 +23,63 @@ type ScreenState = 'title' | 'creator' | 'game' | 'graveyard';
 const SAVE_KEY = 'deadlife_save';
 const GRAVEYARD_KEY = 'deadlife_graveyard';
 
-export function createNewGameWithSurvivor(survivor: Survivor): GameState {
+export function createNewGameWithSurvivor(survivor: Survivor, career: Career): GameState {
+  const spawnStory = getRandomSpawnStory(career.id);
+
   const initialLog: LogEntry = {
     id: `log_init_${Date.now()}`,
-    day: 1,
-    text: `Day 1 begins. The emergency sirens have gone silent. You are standing in your room with completely empty pockets. You must scavenge your surroundings before night falls.`,
+    day: 0,
+    text: spawnStory.intro,
     type: 'milestone',
     timestamp: 'Morning'
   };
 
   return {
-    day: 1,
+    day: 0,
     timeOfDay: 'Morning',
     weather: 'clear',
     temperatureCelsius: 18,
     player: survivor,
-    campMembers: [],
-    shelter: {
-      name: 'Safehouse Apartment',
-      type: 'Suburban Safehouse',
-      defenseRating: 40,
-      stealthRating: 65,
-      warmthRating: 70,
-      waterCollectorLevel: 1,
-      storedRainwater: 2,
-      maxRainwater: 20,
-      barricadeIntegrity: 65,
-      generatorOperational: false,
-      fuelGallons: 1
+    startingLocation: {
+      name: career.startingLocation.name,
+      type: career.startingLocation.type,
+      description: career.startingLocation.description,
+      storyTitle: spawnStory.title,
+      storyText: spawnStory.fullStory,
+      lootSpots: career.startingLocation.lootSpots.map(s => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        searched: false,
+        loot: s.loot.map(item => ({ ...item }))
+      })),
+      hasLeftStartingSpot: false
     },
-    inventory: [], // Starts completely empty!
+    campMembers: [],
+    isCampEstablished: false,
+    shelter: {
+      isEstablished: false,
+      name: 'No Shelter Established',
+      type: 'Unsheltered',
+      defenseRating: 0,
+      stealthRating: 25,
+      warmthRating: 30,
+      waterCollectorLevel: 0,
+      storedRainwater: 0,
+      maxRainwater: 10,
+      barricadeIntegrity: 0,
+      generatorOperational: false,
+      fuelGallons: 0
+    },
+    inventory: [], // Starts completely empty until looted!
     logs: [initialLog],
-    activeDilemma: DAY_ONE_EVENT, // Forces day 1 initial room search
+    activeDilemma: null,
     dilemmaResult: null,
     daysWithoutFood: 0,
     daysWithoutWater: 0,
     stats: {
       zombiesEliminated: 0,
-      daysSurvived: 1,
+      daysSurvived: 0,
       scavengeRuns: 0,
       peopleSaved: 0
     },
@@ -81,12 +102,30 @@ export function App() {
       }
       const savedGame = localStorage.getItem(SAVE_KEY);
       if (savedGame) {
-        setGameState(JSON.parse(savedGame));
+        const parsed: GameState = JSON.parse(savedGame);
+        if (parsed.logs && parsed.logs.length > 1) {
+          if (parsed.logs[0].day > parsed.logs[parsed.logs.length - 1].day) {
+            parsed.logs = [...parsed.logs].reverse();
+          }
+        }
+        setGameState(parsed);
       }
     } catch (e) {
       console.error('Failed to parse saved state', e);
     }
   }, []);
+
+  // Keep active tab valid based on current unlocked features
+  useEffect(() => {
+    if (!gameState) return;
+    if (activeTab === 'spawn' && gameState.startingLocation?.hasLeftStartingSpot) {
+      setActiveTab('journal');
+    } else if (activeTab === 'shelter' && !gameState.shelter?.isEstablished) {
+      setActiveTab('journal');
+    } else if (activeTab === 'camp' && !gameState.isCampEstablished && (!gameState.campMembers || gameState.campMembers.length === 0)) {
+      setActiveTab('journal');
+    }
+  }, [activeTab, gameState?.startingLocation?.hasLeftStartingSpot, gameState?.shelter?.isEstablished, gameState?.isCampEstablished, gameState?.campMembers?.length]);
 
   // Save game state whenever it updates and player is alive
   useEffect(() => {
@@ -126,10 +165,10 @@ export function App() {
   }, [gameState?.player.isDead]);
 
   // Handle Character Creator Completion
-  const handleStartCustomGame = (survivor: Survivor) => {
-    const freshGame = createNewGameWithSurvivor(survivor);
+  const handleStartCustomGame = (survivor: Survivor, career: Career) => {
+    const freshGame = createNewGameWithSurvivor(survivor, career);
     setGameState(freshGame);
-    setActiveTab('journal');
+    setActiveTab('spawn');
     setScreen('game');
   };
 
@@ -174,7 +213,7 @@ export function App() {
 
     setGameState({
       ...outcome.state,
-      logs: [newLog, ...outcome.state.logs].slice(0, 100),
+      logs: [...outcome.state.logs, newLog].slice(-150),
       activeDilemma: null,
       dilemmaResult: {
         title: outcome.outcomeTitle,
@@ -190,54 +229,43 @@ export function App() {
     setGameState(prev => {
       if (!prev) return null;
       let { health, hunger, thirst, statusEffects } = { ...prev.player };
-      let newLogs = [...prev.logs];
       let updatedInv = prev.inventory.map(i => i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
+      let itemLogText = '';
+      let itemLogType: LogEntry['type'] = 'general';
 
       if (item.category === 'food') {
         hunger = Math.min(100, hunger + 25);
-        newLogs.unshift({
-          id: `log_${Date.now()}`,
-          day: prev.day,
-          text: `Consumed ${item.name}. Restored +25 hunger.`,
-          type: 'general',
-          timestamp: 'Action'
-        });
+        itemLogText = `Consumed ${item.name}. Restored +25 hunger.`;
       } else if (item.category === 'water') {
         thirst = Math.min(100, thirst + 25);
-        newLogs.unshift({
-          id: `log_${Date.now()}`,
-          day: prev.day,
-          text: `Drank clean water from ${item.name}. Restored +25 hydration.`,
-          type: 'general',
-          timestamp: 'Action'
-        });
+        itemLogText = `Drank clean water from ${item.name}. Restored +25 hydration.`;
       } else if (item.id.includes('bandage') || item.id.includes('first_aid') || item.id.includes('gauze')) {
         health = Math.min(100, health + 15);
         statusEffects = statusEffects.filter(e => e.id !== 'bleeding');
-        newLogs.unshift({
-          id: `log_${Date.now()}`,
-          day: prev.day,
-          text: `Applied sterile pressure dressing. Bleeding arrested.`,
-          type: 'medical',
-          timestamp: 'Action'
-        });
+        itemLogText = `Applied sterile pressure dressing. Bleeding arrested.`;
+        itemLogType = 'medical';
       } else if (item.id.includes('antibiotic') || item.id.includes('alcohol')) {
         health = Math.min(100, health + 10);
         statusEffects = statusEffects.filter(e => e.id !== 'bacterial_infection');
-        newLogs.unshift({
-          id: `log_${Date.now()}`,
-          day: prev.day,
-          text: `Applied antiseptic and treatment. Sepsis arrested.`,
-          type: 'medical',
-          timestamp: 'Action'
-        });
+        itemLogText = `Applied antiseptic and treatment. Sepsis arrested.`;
+        itemLogType = 'medical';
+      } else {
+        itemLogText = `Inspected ${item.name} from supplies.`;
       }
+
+      const newLog: LogEntry = {
+        id: `log_use_${Date.now()}`,
+        day: prev.day,
+        text: itemLogText,
+        type: itemLogType,
+        timestamp: 'Action'
+      };
 
       return {
         ...prev,
         inventory: updatedInv,
         player: { ...prev.player, health, hunger, thirst, statusEffects },
-        logs: newLogs
+        logs: [...prev.logs, newLog].slice(-150)
       };
     });
   };
@@ -260,13 +288,13 @@ export function App() {
           ...prev.shelter,
           barricadeIntegrity: Math.min(100, prev.shelter.barricadeIntegrity + 25)
         },
-        logs: [{
+        logs: [...prev.logs, {
           id: `log_repair_${Date.now()}`,
           day: prev.day,
           text: 'Reinforced entry points and nailed structural cross-braces (+25% barricade integrity).',
-          type: 'milestone',
+          type: 'milestone' as const,
           timestamp: 'Action'
-        }, ...prev.logs]
+        }].slice(-150)
       };
     });
   };
@@ -348,16 +376,121 @@ export function App() {
           ...prev.stats,
           scavengeRuns: prev.stats.scavengeRuns + 1
         },
-        logs: [{
+        logs: [...prev.logs, {
           id: `log_exp_${Date.now()}`,
           day: prev.day,
           text: logText,
-          type: isSuccess ? 'loot' : 'hazard',
+          type: (isSuccess ? 'loot' : 'hazard') as LogEntry['type'],
           timestamp: 'Expedition'
-        }, ...prev.logs]
+        }].slice(-150)
       };
     });
 
+    setActiveTab('journal');
+  };
+
+  // Day 0 / Starting Spot: Loot a specific spot
+  const handleLootSpot = (spotId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const spot = prev.startingLocation.lootSpots.find(s => s.id === spotId);
+      if (!spot || spot.searched) return prev;
+
+      let updatedInv = [...prev.inventory];
+      for (const item of spot.loot) {
+        const existing = updatedInv.find(i => i.id === item.id);
+        if (existing) {
+          updatedInv = updatedInv.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
+        } else {
+          updatedInv.push({ ...item });
+        }
+      }
+
+      const updatedSpots = prev.startingLocation.lootSpots.map(s =>
+        s.id === spotId ? { ...s, searched: true } : s
+      );
+
+      const itemsFoundText = spot.loot.map(i => `${i.name} (x${i.quantity})`).join(', ');
+      const newLog: LogEntry = {
+        id: `log_loot_${Date.now()}`,
+        day: prev.day,
+        text: `Looted ${spot.name} in ${prev.startingLocation.name}. Secured: ${itemsFoundText}. Supplies updated!`,
+        type: 'loot',
+        timestamp: 'Looting'
+      };
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        startingLocation: {
+          ...prev.startingLocation,
+          lootSpots: updatedSpots
+        },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  // Fortify current starting spot into official Base Shelter
+  const handleFortifyShelter = () => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const newLog: LogEntry = {
+        id: `log_fortify_${Date.now()}`,
+        day: prev.day,
+        text: `Decided to fortify ${prev.startingLocation.name} into your permanent survival shelter. Barricades hammered and shelter systems operational!`,
+        type: 'milestone',
+        timestamp: 'Action'
+      };
+
+      return {
+        ...prev,
+        shelter: {
+          ...prev.shelter,
+          isEstablished: true,
+          name: `${prev.startingLocation.name} (Safehouse)`,
+          type: prev.startingLocation.type,
+          defenseRating: 45,
+          stealthRating: 50,
+          warmthRating: 65,
+          barricadeIntegrity: 55,
+          maxRainwater: 20,
+          storedRainwater: 2
+        },
+        startingLocation: {
+          ...prev.startingLocation,
+          hasLeftStartingSpot: true
+        },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+    setActiveTab('shelter');
+  };
+
+  // Leave starting spot to scout the city on foot
+  const handleLeaveStartingSpot = () => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const newLog: LogEntry = {
+        id: `log_leave_${Date.now()}`,
+        day: prev.day,
+        text: `You abandoned your spawn location at ${prev.startingLocation.name} to scout the city for safehouses or survivor camps.`,
+        type: 'milestone',
+        timestamp: 'Action'
+      };
+
+      return {
+        ...prev,
+        startingLocation: {
+          ...prev.startingLocation,
+          hasLeftStartingSpot: true
+        },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
     setActiveTab('journal');
   };
 
@@ -415,6 +548,14 @@ export function App() {
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
           {activeTab === 'journal' && <JournalFeed logs={gameState.logs} />}
+          {activeTab === 'spawn' && (
+            <StartingLocationTab
+              gameState={gameState}
+              onLootSpot={handleLootSpot}
+              onFortifyShelter={handleFortifyShelter}
+              onLeaveStartingSpot={handleLeaveStartingSpot}
+            />
+          )}
           {activeTab === 'inventory' && <InventoryTab gameState={gameState} onUseItem={handleUseItem} />}
           {activeTab === 'shelter' && <ShelterTab gameState={gameState} onRepairBarricade={handleRepairBarricade} />}
           {activeTab === 'camp' && <CampTab gameState={gameState} onRoleChange={handleRoleChange} />}
@@ -428,6 +569,7 @@ export function App() {
           onAdvanceDay={handleAdvanceDay}
           onAdvanceWeek={handleAdvanceWeek}
           disabled={gameState.player.isDead || !!gameState.activeDilemma || !!gameState.dilemmaResult}
+          gameState={gameState}
         />
 
         {/* Active Dilemma Modal */}

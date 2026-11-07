@@ -41,38 +41,38 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
   const ageProfile = useMemo(() => {
     if (age <= 22) {
       return {
-        label: 'Youth (Raw Potential)',
+        label: 'Youth (16-22)',
         bonusPoints: 10,
         statMods: { fitness: 2, crafting: -1, medical: -1, combat: 0, stealth: 1 },
-        flavor: 'Peak agility & maximum customization points (+10 pts), but lacks trade experience.'
+        flavor: 'Young, fast, and agile (+10 points to spend), but lower job experience.'
       };
     } else if (age <= 34) {
       return {
-        label: 'Young Adult (Prime)',
+        label: 'Young Adult (23-34)',
         bonusPoints: 6,
         statMods: { fitness: 1, crafting: 0, medical: 0, combat: 0, stealth: 0 },
-        flavor: 'Balanced stamina, quick reflexes, and strong point budget (+6 pts).'
+        flavor: 'Strong, healthy, and fast reflexes (+6 points to spend).'
       };
     } else if (age <= 48) {
       return {
-        label: 'Experienced (Mid-Life)',
+        label: 'Middle-Aged (35-48)',
         bonusPoints: 3,
         statMods: { fitness: 0, crafting: 1, medical: 1, combat: 0, stealth: 0 },
-        flavor: 'Established trade skills (+1 Craft/Med), steady mind (+3 pts).'
+        flavor: 'Solid work skills and a steady mind (+3 points to spend).'
       };
     } else if (age <= 60) {
       return {
-        label: 'Seasoned Veteran',
+        label: 'Older Adult (49-60)',
         bonusPoints: 0,
         statMods: { fitness: -1, crafting: 2, medical: 1, combat: 1, stealth: 0 },
-        flavor: 'Decades of real-world expertise (+2 Craft, +1 Combat), but declining stamina (+0 pts).'
+        flavor: 'Lots of practical experience (+0 points), but slowing down slightly.'
       };
     } else {
       return {
-        label: 'Elder / Senior',
+        label: 'Senior (61-75)',
         bonusPoints: -4,
         statMods: { fitness: -2, crafting: 3, medical: 2, combat: 0, stealth: 1 },
-        flavor: 'Master life wisdom (+3 Craft, +2 Med), low customization budget (-4 pts), frail body.'
+        flavor: 'Deep knowledge and crafting skills (-4 points), but physically weaker.'
       };
     }
   }, [age]);
@@ -173,9 +173,9 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
           className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 active:scale-95"
           title="Back to Title"
         >
-          <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-4 h-4" />
         </button>
-        <span className="font-bold text-xs uppercase tracking-wider text-zinc-200">Survivor Designer</span>
+        <span className="font-bold text-xs uppercase tracking-wider text-zinc-200">Create Survivor</span>
         <div className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-bold border flex items-center gap-1 shadow-sm ${
           availablePoints >= 0 
             ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700/60' 
@@ -188,34 +188,10 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
 
       {/* 2. SCROLLABLE MIDDLE CONTENT */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 overscroll-contain">
-        {/* Points Allocation Status Overview Banner */}
-        <section className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 space-y-2 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 font-bold block">
-                Survivor Point Pool
-              </span>
-              <span className="text-xs text-zinc-200 font-semibold">
-                Points to Allocate: <span className="font-mono text-sm font-bold text-emerald-400">{availablePoints >= 0 ? "+" + availablePoints : availablePoints}</span>
-              </span>
-            </div>
-            <div className={"px-3 py-1 rounded-xl text-xs font-mono font-bold border flex items-center gap-1.5 shadow-sm " + (availablePoints > 0 ? "bg-emerald-950/90 text-emerald-300 border-emerald-600/70 shadow-emerald-950/40" : availablePoints === 0 ? "bg-zinc-800 text-zinc-300 border-zinc-700" : "bg-rose-950/90 text-rose-300 border-rose-600/80 animate-pulse")}>
-              <span>Budget:</span>
-              <span>{availablePoints >= 0 ? "+" + availablePoints : availablePoints} pts</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-zinc-400 pt-1 border-t border-zinc-800/80">
-            <span className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800">Age: {ageProfile.bonusPoints >= 0 ? "+" + ageProfile.bonusPoints : ageProfile.bonusPoints}</span>
-            {careerBonus > 0 && <span className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800">Career: +{careerBonus}</span>}
-            <span className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800">Flaws: +{selectedTraits.filter(t => t.type === "negative").reduce((s, t) => s + t.cost, 0)}</span>
-            <span className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800">Advantages: {selectedTraits.filter(t => t.type === "positive").reduce((s, t) => s + t.cost, 0)}</span>
-            <span className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800">Stats Spent: {statPointsSpent > 0 ? "-" + statPointsSpent : statPointsSpent < 0 ? "+" + Math.abs(statPointsSpent) : "0"}</span>
-          </div>
-        </section>
-        {/* Section 1: Name & Interactive Age Slider */}
+        {/* Section 1: Name & Age */}
         <section className="space-y-3.5 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80">
-          <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-400 font-semibold block">
-            1. Identity & Age (Crusader Kings Scale)
+          <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold block">
+            1. Name & Age
           </label>
 
           {/* Name Input */}
@@ -247,14 +223,30 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
               </span>
             </div>
 
-            <input
-              type="range"
-              min="16"
-              max="75"
-              value={age}
-              onChange={(e) => setAge(parseInt(e.target.value, 10))}
-              className="w-full accent-rose-500 h-2 bg-zinc-800 rounded-lg cursor-pointer"
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAge(prev => Math.max(16, prev - 1))}
+                disabled={age <= 16}
+                className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 border border-zinc-700/60 transition-all shrink-0"
+              >-</button>
+
+              <input
+                type="range"
+                min="16"
+                max="75"
+                value={age}
+                onChange={(e) => setAge(parseInt(e.target.value, 10))}
+                className="flex-1 accent-rose-500 h-2 bg-zinc-800 rounded-lg cursor-pointer"
+              />
+
+              <button
+                type="button"
+                onClick={() => setAge(prev => Math.min(75, prev + 1))}
+                disabled={age >= 75}
+                className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 border border-zinc-700/60 transition-all shrink-0"
+              >+</button>
+            </div>
 
             <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
               <span>16 (Youth: +10 pts)</span>
@@ -271,10 +263,10 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         {/* Section 2: Expanded Careers (Auto-Sets Stats) */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-400 font-semibold">
-              2. Pre-Apocalypse Trade ({CAREERS.length} Careers)
+            <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold">
+              2. Job Before the Outbreak
             </label>
-            <span className="text-[10px] text-zinc-500">Sets baseline stats</span>
+            <span className="text-[10px] text-zinc-500">Sets starting skills & spawn location</span>
           </div>
 
           <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-1">
@@ -316,19 +308,16 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         <section className="p-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-200 font-bold block flex items-center gap-2">
-                <span>3. Core Attributes</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-mono font-bold">
-                  Points to Allocate: {availablePoints >= 0 ? "+" + availablePoints : availablePoints}
-                </span>
+              <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-200 font-bold block">
+                3. Skills
               </label>
-              <p className="text-[10px] text-zinc-500">Lower stats to gain points, raise stats to spend points</p>
+              <p className="text-[10px] text-zinc-500">Lower a skill to refund points, or spend points to increase a skill</p>
             </div>
             <button
               onClick={() => setStatOffsets({ combat: 0, medical: 0, crafting: 0, stealth: 0, fitness: 0 })}
               className="text-[10px] font-mono text-zinc-400 hover:text-zinc-200 underline"
             >
-              Reset Offsets
+              Reset
             </button>
           </div>
 
@@ -337,24 +326,28 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
             <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/50 border border-zinc-800/70">
               <div>
                 <span className="flex items-center gap-1.5 font-semibold text-zinc-200">
-                  <Shield className="w-3.5 h-3.5 text-rose-500" /> Combat & Weapons
+                  <Shield className="w-3.5 h-3.5 text-rose-500" /> Combat (Fighting)
                 </span>
                 <span className="text-[10px] text-zinc-500">Base {selectedCareer.stats.combat} + Age {ageProfile.statMods.combat}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-zinc-100 w-5 text-center">{effectiveStats.combat}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <button
                     onClick={() => modifyStat('combat', -1)}
                     disabled={effectiveStats.combat <= 1}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Lower stat to refund 1 trait point"
+                    className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-25 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 transition-all border border-zinc-700/60"
+                    title="Lower skill to get 1 point back"
                   >-</button>
                   <button
                     onClick={() => modifyStat('combat', 1)}
                     disabled={availablePoints <= 0 || effectiveStats.combat >= 10}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Raise stat by spending 1 trait point"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-base active:scale-90 transition-all border ${
+                      availablePoints > 0 && effectiveStats.combat < 10
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/50 shadow-sm shadow-emerald-950/50'
+                        : 'bg-zinc-800/80 text-zinc-500 border-zinc-700/50 disabled:opacity-25 cursor-not-allowed'
+                    }`}
+                    title="Spend 1 point to increase skill"
                   >+</button>
                 </div>
               </div>
@@ -364,24 +357,28 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
             <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/50 border border-zinc-800/70">
               <div>
                 <span className="flex items-center gap-1.5 font-semibold text-zinc-200">
-                  <HeartPulse className="w-3.5 h-3.5 text-cyan-400" /> Medical & Triage
+                  <HeartPulse className="w-3.5 h-3.5 text-cyan-400" /> First Aid (Healing)
                 </span>
                 <span className="text-[10px] text-zinc-500">Base {selectedCareer.stats.medical} + Age {ageProfile.statMods.medical}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-zinc-100 w-5 text-center">{effectiveStats.medical}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <button
                     onClick={() => modifyStat('medical', -1)}
                     disabled={effectiveStats.medical <= 1}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Lower stat to refund 1 trait point"
+                    className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-25 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 transition-all border border-zinc-700/60"
+                    title="Lower skill to get 1 point back"
                   >-</button>
                   <button
                     onClick={() => modifyStat('medical', 1)}
                     disabled={availablePoints <= 0 || effectiveStats.medical >= 10}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Raise stat by spending 1 trait point"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-base active:scale-90 transition-all border ${
+                      availablePoints > 0 && effectiveStats.medical < 10
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/50 shadow-sm shadow-emerald-950/50'
+                        : 'bg-zinc-800/80 text-zinc-500 border-zinc-700/50 disabled:opacity-25 cursor-not-allowed'
+                    }`}
+                    title="Spend 1 point to increase skill"
                   >+</button>
                 </div>
               </div>
@@ -391,24 +388,28 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
             <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/50 border border-zinc-800/70">
               <div>
                 <span className="flex items-center gap-1.5 font-semibold text-zinc-200">
-                  <Hammer className="w-3.5 h-3.5 text-amber-400" /> Crafting & Mechanics
+                  <Hammer className="w-3.5 h-3.5 text-amber-400" /> Crafting (Building)
                 </span>
                 <span className="text-[10px] text-zinc-500">Base {selectedCareer.stats.crafting} + Age {ageProfile.statMods.crafting}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-zinc-100 w-5 text-center">{effectiveStats.crafting}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <button
                     onClick={() => modifyStat('crafting', -1)}
                     disabled={effectiveStats.crafting <= 1}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Lower stat to refund 1 trait point"
+                    className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-25 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 transition-all border border-zinc-700/60"
+                    title="Lower skill to get 1 point back"
                   >-</button>
                   <button
                     onClick={() => modifyStat('crafting', 1)}
                     disabled={availablePoints <= 0 || effectiveStats.crafting >= 10}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Raise stat by spending 1 trait point"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-base active:scale-90 transition-all border ${
+                      availablePoints > 0 && effectiveStats.crafting < 10
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/50 shadow-sm shadow-emerald-950/50'
+                        : 'bg-zinc-800/80 text-zinc-500 border-zinc-700/50 disabled:opacity-25 cursor-not-allowed'
+                    }`}
+                    title="Spend 1 point to increase skill"
                   >+</button>
                 </div>
               </div>
@@ -418,24 +419,28 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
             <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/50 border border-zinc-800/70">
               <div>
                 <span className="flex items-center gap-1.5 font-semibold text-zinc-200">
-                  <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> Stealth & Awareness
+                  <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> Stealth (Sneaking)
                 </span>
                 <span className="text-[10px] text-zinc-500">Base {selectedCareer.stats.stealth} + Age {ageProfile.statMods.stealth}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-zinc-100 w-5 text-center">{effectiveStats.stealth}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <button
                     onClick={() => modifyStat('stealth', -1)}
                     disabled={effectiveStats.stealth <= 1}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Lower stat to refund 1 trait point"
+                    className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-25 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 transition-all border border-zinc-700/60"
+                    title="Lower skill to get 1 point back"
                   >-</button>
                   <button
                     onClick={() => modifyStat('stealth', 1)}
                     disabled={availablePoints <= 0 || effectiveStats.stealth >= 10}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Raise stat by spending 1 trait point"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-base active:scale-90 transition-all border ${
+                      availablePoints > 0 && effectiveStats.stealth < 10
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/50 shadow-sm shadow-emerald-950/50'
+                        : 'bg-zinc-800/80 text-zinc-500 border-zinc-700/50 disabled:opacity-25 cursor-not-allowed'
+                    }`}
+                    title="Spend 1 point to increase skill"
                   >+</button>
                 </div>
               </div>
@@ -445,24 +450,28 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
             <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/50 border border-zinc-800/70">
               <div>
                 <span className="flex items-center gap-1.5 font-semibold text-zinc-200">
-                  <Activity className="w-3.5 h-3.5 text-emerald-400" /> Fitness & Stamina
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" /> Fitness (Stamina)
                 </span>
                 <span className="text-[10px] text-zinc-500">Base {selectedCareer.stats.fitness} + Age {ageProfile.statMods.fitness}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-zinc-100 w-5 text-center">{effectiveStats.fitness}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <button
                     onClick={() => modifyStat('fitness', -1)}
                     disabled={effectiveStats.fitness <= 1}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Lower stat to refund 1 trait point"
+                    className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-25 text-zinc-200 flex items-center justify-center font-bold text-base active:scale-90 transition-all border border-zinc-700/60"
+                    title="Lower skill to get 1 point back"
                   >-</button>
                   <button
                     onClick={() => modifyStat('fitness', 1)}
                     disabled={availablePoints <= 0 || effectiveStats.fitness >= 10}
-                    className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center font-bold text-sm active:scale-95"
-                    title="Raise stat by spending 1 trait point"
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-base active:scale-90 transition-all border ${
+                      availablePoints > 0 && effectiveStats.fitness < 10
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/50 shadow-sm shadow-emerald-950/50'
+                        : 'bg-zinc-800/80 text-zinc-500 border-zinc-700/50 disabled:opacity-25 cursor-not-allowed'
+                    }`}
+                    title="Spend 1 point to increase skill"
                   >+</button>
                 </div>
               </div>
@@ -473,10 +482,10 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         {/* Section 4: Negative Flaws & Medical Conditions (GIVES POINTS) */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] uppercase font-mono tracking-wider text-rose-400 font-semibold flex items-center gap-1">
-              🔴 Flaws & Conditions (Grants Points)
+            <label className="text-[11px] uppercase font-mono tracking-wider text-rose-400 font-bold flex items-center gap-1">
+              Flaws & Weaknesses (Gives Points)
             </label>
-            <span className="text-[10px] text-zinc-500">Equip to gain +points</span>
+            <span className="text-[10px] text-zinc-500">Pick flaws to get extra points</span>
           </div>
 
           <div className="space-y-1.5">
@@ -515,10 +524,10 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         {/* Section 5: Positive Traits (COSTS POINTS) */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] uppercase font-mono tracking-wider text-emerald-400 font-semibold flex items-center gap-1">
-              🟢 Advantage Traits (Costs Points)
+            <label className="text-[11px] uppercase font-mono tracking-wider text-emerald-400 font-bold flex items-center gap-1">
+              Perks & Advantages (Costs Points)
             </label>
-            <span className="text-[10px] text-zinc-500">Spend points to equip</span>
+            <span className="text-[10px] text-zinc-500">Spend points to unlock perks</span>
           </div>
 
           <div className="space-y-1.5">
@@ -560,15 +569,15 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         {availablePoints < 0 ? (
           <div className="text-xs text-rose-400 flex items-center justify-center gap-1.5 mb-2 font-mono">
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>Point deficit ({availablePoints})! Take more flaws or lower stats to balance.</span>
+            <span>You spent too many points ({availablePoints})! Lower a skill or take flaws to balance.</span>
           </div>
         ) : availablePoints > 0 ? (
           <div className="text-[11px] text-emerald-400/90 flex items-center justify-center gap-1.5 mb-2 font-mono">
-            <span>You have +{availablePoints} unspent points to allocate on stats or traits.</span>
+            <span>You have +{availablePoints} points left to spend on skills or perks.</span>
           </div>
         ) : (
           <div className="text-[11px] text-zinc-400 flex items-center justify-center gap-1.5 mb-2 font-mono">
-            <span>✓ All points allocated (0 remaining). Ready for outbreak.</span>
+            <span>All points spent (0 remaining). Ready to start!</span>
           </div>
         )}
 
@@ -581,7 +590,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
               : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'
           }`}
         >
-          <span>Enter the Apocalypse (Day 0 — {selectedCareer.startingLocation.name})</span>
+          <span>Start Game (Day 0 — {selectedCareer.startingLocation.name})</span>
         </button>
       </footer>
     </div>

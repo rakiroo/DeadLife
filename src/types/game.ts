@@ -37,10 +37,19 @@ export interface LootSpot {
   loot: InventoryItem[];
 }
 
+export interface SpawnStory {
+  id: string;
+  title: string;
+  intro: string;
+  fullStory: string;
+}
+
 export interface StartingLocation {
   name: string;
   type: string;
   description: string;
+  storyTitle?: string;
+  storyText?: string;
   lootSpots: LootSpot[];
   hasLeftStartingSpot: boolean;
 }
@@ -55,6 +64,7 @@ export interface Career {
     name: string;
     type: string;
     description: string;
+    stories?: SpawnStory[];
     lootSpots: {
       id: string;
       name: string;

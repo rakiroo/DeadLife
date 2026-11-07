@@ -36,15 +36,15 @@ export const InventoryTab: React.FC<Props> = ({ gameState, onUseItem }) => {
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-w-md mx-auto w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-zinc-100">Backpack & Storage</h2>
+          <h2 className="text-base font-bold text-zinc-100">Supplies & Backpack</h2>
           <p className="text-xs text-zinc-400">Total items: {inventory.reduce((acc, i) => acc + i.quantity, 0)}</p>
         </div>
       </div>
 
       {inventory.length === 0 ? (
         <div className="p-8 text-center text-zinc-500 bg-zinc-900/50 rounded-2xl border border-zinc-800">
-          <p className="text-sm">Your inventory is completely bare.</p>
-          <p className="text-xs mt-1">Go on a scavenge run before starvation hits.</p>
+          <p className="text-sm">Your backpack is empty.</p>
+          <p className="text-xs mt-1">Search your starting spot or go scavenge nearby buildings.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -73,7 +73,13 @@ export const InventoryTab: React.FC<Props> = ({ gameState, onUseItem }) => {
               {isUsable(item) && (
                 <button
                   onClick={() => onUseItem(item)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 shrink-0 active:scale-95 transition-all"
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider shrink-0 active:scale-95 transition-all shadow-sm ${
+                    item.category === 'food'
+                      ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                      : item.category === 'water'
+                      ? 'bg-cyan-600 hover:bg-cyan-500 text-white'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white'
+                  }`}
                 >
                   {item.category === 'food' ? 'Eat' : item.category === 'water' ? 'Drink' : 'Use'}
                 </button>

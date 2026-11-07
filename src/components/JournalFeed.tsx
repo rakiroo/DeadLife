@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { LogEntry } from '../types/game';
-import { Skull, AlertTriangle, Cross, Shield, Sparkles, BookOpen } from 'lucide-react';
+import { Skull, AlertTriangle, Cross, Shield, Sparkles, BookOpen, Clock, ArrowDown } from 'lucide-react';
 
 interface Props {
   logs: LogEntry[];
 }
 
 export const JournalFeed: React.FC<Props> = ({ logs }) => {
+  const endRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to newest entries at the bottom
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs.length]);
+
   const getEntryBadge = (type: LogEntry['type']) => {
     switch (type) {
       case 'combat':
@@ -26,10 +33,11 @@ export const JournalFeed: React.FC<Props> = ({ logs }) => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-md mx-auto w-full">
-      <div className="text-center py-2">
-        <span className="text-[11px] uppercase tracking-widest text-zinc-600 font-mono font-medium">
-          — Survivor's Daily Log —
-        </span>
+      <div className="text-center py-1">
+        <div className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-zinc-500 font-mono font-medium px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800/80">
+          <Clock className="w-3 h-3 text-zinc-500" />
+          <span>Day 0: Outbreak Begins</span>
+        </div>
       </div>
 
       {logs.map((log) => (
@@ -57,6 +65,14 @@ export const JournalFeed: React.FC<Props> = ({ logs }) => {
           </div>
         </div>
       ))}
+
+      {/* Bottom Anchor & Latest Update Indicator */}
+      <div className="text-center pt-2 pb-1 flex items-center justify-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-emerald-400/80">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span>Latest Update</span>
+        <ArrowDown className="w-3 h-3 text-emerald-400/60" />
+      </div>
+      <div ref={endRef} />
     </div>
   );
 };
