@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Heart, Droplets, Utensils, ShieldAlert, CloudRain, Sun, CloudFog, Snowflake, Menu, User, X, Shield, HeartPulse, Hammer, EyeOff, Activity, MapPin } from 'lucide-react';
+import { Heart, Droplets, Utensils, ShieldAlert, CloudRain, Sun, CloudFog, Snowflake, Menu, User, X, Shield, HeartPulse, Hammer, EyeOff, Activity, MapPin, Settings } from 'lucide-react';
 import { GameState, WeatherType } from '../types/game';
 
 interface Props {
   state: GameState;
   onOpenMenu?: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
+export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu, onOpenSettings }) => {
   const { player, day, weather, temperatureCelsius, startingLocation } = state;
   const [showProfileModal, setShowProfileModal] = useState(false);
 

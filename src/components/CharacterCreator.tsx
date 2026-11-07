@@ -11,14 +11,27 @@ const RANDOM_NAMES = [
   'Zoe Washington', 'Arthur Pendelton', 'Siddharth Rao', 'Chloe Bennett'
 ];
 
+const MALE_NAMES = [
+  'Marcus Vance', 'David Kowalski', 'Leon Sterling', 'Thomas O\'Connor',
+  'Julian Walker', 'Robert Hayes', 'Arthur Pendelton', 'Siddharth Rao',
+  'Liam Walker', 'Lucas Reed', 'Ethan Cole', 'Noah Ramirez'
+];
+
+const FEMALE_NAMES = [
+  'Elena Chen', 'Sarah Miller', 'Maya Diaz', 'Hannah Reyes',
+  'Grace Blackwood', 'Claire Patel', 'Zoe Washington', 'Chloe Bennett',
+  'Elena Frost', 'Maya Lin', 'Aria Sterling', 'Mia Robinson'
+];
+
 interface Props {
   onBack: () => void;
   onStartGame: (survivor: Survivor, career: Career) => void;
 }
 
 export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   // Identity state
-  const [name, setName] = useState(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]);
+  const [name, setName] = useState(MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]);
   const [age, setAge] = useState<number>(28);
   const [selectedCareer, setSelectedCareer] = useState<Career>(CAREERS[0]);
 
@@ -130,7 +143,8 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
   };
 
   const handleRandomizeName = () => {
-    setName(RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]);
+    const pool = gender === 'female' ? FEMALE_NAMES : MALE_NAMES;
+    setName(pool[Math.floor(Math.random() * pool.length)]);
   };
 
   const canStart = availablePoints >= 0 && name.trim().length > 0;
@@ -142,6 +156,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
 
     const newSurvivor: Survivor = {
       name: name.trim(),
+      gender,
       age,
       ageGroup,
       profession: selectedCareer.title,
@@ -191,8 +206,35 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         {/* Section 1: Name & Age */}
         <section className="space-y-3.5 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80">
           <label className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold block">
-            1. Name & Age
+            1. Identity & Gender
           </label>
+
+          {/* Gender Selector */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => { setGender('male'); setName(MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]); }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                gender === 'male'
+                  ? 'bg-rose-950/50 border-rose-500 text-rose-200 shadow-sm'
+                  : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <span>Boy (Male)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setGender('female'); setName(FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)]); }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                gender === 'female'
+                  ? 'bg-rose-950/50 border-rose-500 text-rose-200 shadow-sm'
+                  : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <span>Girl (Female)</span>
+            </button>
+          </div>
 
           {/* Name Input */}
           <div className="flex gap-2">

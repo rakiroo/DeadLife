@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameState } from '../types/game';
-import { Cross, ShoppingBag, ShieldAlert, Wrench, Compass, ArrowUpRight } from 'lucide-react';
+import { Cross, ShoppingBag, ShieldAlert, Wrench, Compass, ArrowUpRight, Users } from 'lucide-react';
 
 interface Props {
   gameState: GameState;
@@ -44,6 +44,15 @@ export const ScavengeTab: React.FC<Props> = ({ gameState, onLaunchExpedition }) 
       dangerColor: 'text-emerald-400',
       loot: 'Lumber Planks, Nails, Crowbars, Duct Tape',
       icon: <Wrench className="w-5 h-5 text-zinc-300" />
+    },
+    {
+      id: 'survivor_outpost',
+      title: 'St. Michael Church Sanctuary (Survivor Camp)',
+      distance: '1.6 miles away',
+      danger: 'Other Survivors',
+      dangerColor: 'text-cyan-400 font-bold',
+      loot: 'Meet Companions, Barter Rations, Romance',
+      icon: <Users className="w-5 h-5 text-cyan-400" />
     }
   ];
 

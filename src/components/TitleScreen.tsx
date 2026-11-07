@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, Play, BookOpen, RotateCcw } from 'lucide-react';
+import { Skull, Play, BookOpen, RotateCcw, Sparkles } from 'lucide-react';
 
 interface Props {
   hasSaveGame: boolean;
@@ -7,6 +7,7 @@ interface Props {
   onLoadGame: () => void;
   onOpenGraveyard: () => void;
   graveyardCount: number;
+  onOpenSettings?: () => void;
 }
 
 export const TitleScreen: React.FC<Props> = ({
@@ -14,7 +15,8 @@ export const TitleScreen: React.FC<Props> = ({
   onStartNew,
   onLoadGame,
   onOpenGraveyard,
-  graveyardCount
+  graveyardCount,
+  onOpenSettings
 }) => {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between p-6 select-none relative overflow-hidden">

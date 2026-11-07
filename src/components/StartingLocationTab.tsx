@@ -20,6 +20,7 @@ export const StartingLocationTab: React.FC<Props> = ({
 
   const totalSpots = startingLocation.lootSpots.length;
   const searchedCount = startingLocation.lootSpots.filter(s => s.searched).length;
+  const hasCompanions = gameState.campMembers.length > 0;
 
   const handleLoot = (spotId: string, spotName: string) => {
     onLootSpot(spotId);
@@ -146,10 +147,10 @@ export const StartingLocationTab: React.FC<Props> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-emerald-200 group-hover:text-emerald-100 transition-colors">
-                  Turn this Place into Your Shelter
+                  {hasCompanions ? "Turn this Place into Our Camp & Shelter" : "Turn this Place into Your Shelter"}
                 </div>
                 <div className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                  Board up doors and windows to make this your permanent safehouse. Unlocks the Shelter tab.
+                  {hasCompanions ? "Work together with your companions to fortify this as your shared camp and shelter." : "Board up doors and windows to make this your permanent safehouse. Unlocks the Shelter tab."}
                 </div>
               </div>
             </div>

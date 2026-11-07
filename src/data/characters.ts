@@ -80,6 +80,7 @@ export function generateRandomSurvivor(archetypeIndex = 0): { player: Survivor; 
 
   const player: Survivor = {
     name: `${firstName} ${lastName}`,
+    gender: Math.random() < 0.5 ? 'male' : 'female',
     age,
     ageGroup: 'Prime',
     profession: archetype.profession,

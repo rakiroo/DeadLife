@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, EventChoice, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career } from './types/game';
-import { DAY_ONE_EVENT } from './data/events';
+import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
 import { advanceOneDay, advanceOneWeek } from './utils/simulation';
 import { HeaderVitals } from './components/HeaderVitals';
 import { JournalFeed } from './components/JournalFeed';
@@ -17,6 +17,7 @@ import { DeathScreen } from './components/DeathScreen';
 import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
+import { generateAIDilemma } from './services/aiStoryteller';
 
 type ScreenState = 'title' | 'creator' | 'game' | 'graveyard';
 
@@ -308,47 +309,207 @@ export function App() {
     }) : null);
   };
 
+  // Camp relationship interactions:
+  const handleTalkSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const newTrust = Math.min(100, member.trust + 5);
+      const newAffection = Math.min(100, (member.affection ?? 20) + 10);
+      let stage = member.relationshipStage ?? 'stranger';
+      if (newTrust >= 75 && newAffection >= 65 && stage !== 'romance') {
+        stage = 'close_friend';
+      } else if (newTrust >= 50 && stage !== 'romance') {
+        stage = 'friend';
+      }
+
+      const updated = prev.campMembers.map(m =>
+        m.id === memberId ? { ...m, trust: newTrust, affection: newAffection, relationshipStage: stage } : m
+      );
+
+      const newLog: LogEntry = {
+        id: `log_talk_${Date.now()}`,
+        day: prev.day,
+        text: `You spent time talking with ${member.name}. Bond strengthened (+Trust & Affection).`,
+        type: 'camp',
+        timestamp: 'Camp Bond'
+      };
+
+      return {
+        ...prev,
+        campMembers: updated,
+        player: { ...prev.player, sanity: Math.min(100, prev.player.sanity + 6) },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  const handleGiftSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      const foodItem = prev.inventory.find(i => i.category === 'food' && i.quantity > 0);
+      if (!member || !foodItem) return prev;
+
+      const updatedInv = prev.inventory.map(i => i === foodItem ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
+      const updatedMembers = prev.campMembers.map(m =>
+        m.id === memberId ? { ...m, trust: Math.min(100, m.trust + 15), health: Math.min(100, m.health + 15) } : m
+      );
+
+      const newLog: LogEntry = {
+        id: `log_gift_${Date.now()}`,
+        day: prev.day,
+        text: `You shared food with ${member.name}. Their loyalty is deepened (+Trust & Health).`,
+        type: 'camp',
+        timestamp: 'Camp Care'
+      };
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        campMembers: updatedMembers,
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  const handleRomanceSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const updated = prev.campMembers.map(m =>
+        m.id === memberId ? { ...m, relationshipStage: 'romance' as const, relation: 'Partner ❤️', trust: 100, affection: 100 } : m
+      );
+
+      const newLog: LogEntry = {
+        id: `log_romance_${Date.now()}`,
+        day: prev.day,
+        text: `❤️ You and ${member.name} confessed your feelings and became romantic partners! (Nightly comfort bonus active)`,
+        type: 'camp',
+        timestamp: 'Romance'
+      };
+
+      return {
+        ...prev,
+        campMembers: updated,
+        player: { ...prev.player, sanity: 100 },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  const handleExileSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const updated = prev.campMembers.filter(m => m.id !== memberId);
+      const newLog: LogEntry = {
+        id: `log_exile_${Date.now()}`,
+        day: prev.day,
+        text: `You banished ${member.name} from the camp. They walked out into the ruins as an enemy.`,
+        type: 'camp',
+        timestamp: 'Exile'
+      };
+
+      return {
+        ...prev,
+        campMembers: updated,
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
   // Launch Scavenge Expedition
   const handleLaunchExpedition = (locationId: string) => {
     if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
-      const isSuccess = Math.random() < 0.70 + (prev.player.stealthSkill * 0.03);
+
+      // Special expedition to visit other survivors at their outpost
+      if (locationId === 'survivor_outpost') {
+        const outpostDilemma = getSurvivorOutpostDilemma(prev);
+        return {
+          ...prev,
+          activeDilemma: outpostDilemma,
+          stats: {
+            ...prev.stats,
+            scavengeRuns: prev.stats.scavengeRuns + 1
+          }
+        };
+      }
+
+      const profession = prev.player.profession.toLowerCase();
+      let successRate = 0.62 + (prev.player.stealthSkill * 0.04);
+      if (profession.includes('ranger') || profession.includes('locksmith') || profession.includes('security')) {
+        successRate += 0.15; // Stealth career bonus
+      }
+
+      const isSuccess = Math.random() < successRate;
       let newItems: InventoryItem[] = [];
       let logText = '';
       let hpDelta = 0;
 
+      const baseDamage = locationId === 'police_precinct' ? 24 : locationId === 'pharmacy' ? 18 : 12;
+      const damageReduction = Math.min(14, Math.floor(prev.player.fitnessSkill * 1.2) + Math.floor(prev.player.combatSkill * 0.6));
+      const mitigatedDamage = Math.max(4, baseDamage - damageReduction);
+
       if (locationId === 'pharmacy') {
+        const medBonus = (profession.includes('paramedic') || profession.includes('doctor') || profession.includes('surgeon') || profession.includes('veterinarian')) ? 3 : 0;
         if (isSuccess) {
           newItems = [
-            { id: 'bandage_scavenged', name: 'Field Dressing Bandages', category: 'medical', quantity: 2, description: 'Sterile roll bandage.' },
-            { id: 'antibiotics_scavenged', name: 'Amoxicillin Antibiotics', category: 'medical', quantity: 4, description: 'Capsules for bacterial infections.' }
+            { id: 'bandage_scavenged', name: 'Field Dressing Bandages', category: 'medical', quantity: 2 + (prev.player.medicalSkill >= 6 ? 1 : 0), description: 'Sterile roll bandage.' },
+            { id: 'antibiotics_scavenged', name: 'Amoxicillin Antibiotics', category: 'medical', quantity: 4 + medBonus, description: 'Capsules for bacterial infections.' }
           ];
-          logText = 'Scavenged Mercy Memorial Pharmacy: Retrieved antibiotics and trauma bandages safely.';
+          logText = `Scavenged Mercy Memorial Pharmacy: Retrieved antibiotics and trauma bandages safely.${medBonus > 0 ? ' (Medical career bonus: found extra antibiotics!)' : ''}`;
         } else {
-          hpDelta = -18;
-          logText = 'Ambushed at the pharmacy backdoor! Escaped with superficial bites/scrapes (-18% HP).';
+          hpDelta = -mitigatedDamage;
+          logText = `Ambushed at the pharmacy backdoor! Your fitness & combat skills reduced the damage (-${mitigatedDamage}% HP).`;
         }
       } else if (locationId === 'supermarket') {
+        const chefBonus = (profession.includes('cook') || profession.includes('chef')) ? 2 : 0;
         if (isSuccess) {
           newItems = [
-            { id: 'canned_food_scav', name: 'Canned Peaches & Tuna', category: 'food', quantity: 4, description: 'Sealed canned rations.' },
+            { id: 'canned_food_scav', name: 'Canned Food Rations', category: 'food', quantity: 4 + chefBonus, description: 'Sealed canned rations.' },
             { id: 'water_scav', name: 'Bottled Spring Water', category: 'water', quantity: 3, description: '1-Liter bottled water.' }
           ];
-          logText = 'Scavenged Costway Supermarket: Hauled back 4 canned meals and 3 bottles of water.';
+          logText = `Scavenged Costway Supermarket: Hauled back canned meals and clean water.${chefBonus > 0 ? ' (Culinary career bonus: found extra sealed rations!)' : ''}`;
         } else {
-          hpDelta = -12;
-          logText = 'Cornered in aisle 4 by a cluster of infected. Dropped half your haul while sprinting back (-12% HP).';
+          hpDelta = -mitigatedDamage;
+          logText = `Cornered in aisle 4 by infected! You fought your way free taking (-${mitigatedDamage}% HP).`;
         }
-      } else {
+      } else if (locationId === 'police_precinct') {
+        const copBonus = (profession.includes('police') || profession.includes('security') || profession.includes('firefighter')) ? 1 : 0;
         if (isSuccess) {
           newItems = [
-            { id: 'wood_scav', name: 'Lumber Studs (2x4)', category: 'resource', quantity: 3, description: 'Heavy structural timber.' }
+            { id: 'shotgun_shells_scav', name: '12-Gauge Buckshot (8 shells)', category: 'resource', quantity: 8, description: 'Shotgun ammunition.' },
+            { id: 'tactical_vest', name: 'Kevlar Duty Vest', category: 'tool', quantity: 1, description: 'Protects torso from bites.' }
           ];
-          logText = 'Scavenged Pioneer Lumber: Retrieved structural wood planks for shelter defense.';
+          logText = `Scavenged 3rd Precinct Station: Cleared the armory locker and recovered shotgun ammunition and a tactical vest!`;
         } else {
-          hpDelta = -8;
-          logText = 'Twisted ankle climbing the yard fence (-8% HP). Retrieved minimal timber.';
+          hpDelta = -mitigatedDamage;
+          logText = `Swarmed by infected in the station sally port! Escaped with injuries (-${mitigatedDamage}% HP).`;
+        }
+      } else {
+        const craftBonus = (profession.includes('carpenter') || profession.includes('mechanic') || profession.includes('electrician')) ? 2 : 0;
+        if (isSuccess) {
+          newItems = [
+            { id: 'wood_scav', name: 'Lumber Studs (2x4)', category: 'resource', quantity: 3 + craftBonus, description: 'Heavy structural timber.' },
+            { id: 'nails_scav', name: 'Box of Framing Nails', category: 'resource', quantity: 20, description: 'Construction nails.' }
+          ];
+          logText = `Scavenged Pioneer Lumber: Retrieved structural wood planks and nails for defense.${craftBonus > 0 ? ' (Crafting career bonus: gathered extra lumber!)' : ''}`;
+        } else {
+          hpDelta = -mitigatedDamage;
+          logText = `Fell from the lumber yard fence while evading infected (-${mitigatedDamage}% HP).`;
         }
       }
 
@@ -420,6 +581,12 @@ export function App() {
         timestamp: 'Looting'
       };
 
+      // If player is surviving alone without a camp, trigger an exciting survivor discovery in the loot spot!
+      let dilemmaToTrigger = null;
+      if (prev.campMembers.length === 0) {
+        dilemmaToTrigger = getLootSpotSurvivorDilemma(prev, spot.name);
+      }
+
       return {
         ...prev,
         inventory: updatedInv,
@@ -427,6 +594,7 @@ export function App() {
           ...prev.startingLocation,
           lootSpots: updatedSpots
         },
+        activeDilemma: dilemmaToTrigger,
         logs: [...prev.logs, newLog].slice(-150)
       };
     });
@@ -437,25 +605,35 @@ export function App() {
     if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
+      const hasCompanions = prev.campMembers.length > 0;
+      const companionsNames = prev.campMembers.map(m => m.name).join(' & ');
+      const shelterName = hasCompanions
+        ? `${prev.startingLocation.name} (Our Camp & Shelter)`
+        : `${prev.startingLocation.name} (Safehouse)`;
+      const logText = hasCompanions
+        ? `You and ${companionsNames} worked together to fortify ${prev.startingLocation.name} into your shared camp and shelter! Heavy barricades secured.`
+        : `Decided to fortify ${prev.startingLocation.name} into your permanent survival shelter. Barricades hammered and shelter systems operational!`;
+
       const newLog: LogEntry = {
         id: `log_fortify_${Date.now()}`,
         day: prev.day,
-        text: `Decided to fortify ${prev.startingLocation.name} into your permanent survival shelter. Barricades hammered and shelter systems operational!`,
+        text: logText,
         type: 'milestone',
         timestamp: 'Action'
       };
 
       return {
         ...prev,
+        isCampEstablished: hasCompanions ? true : prev.isCampEstablished,
         shelter: {
           ...prev.shelter,
           isEstablished: true,
-          name: `${prev.startingLocation.name} (Safehouse)`,
+          name: shelterName,
           type: prev.startingLocation.type,
-          defenseRating: 45,
+          defenseRating: hasCompanions ? 55 : 45,
           stealthRating: 50,
           warmthRating: 65,
-          barricadeIntegrity: 55,
+          barricadeIntegrity: hasCompanions ? 70 : 55,
           maxRainwater: 20,
           storedRainwater: 2
         },
@@ -466,7 +644,7 @@ export function App() {
         logs: [...prev.logs, newLog].slice(-150)
       };
     });
-    setActiveTab('shelter');
+    setActiveTab(gameState.campMembers.length > 0 ? 'camp' : 'shelter');
   };
 
   // Leave starting spot to scout the city on foot
@@ -558,7 +736,16 @@ export function App() {
           )}
           {activeTab === 'inventory' && <InventoryTab gameState={gameState} onUseItem={handleUseItem} />}
           {activeTab === 'shelter' && <ShelterTab gameState={gameState} onRepairBarricade={handleRepairBarricade} />}
-          {activeTab === 'camp' && <CampTab gameState={gameState} onRoleChange={handleRoleChange} />}
+          {activeTab === 'camp' && (
+            <CampTab
+              gameState={gameState}
+              onRoleChange={handleRoleChange}
+              onTalkSurvivor={handleTalkSurvivor}
+              onGiftSurvivor={handleGiftSurvivor}
+              onRomanceSurvivor={handleRomanceSurvivor}
+              onExileSurvivor={handleExileSurvivor}
+            />
+          )}
           {activeTab === 'scavenge' && <ScavengeTab gameState={gameState} onLaunchExpedition={handleLaunchExpedition} />}
         </main>
 

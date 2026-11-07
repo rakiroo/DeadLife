@@ -1,5 +1,5 @@
 import { GameState, LogEntry, WeatherType, StatusEffect } from '../types/game';
-import { SURVIVAL_EVENTS } from '../data/events';
+import { getRandomSurvivalEvent } from '../data/events';
 
 const WEATHERS: WeatherType[] = ['clear', 'heavy_rain', 'dense_fog', 'freezing_cold', 'thunderstorm'];
 
@@ -141,11 +141,47 @@ export function advanceOneDay(state: GameState): GameState {
     timestamp: 'Nightfall'
   });
 
+  // Camp survivor relationship & duty progression
+  const updatedMembers = state.campMembers.map(member => {
+    let trust = member.trust;
+    let affection = member.affection ?? 20;
+    let daysTogether = (member.daysTogether ?? 0) + 1;
+    let stage = member.relationshipStage ?? 'stranger';
+
+    // Depleted food/water strains relationships
+    if (daysWithoutFood > 0 || daysWithoutWater > 0) {
+      trust = Math.max(0, trust - (daysWithoutFood * 4 + daysWithoutWater * 4));
+      affection = Math.max(0, affection - 3);
+    } else {
+      trust = Math.min(100, trust + 1);
+    }
+
+    // Romance partner grants nightly sanity comfort
+    if (stage === 'romance') {
+      sanity = Math.min(100, sanity + 5);
+    } else if (trust <= 20) {
+      stage = 'enemy';
+    } else if (trust <= 40) {
+      stage = 'tense';
+    } else if (trust >= 75 && affection >= 65) {
+      stage = 'close_friend';
+    } else if (trust >= 50) {
+      stage = 'friend';
+    }
+
+    return {
+      ...member,
+      trust,
+      affection,
+      daysTogether,
+      relationshipStage: stage
+    };
+  });
+
   // Pick a random dilemma if alive and none active
   let nextDilemma = state.activeDilemma;
   if (!nextDilemma && !isDead && Math.random() < 0.65) {
-    const availableEvents = SURVIVAL_EVENTS.filter(e => e.id !== state.activeDilemma?.id);
-    nextDilemma = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+    nextDilemma = getRandomSurvivalEvent(state);
   }
 
   return {
@@ -156,6 +192,7 @@ export function advanceOneDay(state: GameState): GameState {
     daysWithoutFood,
     daysWithoutWater,
     inventory,
+    campMembers: updatedMembers,
     shelter: {
       ...state.shelter,
       storedRainwater,
@@ -210,9 +247,7 @@ export function advanceOneWeek(state: GameState): GameState {
     );
 
     // Pick 1 major event for the conclusion of the week
-    const availableEvents = SURVIVAL_EVENTS;
-    const weekDilemma = availableEvents[Math.floor(Math.random() * availableEvents.length)];
-    currentState.activeDilemma = weekDilemma;
+    currentState.activeDilemma = getRandomSurvivalEvent(currentState);
   }
 
   const recapLog: LogEntry = {
