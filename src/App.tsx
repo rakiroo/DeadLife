@@ -80,7 +80,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
     title: spawnStory.title || 'Day 0: The Outbreak Begins',
     category: 'discovery',
     dangerLevel: 'low',
-    description: spawnStory.fullStory + '\n\n🎯 Personal Stake: ' + backstory.hookText + ' (' + backstory.searchGoal + ')',
+    description: spawnStory.fullStory,
     choices: [
       {
         id: 'loot_all_workplace',
@@ -149,6 +149,14 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
     timestamp: 'Morning'
   };
 
+  const backstoryLog: LogEntry = {
+    id: 'log_backstory_' + Date.now(),
+    day: 0,
+    text: backstory.hookText,
+    type: 'general',
+    timestamp: 'Morning'
+  };
+
   return {
     day: 0,
     timeOfDay: 'Morning',
@@ -187,7 +195,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
       fuelGallons: 0
     },
     inventory: [],
-    logs: [initialLog],
+    logs: [initialLog, backstoryLog],
     activeDilemma: dayZeroDilemma,
     dilemmaResult: null,
     daysWithoutFood: 0,
@@ -792,7 +800,7 @@ export function App() {
       if (prev.player.backstory && prev.player.backstory.targetLocationId === locationId && prev.player.backstory.status === 'searching') {
         prev.player.backstory.status = 'clue_found';
         prev.player.sanity = Math.min(100, prev.player.sanity + 15);
-        logText += ` [Clue Discovered: I found evidence of ${prev.player.backstory.targetName}! ${prev.player.backstory.searchGoal}]`;
+        logText += ` Tucked behind a shelf, I found a handwritten message left by ${prev.player.backstory.targetName}: they survived the initial panic and evacuated toward safety (+15 Sanity).`;
       }
 
       // Merge new items into inventory
