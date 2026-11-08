@@ -214,7 +214,9 @@ export function getNextBackstoryDilemma(
 }
 
 function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, currentDay: number): EventDilemma {
-  const target = bs.targetName;
+  const isFather = Boolean(bs.relation && bs.relation.toLowerCase().includes('father')) || Boolean(bs.id && (bs.id.includes('dad') || bs.id.includes('father')));
+  const isMother = Boolean(bs.relation && bs.relation.toLowerCase().includes('mother')) || Boolean(bs.id && (bs.id.includes('mom') || bs.id.includes('mother')));
+  const target = isFather ? 'Dad' : (isMother ? 'Mom' : bs.targetName);
   const relation = bs.relation;
   const isPet = bs.theme === 'pet';
   const isRival = bs.theme === 'rival';
@@ -230,7 +232,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
       dangerLevel: 'low',
       description: isPet
         ? 'While scanning the street at sunrise, a sharp, distant bark echoes over the rooftops from the direction of ' + (bs.targetLocationId === 'supermarket' ? 'Costway Supermarket' : 'the commercial avenue') + '. It sounded unmistakably like ' + target + '.'
-        : 'While checking my gear this morning, my emergency receiver picked up a burst of crackling radio static. Through the interference, a voice called out regarding evacuees heading toward ' + (bs.targetLocationId === 'pharmacy' ? 'Mercy Memorial' : bs.targetLocationId === 'police_precinct' ? 'the 3rd Precinct' : 'the avenue') + ', mentioning ' + target + ' (' + relation + ').',
+        : 'While checking my gear this morning, my emergency receiver picked up a burst of crackling radio static. Through the interference, a voice called out regarding evacuees heading toward ' + (bs.targetLocationId === 'pharmacy' ? 'Mercy Memorial' : bs.targetLocationId === 'police_precinct' ? 'the 3rd Precinct' : 'the avenue') + ', mentioning ' + target + '.',
       choices: [
         {
           id: 'ch1_investigate',
@@ -240,7 +242,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             const updatedBs = advanceBackstoryChapter(bs, 1, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
-              log: 'I documented the first signal vector toward ' + target + ' (' + relation + '). I have a direct heading to search. Chapter 1 resolved.',
+              log: 'I documented the first signal vector toward ' + target + '. I have a direct heading to search. Chapter 1 resolved.',
               outcomeTitle: 'Signal Mapped',
               outcomeText: 'I recorded the coordinates on my map. ' + target + ' is out there, and I now have a solid lead to follow.'
             };
@@ -689,9 +691,9 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
                   isCampEstablished: true,
                   player: { ...state.player, backstory: updatedBs, sanity: 100 }
                 },
-                log: 'I performed an agonizing emergency field amputation on ' + target + '\'s bitten forearm and cauterized the wound. It was brutal, but the fever broke! They survived and joined my camp!',
-                outcomeTitle: 'Miracle Amputation Success!',
-                outcomeText: 'I bound the tourniquet and severed the infected tissue before sepsis spread. The fever broke by dawn! ' + target + ' is alive and safe in our camp! (Mind restored to 100%)'
+                log: 'I performed an agonizing emergency field amputation on ' + target + '\'s bitten forearm and cauterized the wound. It was brutal, but the fever broke! ' + (isFather || isMother ? target + ' (' + companion.name + ')' : companion.name) + ' survived and joined my camp!',
+                outcomeTitle: (isFather || isMother ? target + ' (' + companion.name + ')' : companion.name) + ' Rescued!',
+                outcomeText: 'I bound the tourniquet and severed the infected tissue before sepsis spread. The fever broke by dawn! ' + (isFather || isMother ? target + ' (' + companion.name + ')' : companion.name) + ' is alive and safe in our camp! (Mind restored to 100%)'
               };
             } else {
               const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Succumbed to infected bite despite triage attempt' };
@@ -751,7 +753,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
     title: target + ': Reunited at the Sanctuary (Chapter 5/5 Climax)',
     category: 'discovery',
     dangerLevel: 'medium',
-    description: 'I breach the sanctuary courtyard! Two walkers are clawing at the stone tool shed door, but the wood hasn\'t given way! From inside, ' + target + ' (' + relation + ')\'s voice shouts with fierce defiance: "Stay back, I have a pipe!" ' + target + ' is completely unbitten and fighting for their life!',
+    description: 'I breach the sanctuary courtyard! Two walkers are clawing at the stone tool shed door, but the wood hasn\'t given way! From inside, ' + target + '\'s voice shouts with fierce defiance: "Stay back, I have a pipe!" ' + target + ' is completely unbitten and fighting for their life!',
     choices: [
       {
         id: 'ch5_heroic_rescue_alive',
@@ -769,9 +771,9 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
               player: { ...state.player, backstory: updatedBs, sanity: 100 },
               stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 2, peopleSaved: state.stats.peopleSaved + 1 }
             },
-            log: 'I eliminated the walkers in the courtyard and broke ' + target + ' out of the stone shed! We embraced with tears of joy. ' + target + ' joined my camp! Journey completed!',
-            outcomeTitle: target + ' Reunited at Last!',
-            outcomeText: target + ' burst out of the shed into my arms, crying tears of relief. After weeks of fighting through the dead city, we found each other alive and well! ' + target + ' is now safe in our camp! (Mind restored to 100%)'
+            log: 'I eliminated the walkers in the courtyard and broke ' + target + ' out of the stone shed! We embraced with tears of joy. ' + (isFather || isMother ? target + ' (' + companion.name + ')' : companion.name) + ' joined my camp! Journey completed!',
+            outcomeTitle: (isFather || isMother ? target + ' (' + companion.name + ')' : companion.name) + ' Reunited at Last!',
+            outcomeText: target + ' burst out of the shed into my arms, crying tears of relief. After weeks of fighting through the dead city, we found each other alive and well! ' + companion.name + ' is now safe in our camp! (Mind restored to 100%)'
           };
         }
       }

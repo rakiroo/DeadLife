@@ -36,15 +36,15 @@ const STUDENT_TEMPLATES: BackstoryTemplate[] = [
     theme: 'family',
     nameKey: 'father',
     relation: 'Father',
-    title: "{NAME}'s Promised Pickup",
-    hookText: 'Dad promised he would be waiting outside the school gates in his blue pickup truck at 3 PM to take me home. He never showed up, and the street outside the school was overrun with infected. I know {NAME} would never leave me stranded—something stopped his truck along the avenue.',
-    searchGoal: "Search abandoned vehicles along the avenue near Costway Supermarket for {NAME}'s truck.",
+    title: "Dad's Promised Pickup",
+    hookText: 'Dad promised he would be waiting outside the school gates in his blue pickup truck at 3 PM to take me home. He never showed up, and the street outside the school was overrun with infected. I know Dad would never leave me stranded—something stopped his truck along the avenue.',
+    searchGoal: "Search abandoned vehicles along the avenue near Costway Supermarket for Dad's blue truck.",
     targetLocationId: 'supermarket',
     journalThoughts: [
-      "I kept looking down at my watch. {NAME} always texted if he was even five minutes late.",
-      "I remembered {NAME} teaching me how to check the oil in his truck. I have to find him.",
-      "Every blue pickup truck I see down the avenue makes my chest tighten, hoping it is {NAME}.",
-      "{NAME} promised he would protect our family. I know he is fighting to reach me."
+      "I kept looking down at my watch. Dad always texted if he was even five minutes late.",
+      "I remembered Dad teaching me how to check the oil in his truck. I have to find him.",
+      "Every blue pickup truck I see down the avenue makes my chest tighten, hoping it is Dad.",
+      "Dad promised he would protect our family. I know he is fighting to reach me."
     ]
   },
   {
@@ -52,15 +52,15 @@ const STUDENT_TEMPLATES: BackstoryTemplate[] = [
     theme: 'family',
     nameKey: 'mother',
     relation: 'Mother',
-    title: "{NAME}'s Clinic Shift",
+    title: "Mom's Clinic Shift",
     hookText: 'Mom was working her morning shift at Mercy Memorial Pharmacy when the school lockdown sirens went off. Her final text message read: "Stay locked in the science lab, sweetheart. The hospital street is blocked, but I will find a way to reach you." I have to make it to the pharmacy.',
-    searchGoal: "Search Mercy Memorial Pharmacy for {NAME}'s employee records and notes.",
+    searchGoal: "Search Mercy Memorial Pharmacy for Mom's employee records and notes.",
     targetLocationId: 'pharmacy',
     journalThoughts: [
-      "I re-read mom's final text message on my phone before the battery dimmed.",
-      "{NAME} worked sixty hours a week so I could have school supplies. I am going to reach her.",
-      "I checked every medicine shelf I found, wondering if {NAME} was safely barricaded inside.",
-      "{NAME} always told me to be brave when storms hit. This is the worst storm of all."
+      "I re-read Mom's final text message on my phone before the battery dimmed.",
+      "Mom worked sixty hours a week so I could have school supplies. I am going to reach her.",
+      "I checked every medicine shelf I found, wondering if Mom was safely barricaded inside.",
+      "Mom always told me to be brave when storms hit. This is the worst storm of all."
     ]
   },
   {
@@ -252,14 +252,14 @@ const ADULT_GENERAL_TEMPLATES: BackstoryTemplate[] = [
     theme: 'family',
     nameKey: 'father',
     relation: 'Elderly Father',
-    title: "Father {NAME}'s Prescription",
-    hookText: 'My father {NAME} stayed behind in his 4th Street apartment because his mobility was failing and his insulin was running low. I promised I would return with fresh medical supplies.',
-    searchGoal: "Search Mercy Memorial Pharmacy for {NAME}'s insulin.",
+    title: "Father's Prescription",
+    hookText: 'My father stayed behind in his 4th Street apartment because his mobility was failing and his insulin was running low. I promised I would return with fresh medical supplies.',
+    searchGoal: "Search Mercy Memorial Pharmacy for Dad's insulin.",
     targetLocationId: 'pharmacy',
     journalThoughts: [
-      "{NAME} taught me that panic is the real killer. I kept my head down and stayed focused.",
-      "I checked every medicine box, searching for the insulin brand {NAME} relied on.",
-      "{NAME} worked forty years to give me a future. I will survive for him."
+      "Dad taught me that panic is the real killer. I kept my head down and stayed focused.",
+      "I checked every medicine box, searching for the insulin brand Dad relied on.",
+      "Dad worked forty years to give me a future. I will survive for him."
     ]
   },
   {
@@ -282,14 +282,14 @@ const ADULT_GENERAL_TEMPLATES: BackstoryTemplate[] = [
     theme: 'family',
     nameKey: 'mother',
     relation: 'Mother',
-    title: "Mother {NAME} at Costway",
-    hookText: 'My mother {NAME} was working the morning register at the Costway depot when the steel riot shutters crashed down. She raised me alone; I will not leave her behind in the dark.',
-    searchGoal: "Search the employee breakroom and office at Costway Supermarket Depot for {NAME}.",
+    title: "Mother at Costway",
+    hookText: 'My mother was working the morning register at the Costway depot when the steel riot shutters crashed down. She raised me alone; I will not leave her behind in the dark.',
+    searchGoal: "Search the employee breakroom and office at Costway Supermarket Depot for Mom.",
     targetLocationId: 'supermarket',
     journalThoughts: [
-      "{NAME} survived tough times before the outbreak. A city of infected will not defeat her.",
-      "I kept {NAME}'s handwritten note in my wallet; her handwriting is neat and patient.",
-      "I will clear every aisle of that supermarket if that is what it takes to find {NAME}."
+      "Mom survived tough times before the outbreak. A city of infected will not defeat her.",
+      "I kept Mom's handwritten note in my wallet; her handwriting is neat and patient.",
+      "I will clear every aisle of that supermarket if that is what it takes to find Mom."
     ]
   },
   {
