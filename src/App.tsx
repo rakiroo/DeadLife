@@ -854,6 +854,17 @@ export function App() {
     );
   }
 
+  if (screen === 'settings') {
+    return (
+      <SettingsScreen
+        gameState={gameState}
+        onBack={() => setScreen(gameState ? 'game' : 'title')}
+        onReturnToTitle={() => setScreen('title')}
+        onForfeitRun={handleForfeitRun}
+      />
+    );
+  }
+
   // ACTIVE SURVIVAL GAME SCREEN
   if (!gameState) {
     return (

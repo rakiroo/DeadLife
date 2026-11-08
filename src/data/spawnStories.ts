@@ -316,24 +316,45 @@ export const SPAWN_STORIES: Record<string, SpawnStory[]> = {
     }
   ],
 
+  student: [
+    {
+      id: 'student_chem_lab',
+      title: 'The Chemistry Lab Lockdown',
+      intro: 'Day 0 begins: The fourth-period lockdown bell shrilled through the hallways as screaming erupted in the gym. I bolted into the chemistry prep room and jammed a heavy desk under the door.',
+      fullStory: 'I was sitting in fourth-period chemistry when the red lockdown strobe lights began flashing over the whiteboard. Over the intercom, the principal screamed for everyone to lock their classroom doors before the broadcast cut off with a wet thud and shattering glass. Down in the courtyard, students were running in total terror as infected swarmed past the bicycle racks.\n\nI sprinted into the back chemical prep room, locked the reinforced metal door, and wedged a heavy teacher desk under the handle. I have my student backpack, my packed lunch, my aluminum baseball bat, and emergency eye-wash water bottles. Through the narrow frosted glass slit, I can hear lockers rattling as things shuffle past in the dark.'
+    },
+    {
+      id: 'student_library_stacks',
+      title: 'Trapped in the Library Stacks',
+      intro: 'Day 0 begins: When the front lobby glass shattered, I scrambled up the library maintenance ladder into the storage loft and pulled the ladder up behind me.',
+      fullStory: 'I was studying alone in the corner of the second-floor library when the sound of gunfire erupted from the avenue outside. Moments later, the heavy entrance doors caved in, and hundreds of frantic running footsteps echoed through the halls below.\n\nI did not hesitate: I climbed the iron spiral ladder into the archive loft above the history stacks, unhooked the ladder from the rungs, and laid flat on the floorboards. Looking down between the gaps, I watched infected wander past the checkout desks. I have my backpack with bottled spring water, granola bars, and my baseball bat. I am hidden high above them, but I need to survive the night.'
+    },
+    {
+      id: 'student_fieldhouse_cage',
+      title: 'The Fieldhouse Cage',
+      intro: 'Day 0 begins: Practice ended in chaos as infected broke through the sports field gates. I sprinted into the athletic equipment cage and padlocked the steel grate.',
+      fullStory: 'We were finishing baseball practice on the diamond when people from the neighborhood came sprinting across the outfield screaming that people were being attacked downtown. Within seconds, infected burst through the chain-link gates, tackling people onto the grass.\n\nI grabbed my heavy aluminum bat, sprinted for the fieldhouse equipment room, slammed the heavy steel security grate shut, and clicked the master padlock into place. Now I am locked inside the equipment cage surrounded by sports gear, water bottles, and first aid tape. Outside the mesh, infected are smacking their bloody palms against the steel, but the reinforced cage is holding firm. I have my bat, energy snacks, and clean water.'
+    }
+  ],
+
   office_drone: [
     {
       id: 'office_fire_alarm',
       title: 'The 7th Floor Lockdown',
-      intro: 'Day 0 begins: The high-rise fire alarm blared as elevators dropped to the lobby. I barricaded yourself inside your corner cubicle suite.',
-      fullStory: 'You were staring at a spreadsheet sipping lukewarm coffee when the office fire alarms shrieked. Everyone rushed toward the elevator banks, but the elevators were stuck on the ground floor where horrific screams were echoing up the concrete shafts.\n\nYou sprinted back to your corner department, slammed the heavy glass suite door, and shoved three heavy filing cabinets across the handles. You are on the 7th floor of an office tower. You have bottled cooler water, breakroom snacks, and scissors, but you have no combat training. You are an ordinary civilian, but your blank slate means you can adapt and learn fast.'
+      intro: 'Day 0 begins: The high-rise fire alarm blared as elevators dropped to the lobby. I barricaded myself inside my corner cubicle suite.',
+      fullStory: 'I was staring at a spreadsheet sipping lukewarm coffee when the office fire alarms shrieked. Everyone rushed toward the elevator banks, but the elevators were stuck on the ground floor where horrific screams were echoing up the concrete shafts.\n\nI sprinted back to my corner department, slammed the heavy glass suite door, and shoved three heavy filing cabinets across the handles. I am on the 7th floor of an office tower. I have bottled cooler water, breakroom snacks, and scissors, but I have no combat training. I was an ordinary civilian, but my blank slate means I can adapt and learn fast.'
     },
     {
       id: 'office_overtime_escape',
       title: 'The Overtime Nightmare',
-      intro: 'Day 0 begins: Working late on a deadline saved your life while the streets below collapsed into chaos. You secured the conference room.',
-      fullStory: 'I stayed late at your desk to finish an urgent client presentation. At 8 PM, police sirens began howling across downtown like a chorus of dying animals. Looking out through the double-pane office windows, you saw crowds running down 5th Avenue, illuminated by burning cars and flashing red beacons.\n\nYou locked the executive conference room door and turned off all overhead fluorescent lights. The city skyline is now completely black with pillars of smoke rising between skyscrapers. You have water jugs, snack bars, and stationery tools. You need to gather supplies and figure out how to survive.'
+      intro: 'Day 0 begins: Working late on a deadline saved my life while the streets below collapsed into chaos. I secured the conference room.',
+      fullStory: 'I stayed late at my desk to finish an urgent client presentation. At 8 PM, police sirens began howling across downtown like a chorus of dying animals. Looking out through the double-pane office windows, I saw crowds running down 5th Avenue, illuminated by burning cars and flashing red beacons.\n\nI locked the executive conference room door and turned off all overhead fluorescent lights. The city skyline is now completely black with pillars of smoke rising between skyscrapers. I have water jugs, snack bars, and stationery tools. I need to gather supplies and figure out how to survive.'
     },
     {
       id: 'office_breakroom_refuge',
       title: 'The Breakroom Sanctuary',
       intro: 'Day 0 begins: When screaming echoed from the stairwell, I ducked into the office kitchen pantry and locked the deadbolt.',
-      fullStory: 'The emergency stairwell door burst open with a bang, and panicked coworkers ran across the carpeted floor shouting that people downstairs were eating each other. You didn\'t hesitate: you ducked straight into the supply breakroom and clicked the deadbolt into place.\n\nFootsteps and heavy thuds pounded against the suite doors outside, but your breakroom door went unnoticed. You have gallons of spring water from the water cooler, boxes of granola bars, coffee, and scissors. You never held a weapon in your life, but survival will force you to become someone entirely new.'
+      fullStory: 'The emergency stairwell door burst open with a bang, and panicked coworkers ran across the carpeted floor shouting that people downstairs were eating each other. You didn\'t hesitate: you ducked straight into the supply breakroom and clicked the deadbolt into place.\n\nFootsteps and heavy thuds pounded against the suite doors outside, but my breakroom door went unnoticed. I have gallons of spring water from the water cooler, boxes of granola bars, coffee, and scissors. I never held a weapon in my life, but survival will force me to become someone entirely new.'
     }
   ]
 };
@@ -347,7 +368,7 @@ export function getRandomSpawnStory(careerId: string): SpawnStory {
   return {
     id: 'default_spawn',
     title: 'The Outbreak Begins',
-    intro: 'Day 0 begins: Sirens wail in the distance as society collapses. I have taken shelter at your starting place.',
-    fullStory: 'The national emergency sirens abruptly died out. The streets outside are deathly quiet. You have empty pockets and zero supplies on you. Search your immediate surroundings before deciding your next move.'
+    intro: 'Day 0 begins: Sirens wail in the distance as society collapses. I have taken shelter at my starting place.',
+    fullStory: 'The national emergency sirens abruptly died out. The streets outside are deathly quiet. I have empty pockets and zero supplies on me. I need to search my immediate surroundings before deciding my next move.'
   };
 }
