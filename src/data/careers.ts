@@ -134,10 +134,10 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      medical: 10,
+      medical: 9,
       crafting: 4,
-      stealth: 3,
-      combat: 2,
+      stealth: 4,
+      combat: 3,
       fitness: 4
     }
   },
@@ -181,7 +181,7 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      combat: 8,
+      combat: 7,
       fitness: 7,
       stealth: 4,
       medical: 3,
@@ -228,10 +228,10 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      fitness: 9,
-      combat: 7,
+      fitness: 8,
+      combat: 6,
       crafting: 5,
-      medical: 4,
+      medical: 3,
       stealth: 2
     }
   },
@@ -275,11 +275,11 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      stealth: 8,
-      fitness: 7,
+      stealth: 7,
+      fitness: 6,
       combat: 5,
-      crafting: 5,
-      medical: 4
+      crafting: 4,
+      medical: 2
     }
   },
   {
@@ -322,7 +322,7 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      crafting: 9,
+      crafting: 8,
       fitness: 6,
       combat: 4,
       stealth: 4,
@@ -463,10 +463,10 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      stealth: 9,
+      stealth: 8,
       crafting: 6,
       fitness: 5,
-      combat: 4,
+      combat: 3,
       medical: 2
     }
   },
@@ -558,10 +558,10 @@ export const CAREERS: Career[] = [
     },
     stats: {
       fitness: 7,
-      crafting: 5,
+      crafting: 6,
       combat: 5,
       stealth: 3,
-      medical: 2
+      medical: 3
     }
   },
   {
@@ -606,8 +606,8 @@ export const CAREERS: Career[] = [
     stats: {
       crafting: 6,
       medical: 5,
-      stealth: 4,
-      combat: 3,
+      stealth: 5,
+      combat: 4,
       fitness: 4
     }
   },
@@ -650,7 +650,7 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      fitness: 9,
+      fitness: 8,
       combat: 6,
       stealth: 5,
       medical: 3,
@@ -701,7 +701,7 @@ export const CAREERS: Career[] = [
       combat: 6,
       fitness: 6,
       crafting: 3,
-      medical: 2
+      medical: 3
     }
   },
   {
@@ -709,7 +709,6 @@ export const CAREERS: Career[] = [
     title: 'Office Worker / Freelancer',
     icon: '💼',
     description: 'Blank slate civilian with no rigid trade, granting +4 Extra Trait Points to build your own way!',
-    bonusPoints: 4,
     startingLocation: {
       name: '14th Floor Cubicle & Breakroom',
       type: 'Corporate High-Rise',
@@ -745,11 +744,11 @@ export const CAREERS: Career[] = [
       ]
     },
     stats: {
-      crafting: 3,
-      combat: 3,
-      fitness: 4,
+      crafting: 5,
+      combat: 4,
+      fitness: 5,
       stealth: 5,
-      medical: 3
+      medical: 5
     }
   }
 ];
