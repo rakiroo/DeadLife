@@ -190,12 +190,14 @@ export function App() {
   // Time Progression: +1 Day
   const handleAdvanceDay = () => {
     if (!gameState) return;
+    setActiveTab('journal');
     setGameState(prev => prev ? advanceOneDay(prev) : null);
   };
 
   // Time Progression: +1 Week
   const handleAdvanceWeek = () => {
     if (!gameState) return;
+    setActiveTab('journal');
     setGameState(prev => prev ? advanceOneWeek(prev) : null);
   };
 
