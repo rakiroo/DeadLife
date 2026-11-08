@@ -11,7 +11,7 @@ import { BottomActionBar, ActiveTab } from './components/BottomActionBar';
 import { InventoryTab } from './components/InventoryTab';
 import { ShelterTab } from './components/ShelterTab';
 import { CampTab } from './components/CampTab';
-import { ScavengeTab } from './components/ScavengeTab';
+import { ActivitiesTab } from './components/ActivitiesTab';
 import { DeathScreen } from './components/DeathScreen';
 import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
@@ -558,6 +558,104 @@ export function App() {
     });
   };
 
+  // Quick Voluntary Activities
+  const handleQuickActivity = (activityId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let { health, sanity } = { ...prev.player };
+      let updatedInv = [...prev.inventory];
+      let logText = '';
+      let logType: LogEntry['type'] = 'general';
+
+      if (activityId === 'search_vehicles') {
+        const isHazard = Math.random() < 0.25;
+        if (isHazard) {
+          health = Math.max(10, health - 6);
+          logText = 'While prying open an abandoned car door, jagged metal sliced my arm (-6% HP). Found nothing inside.';
+          logType = 'hazard';
+        } else {
+          const lootPool = [
+            { id: 'loose_soda', name: 'Can of Lemon Soda', category: 'water' as const, quantity: 1, description: 'Canned soda.' },
+            { id: 'batteries_aa', name: 'Pack of AA Batteries', category: 'resource' as const, quantity: 2, description: 'Power cells.' },
+            { id: 'duct_tape_car', name: 'Roll of Duct Tape', category: 'tool' as const, quantity: 1, description: 'Heavy tape.' }
+          ];
+          const found = lootPool[Math.floor(Math.random() * lootPool.length)];
+          const ex = updatedInv.find(i => i.id === found.id);
+          if (ex) ex.quantity += found.quantity;
+          else updatedInv.push({ ...found });
+          logText = `I searched the glovebox of an abandoned sedan on the curb and found ${found.name}.`;
+          logType = 'loot';
+        }
+      } else if (activityId === 'rooftop_recon') {
+        sanity = Math.min(100, sanity + 15);
+        logText = 'I spent an hour on the rooftop scanning the avenues with binoculars. Mapped the street layout (+15 Sanity).';
+      } else if (activityId === 'workout') {
+        health = Math.min(100, health + 5);
+        prev.player.fitnessSkill = Math.min(10, prev.player.fitnessSkill + 1);
+        logText = 'I did sprint drills and calisthenics in the corridor. Reflexes and endurance sharpened (+5 HP, Fitness conditioned).';
+      } else if (activityId === 'meditate') {
+        sanity = Math.min(100, sanity + 20);
+        logText = 'I sat quietly by candlelight and let my pulse slow down. Found peace in the quiet dark (+20 Sanity).';
+      } else if (activityId === 'radio_tune') {
+        sanity = Math.min(100, sanity + 10);
+        logText = 'I spun the emergency radio dial through static, listening for human voices or weather alerts (+10 Sanity).';
+      } else if (activityId === 'craft_spiked_bat') {
+        const bat = updatedInv.find(i => i.id.includes('bat'));
+        const nails = updatedInv.find(i => i.id.includes('nail'));
+        if (bat && nails && nails.quantity >= 10) {
+          bat.quantity -= 1;
+          nails.quantity -= 10;
+          updatedInv = updatedInv.filter(i => i.quantity > 0);
+          updatedInv.push({ id: 'spiked_bat_' + Date.now(), name: 'Spiked Baseball Bat', category: 'weapon', quantity: 1, description: 'Forged nails driven through hardwood for lethal blunt trauma.' });
+          logText = 'I hammered ten 3-inch framing nails through the baseball bat, creating a lethal spiked bludgeon.';
+          logType = 'milestone';
+        }
+      } else if (activityId === 'craft_spear') {
+        const knife = updatedInv.find(i => (i.id.includes('knife') || i.id.includes('blade') || i.id.includes('scalpel')));
+        const plank = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')));
+        const tape = updatedInv.find(i => (i.id.includes('tape') || i.id.includes('cord')));
+        if (knife && plank && tape) {
+          knife.quantity -= 1;
+          plank.quantity -= 1;
+          tape.quantity -= 1;
+          updatedInv = updatedInv.filter(i => i.quantity > 0);
+          updatedInv.push({ id: 'makeshift_spear_' + Date.now(), name: 'Makeshift Hunting Spear', category: 'weapon', quantity: 1, description: 'Long-range melee spear taped to cured timber.' });
+          logText = 'I bound the hunting blade tightly to a timber shaft with heavy gorilla tape. Created a long-reach spear.';
+          logType = 'milestone';
+        }
+      } else if (activityId === 'craft_molotov') {
+        const fuel = updatedInv.find(i => (i.id.includes('alcohol') || i.id.includes('whiskey') || i.id.includes('fuel')));
+        const matches = updatedInv.find(i => (i.id.includes('match') || i.id.includes('fire')));
+        if (fuel && matches) {
+          fuel.quantity -= 1;
+          matches.quantity -= 1;
+          updatedInv = updatedInv.filter(i => i.quantity > 0);
+          updatedInv.push({ id: 'molotov_' + Date.now(), name: 'Molotov Firebomb', category: 'weapon', quantity: 1, description: 'Glass bottle fuel bomb to incinerate swarms.' });
+          logText = 'I stuffed a cloth rag into a whiskey bottle to create a makeshift Molotov firebomb.';
+          logType = 'milestone';
+        }
+      }
+
+      const newLog: LogEntry = {
+        id: 'act_' + Date.now(),
+        day: prev.day,
+        text: logText,
+        type: logType,
+        timestamp: 'Activity'
+      };
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        player: { ...prev.player, health, sanity },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+
+    setActiveTab('journal');
+  };
+
   // Launch Scavenge Expedition
   const handleLaunchExpedition = (locationId: string) => {
     if (!gameState) return;
@@ -773,7 +871,15 @@ export function App() {
               onExileSurvivor={handleExileSurvivor}
             />
           )}
-          {activeTab === 'scavenge' && <ScavengeTab gameState={gameState} onLaunchExpedition={handleLaunchExpedition} />}
+          {activeTab === 'activities' && (
+            <ActivitiesTab
+              gameState={gameState}
+              onLaunchExpedition={handleLaunchExpedition}
+              onRepairBarricade={handleRepairBarricade}
+              onQuickActivity={handleQuickActivity}
+              onOpenAmbitions={() => setShowAmbitionsModal(true)}
+            />
+          )}
         </main>
 
         {/* Bottom Tactile Action Drawer - Fixed & pinned! */}

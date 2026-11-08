@@ -1,8 +1,8 @@
 import React from 'react';
-import { FastForward, Clock, Shield, Users, Package, Compass, BookOpen } from 'lucide-react';
+import { FastForward, Clock, Shield, Users, Package, Zap, BookOpen } from 'lucide-react';
 import { GameState } from '../types/game';
 
-export type ActiveTab = 'journal' | 'shelter' | 'camp' | 'inventory' | 'scavenge';
+export type ActiveTab = 'journal' | 'shelter' | 'camp' | 'inventory' | 'activities';
 
 interface Props {
   activeTab: ActiveTab;
@@ -97,6 +97,20 @@ export const BottomActionBar: React.FC<Props> = ({
           <span className="text-[10px]">Supplies</span>
         </button>
 
+        {/* Activities Hub (Replaces singular Scavenge) */}
+        <button
+          type="button"
+          onClick={() => onTabChange('activities')}
+          className={`flex-1 py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
+            activeTab === 'activities'
+              ? 'bg-white/10 border border-white/10 text-white font-semibold shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <Zap className={`w-4 h-4 ${activeTab === 'activities' ? 'text-amber-400' : 'text-zinc-500'}`} />
+          <span className="text-[10px]">Activities</span>
+        </button>
+
         {/* Camp Tab */}
         {hasCamp && (
           <button
@@ -128,20 +142,6 @@ export const BottomActionBar: React.FC<Props> = ({
             <span className="text-[10px]">Shelter</span>
           </button>
         )}
-
-        {/* Scavenge Tab */}
-        <button
-          type="button"
-          onClick={() => onTabChange('scavenge')}
-          className={`flex-1 py-1.5 px-1 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
-            activeTab === 'scavenge'
-              ? 'bg-white/10 border border-white/10 text-white font-semibold shadow-sm'
-              : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Compass className={`w-4 h-4 ${activeTab === 'scavenge' ? 'text-white' : 'text-zinc-500'}`} />
-          <span className="text-[10px]">Scavenge</span>
-        </button>
       </nav>
     </div>
   );
