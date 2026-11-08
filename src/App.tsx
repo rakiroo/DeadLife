@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career } from './types/game';
+import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom } from './types/game';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
 import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear } from './utils/simulation';
 import { LegacySuccessionModal } from './components/LegacySuccessionModal';
@@ -715,7 +715,7 @@ export function App() {
     });
   };
 
-  const handleUpgradeFacility = (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'schoolhouse' | 'nursery' | 'memorial_garden') => {
+  const handleUpgradeFacility = (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'schoolhouse' | 'nursery' | 'memorial_garden' | 'chicken_coop' | 'sanctuary_well') => {
     if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
@@ -762,6 +762,22 @@ export function App() {
         updatedShelter.hasMemorialGarden = true;
         updatedShelter.morale = Math.min(100, (updatedShelter.morale ?? 75) + 10);
         logText = 'Dedicated the Memorial Garden & Cemetery to honor fallen founders and ancestors.';
+      } else if (facilityId === 'chicken_coop') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 3);
+        const nailItem = updatedInv.find(i => i.id.includes('nail') && i.quantity >= 8);
+        if (woodItem) woodItem.quantity -= 3;
+        if (nailItem) nailItem.quantity -= 8;
+        updatedShelter.hasChickenCoop = true;
+        updatedShelter.chickenCoopLevel = (updatedShelter.chickenCoopLevel || 0) + 1;
+        updatedShelter.morale = Math.min(100, (updatedShelter.morale ?? 75) + 10);
+        logText = 'Constructed the Sanctuary Chicken Coop! Laying hens will generate fresh eggs daily for the settlement.';
+      } else if (facilityId === 'sanctuary_well') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 4);
+        const nailItem = updatedInv.find(i => i.id.includes('nail') && i.quantity >= 12);
+        if (woodItem) woodItem.quantity -= 4;
+        if (nailItem) nailItem.quantity -= 12;
+        updatedShelter.hasSanctuaryWell = true;
+        logText = 'Dug and reinforced the Sanctuary Aquifer Well! Provides clean, drought-proof drinking water daily.';
       }
 
       updatedInv = updatedInv.filter(i => i.quantity > 0);
@@ -987,6 +1003,83 @@ export function App() {
           text: logText,
           type: 'milestone' as const,
           timestamp: 'New Life'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Child Mentorship & Stat Passing
+  const handleMentorChild = (childId: string, skill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let childName = '';
+      const skillName = skill.charAt(0).toUpperCase() + skill.slice(1);
+
+      const updatedChildren = (prev.player.children || []).map(c => {
+        if (c.id === childId) {
+          childName = c.name;
+          const currentSkills = { ...(c.skills || { combat: 5, medical: 5, crafting: 5, stealth: 5, fitness: 5 }) };
+          currentSkills[skill] = Math.min(10, currentSkills[skill] + 1);
+          return {
+            ...c,
+            skills: currentSkills,
+            lastMentoredDay: prev.day
+          };
+        }
+        return c;
+      });
+
+      const logText = '�<ߓ Mentorship Passed Down: I spent the day training ' + childName + ' in ' + skillName + ' (+1 ' + skillName + '). Our survival knowledge will outlive the apocalypse!';
+
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          children: updatedChildren,
+          sanity: Math.min(100, prev.player.sanity + 10)
+        },
+        logs: [...prev.logs, {
+          id: 'mentor_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'milestone' as const,
+          timestamp: 'Mentorship'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Bestow or Inscribe Family Heirloom
+  const handleBestowHeirloom = (name: string, type: 'weapon' | 'ring' | 'journal' | 'tool' | 'locket', bonusSkill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const newHeirloom: FamilyHeirloom = {
+        id: 'heirloom_' + Date.now(),
+        name,
+        type,
+        bonusSkill,
+        bonusValue: 1,
+        description: 'Generational heirloom inscribed by founder ' + prev.player.name + '.',
+        passedFrom: prev.player.name,
+        generation: prev.player.generation || 1
+      };
+
+      const existing = prev.player.heirlooms ? [...prev.player.heirlooms] : [];
+
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          heirlooms: [...existing, newHeirloom]
+        },
+        logs: [...prev.logs, {
+          id: 'heirloom_' + Date.now(),
+          day: prev.day,
+          text: '✨ Generational Heirloom Inscribed: Dedicated "' + name + '" as a family relic (+1 ' + bonusSkill + '). It will be passed down to our descendants.',
+          type: 'milestone' as const,
+          timestamp: 'Dynasty'
         }].slice(-150)
       };
     });
@@ -1529,6 +1622,8 @@ export function App() {
               onCourtSurvivor={handleCourtSurvivor}
               onProposeMarriage={handleProposeMarriage}
               onHaveBaby={handleHaveBaby}
+              onMentorChild={handleMentorChild}
+              onBestowHeirloom={handleBestowHeirloom}
             />
           )}
           {activeTab === 'inventory' && (

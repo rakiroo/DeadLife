@@ -3,7 +3,8 @@ import { GameState, CampMember, CampRole, SurvivorChild } from '../types/game';
 import { 
   Home, Users, Shield, HeartPulse, Hammer, Search, Bed, MessageSquare, 
   Utensils, UserMinus, Sparkles, Droplets, Edit3, Award, DoorOpen, Scroll, Check,
-  Heart, Baby, GraduationCap, Flower2, UserPlus
+  Heart, Baby, GraduationCap, Flower2, UserPlus,
+  Egg, Crown
 } from 'lucide-react';
 
 interface Props {
@@ -18,7 +19,9 @@ interface Props {
   onRepairBarricade: () => void;
   onBuildRoom: (roomType: 'cots' | 'bunk' | 'cabin') => void;
   onAssignRoom: (memberId: string, roomId: string) => void;
-  onUpgradeFacility: (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'schoolhouse' | 'nursery' | 'memorial_garden') => void;
+  onUpgradeFacility: (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'schoolhouse' | 'nursery' | 'memorial_garden' | 'chicken_coop' | 'sanctuary_well') => void;
+  onMentorChild?: (childId: string, skill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => void;
+  onBestowHeirloom?: (name: string, type: 'weapon' | 'ring' | 'journal' | 'tool' | 'locket', bonusSkill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => void;
   onSetRationPolicy: (policy: 'full' | 'standard' | 'half') => void;
   onSetSecurityProtocol: (protocol: 'open' | 'quarantine' | 'lockdown') => void;
   onCourtSurvivor: (memberId: string) => void;
@@ -43,7 +46,9 @@ export const BaseTab: React.FC<Props> = ({
   onSetSecurityProtocol,
   onCourtSurvivor,
   onProposeMarriage,
-  onHaveBaby
+  onHaveBaby,
+  onMentorChild,
+  onBestowHeirloom
 }) => {
   const { shelter, campMembers, inventory, player } = gameState;
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
@@ -386,6 +391,11 @@ export const BaseTab: React.FC<Props> = ({
                               {member.stage === 'infant' ? 'Infant' : member.stage === 'child' ? 'Child' : 'Teen'}
                             </span>
                           )}
+                          {member.isSleepingRough && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+                              No Bed • Floor
+                            </span>
+                          )}
                           {isMarriedToPlayer && (
                             <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 flex items-center gap-0.5">
                               <Heart className="w-2.5 h-2.5 text-rose-400 fill-rose-400" /> Spouse
@@ -584,25 +594,161 @@ export const BaseTab: React.FC<Props> = ({
               <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block px-1">
                 Your Offspring ({player.children ? player.children.length : 0})
               </span>
-              {(!player.children || player.children.length === 0) ? (
+                            {(!player.children || player.children.length === 0) ? (
                 <div className="p-3 text-center text-zinc-500 bg-black/20 rounded-2xl border border-white/5 text-[11px]">
                   No children yet. Once married, you can start a family to ensure your lineage continues when you grow old!
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {player.children.map(child => (
-                    <div key={child.id} className="p-2.5 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-white">{child.name}</span>
-                        <span className="text-[10px] text-zinc-400 ml-2">Age {child.age} â€¢ {child.stage}</span>
+                    <div key={child.id} className="p-3 bg-black/40 border border-white/5 rounded-2xl space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-white">{child.name}</span>
+                          <span className="text-[10px] text-zinc-400 ml-2">Age {child.age} • {child.stage}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          {child.age >= 18 ? 'Adult Heir' : 'Growing Up'}
+                        </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        {child.age >= 18 ? 'Adult Heir' : 'Growing Up'}
-                      </span>
+
+                      {/* RPG Attributes */}
+                      {child.skills && (
+                        <div className="grid grid-cols-5 gap-1 text-center text-[10px] font-mono py-1 border-y border-white/5">
+                          <div className="p-1 bg-white/[0.02] rounded">
+                            <span className="text-rose-400 font-bold block">{child.skills.combat}</span>
+                            <span className="text-zinc-500 text-[8px]">Cbt</span>
+                          </div>
+                          <div className="p-1 bg-white/[0.02] rounded">
+                            <span className="text-cyan-400 font-bold block">{child.skills.medical}</span>
+                            <span className="text-zinc-500 text-[8px]">Med</span>
+                          </div>
+                          <div className="p-1 bg-white/[0.02] rounded">
+                            <span className="text-amber-400 font-bold block">{child.skills.crafting}</span>
+                            <span className="text-zinc-500 text-[8px]">Crf</span>
+                          </div>
+                          <div className="p-1 bg-white/[0.02] rounded">
+                            <span className="text-indigo-400 font-bold block">{child.skills.stealth}</span>
+                            <span className="text-zinc-500 text-[8px]">Stl</span>
+                          </div>
+                          <div className="p-1 bg-white/[0.02] rounded">
+                            <span className="text-emerald-400 font-bold block">{child.skills.fitness}</span>
+                            <span className="text-zinc-500 text-[8px]">Fit</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Mentorship Training Buttons (age >= 4) */}
+                      {child.age >= 4 && onMentorChild && (
+                        <div className="pt-1 space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                            <span className="flex items-center gap-1 font-semibold text-zinc-300"><GraduationCap className="w-3 h-3 text-amber-400" /> Train & Mentor:</span>
+                            {child.lastMentoredDay === gameState.day && (
+                              <span className="text-emerald-400 text-[9px] font-mono">Trained Today</span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-5 gap-1">
+                            <button
+                              type="button"
+                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.combat >= 10)}
+                              onClick={() => triggerFeedback(`Mentored ${child.name} in Combat tactics (+1 Combat).`, () => onMentorChild(child.id, 'combat'))}
+                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              +Cbt
+                            </button>
+                            <button
+                              type="button"
+                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.medical >= 10)}
+                              onClick={() => triggerFeedback(`Mentored ${child.name} in Field Medicine (+1 Medical).`, () => onMentorChild(child.id, 'medical'))}
+                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              +Med
+                            </button>
+                            <button
+                              type="button"
+                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.crafting >= 10)}
+                              onClick={() => triggerFeedback(`Mentored ${child.name} in Fortification Crafting (+1 Crafting).`, () => onMentorChild(child.id, 'crafting'))}
+                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              +Crf
+                            </button>
+                            <button
+                              type="button"
+                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.stealth >= 10)}
+                              onClick={() => triggerFeedback(`Mentored ${child.name} in Stealth & Concealment (+1 Stealth).`, () => onMentorChild(child.id, 'stealth'))}
+                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              +Stl
+                            </button>
+                            <button
+                              type="button"
+                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.fitness >= 10)}
+                              onClick={() => triggerFeedback(`Mentored ${child.name} in Survival Fitness (+1 Fitness).`, () => onMentorChild(child.id, 'fitness'))}
+                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              +Fit
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Family Heirlooms & Dynasty Relics */}
+              <div className="space-y-1.5 pt-3 border-t border-white/5">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-amber-400" /> Family Heirlooms & Relics ({player.heirlooms ? player.heirlooms.length : 0})
+                  </span>
+                  {onBestowHeirloom && (!player.heirlooms || player.heirlooms.length < 3) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const heirloomTypes = [
+                          { name: "Founder's Engraved Sidearm", type: 'weapon', skill: 'combat' },
+                          { name: "Ancestral Silver Ring", type: 'ring', skill: 'fitness' },
+                          { name: "Field Surgeon's Pocket Kit", type: 'tool', skill: 'medical' },
+                          { name: "Pioneer's Weathered Compass", type: 'tool', skill: 'stealth' },
+                          { name: "Master Builder's Claw Hammer", type: 'tool', skill: 'crafting' }
+                        ];
+                        const chosen = heirloomTypes[(player.heirlooms ? player.heirlooms.length : 0) % heirloomTypes.length];
+                        onBestowHeirloom(chosen.name, chosen.type as any, chosen.skill as any);
+                        triggerFeedback(`Dedicated family heirloom "${chosen.name}" (+1 ${chosen.skill}).`);
+                      }}
+                      className="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1"
+                    >
+                      + Inscribe Relic
+                    </button>
+                  )}
+                </div>
+
+                {(!player.heirlooms || player.heirlooms.length === 0) ? (
+                  <div className="p-3 text-center text-zinc-500 bg-black/20 rounded-2xl border border-white/5 text-[11px]">
+                    No relics inscribed yet. Inscribe a family weapon, tool, or heirloom to pass down permanent stat bonuses to your heirs!
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {player.heirlooms.map(h => (
+                      <div key={h.id} className="p-2.5 bg-black/40 border border-amber-500/20 rounded-2xl flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-amber-200 flex items-center gap-1.5">
+                            <Crown className="w-3 h-3 text-amber-400" />
+                            <span>{h.name}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-0.5">
+                            Passed down by {h.passedFrom} (Gen {h.generation}) • +{h.bonusValue} {h.bonusSkill.toUpperCase()}
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
+                          Dynasty Relic
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -883,6 +1029,71 @@ export const BaseTab: React.FC<Props> = ({
                   {shelter.greenhouseLevel ? 'Upgrade' : 'Build (3 Wood, 2 Water)'}
                 </button>
               </div>
+            </div>
+
+            
+            {/* Chicken Coop & Livestock */}
+            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Egg className="w-3.5 h-3.5 text-amber-400" />
+                    Sanctuary Chicken Coop
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {shelter.hasChickenCoop ? 'Active Coop' : 'Unbuilt'} • Produces fresh farm eggs daily (reduces canned food need)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={woodCount < 3 || nailsCount < 8 || shelter.hasChickenCoop}
+                  onClick={() => triggerFeedback('Constructed Chicken Coop (+Fresh Eggs Daily)!', () => onUpgradeFacility('chicken_coop'))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    shelter.hasChickenCoop
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                      : woodCount >= 3 && nailsCount >= 8
+                      ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95'
+                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                  }`}
+                >
+                  {shelter.hasChickenCoop ? 'Built' : 'Build (3 Wood, 8 Nails)'}
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
+                Houses nesting hens in a reinforced timber coop. Yields fresh eggs every day and lowers food scavenging danger.
+              </p>
+            </div>
+
+            {/* Sanctuary Aquifer Well */}
+            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Droplets className="w-3.5 h-3.5 text-cyan-400" />
+                    Sanctuary Aquifer Well
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {shelter.hasSanctuaryWell ? 'Active Deep Well' : 'Unbuilt'} • Infinite clean ground water (drought-proof)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={woodCount < 4 || nailsCount < 12 || shelter.hasSanctuaryWell}
+                  onClick={() => triggerFeedback('Dug and reinforced Sanctuary Well (+Clean Water Daily)!', () => onUpgradeFacility('sanctuary_well'))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    shelter.hasSanctuaryWell
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                      : woodCount >= 4 && nailsCount >= 12
+                      ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm active:scale-95'
+                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                  }`}
+                >
+                  {shelter.hasSanctuaryWell ? 'Operational' : 'Dig Well (4 Wood, 12 Nails)'}
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
+                Taps into deep subterranean aquifers beneath the haven. Yields clean, uncontaminated water even through scorching heatwaves.
+              </p>
             </div>
 
             {/* Infirmary */}

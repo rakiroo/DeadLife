@@ -343,7 +343,13 @@ export function advanceOneDay(state: GameState): GameState {
     });
   }
 
-  // Camp survivor duties & consumption
+  // Camp survivor duties, consumption & sleeping rough checks
+  const totalBedsNow = state.shelter.rooms && state.shelter.rooms.length > 0 
+    ? state.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
+    : (state.shelter.maxSurvivors || 4);
+  const totalOccupantsNow = state.campMembers.length + 1;
+  const hasBedAvailable = totalOccupantsNow <= totalBedsNow;
+
   const updatedMembers: typeof state.campMembers = [];
   for (const member of state.campMembers) {
     let memberHealth = member.health;
@@ -602,15 +608,17 @@ export function advanceOneMonth(state: GameState): GameState {
 
   const greenhouseLevel = shelter.greenhouseLevel || 0;
   const gardenFoodYield = greenhouseLevel * 12;
+  const coopFoodYield = shelter.hasChickenCoop ? 40 : 0;
   const waterCollectorLevel = shelter.waterCollectorLevel || 1;
   const rainwaterYield = waterCollectorLevel * 18;
+  const wellWaterYield = shelter.hasSanctuaryWell ? 65 : 0;
   const scoutsCount = campMembers.filter(m => m.role === 'scavenger').length;
   const scoutFoodYield = scoutsCount * 14;
   const scoutWaterYield = scoutsCount * 10;
   const scoutMatsYield = scoutsCount * 4;
 
-  const totalFoodGenerated = gardenFoodYield + scoutFoodYield;
-  const totalWaterGenerated = rainwaterYield + scoutWaterYield;
+  const totalFoodGenerated = gardenFoodYield + scoutFoodYield + coopFoodYield;
+  const totalWaterGenerated = rainwaterYield + scoutWaterYield + wellWaterYield;
 
   const existingFood = inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);
   const existingWater = inventory.filter(i => i.category === 'water').reduce((sum, i) => sum + i.quantity, 0);
@@ -652,6 +660,24 @@ export function advanceOneMonth(state: GameState): GameState {
       description: 'Lumber salvaged by scout teams over the past month.'
     });
   }
+  if (coopFoodYield > 0) {
+    inventory.push({
+      id: 'coop_eggs_' + Date.now(),
+      name: 'Fresh Farm Eggs (Crate)',
+      category: 'food',
+      quantity: coopFoodYield,
+      description: 'Dozens of fresh eggs gathered from the sanctuary chicken coop over the past month.'
+    });
+  }
+  if (wellWaterYield > 0) {
+    inventory.push({
+      id: 'well_water_' + Date.now(),
+      name: 'Purified Aquifer Water (Barrels)',
+      category: 'water',
+      quantity: wellWaterYield,
+      description: 'Fresh drinking water pumped from the sanctuary aquifer well over the month.'
+    });
+  }
 
   inventory = inventory.filter(i => i.quantity > 0);
 
@@ -675,12 +701,12 @@ export function advanceOneMonth(state: GameState): GameState {
   }
 
   // 2. Autonomous Romances, Marriages & Co-habitation
-  // Prioritize roommates assigned to share the same room/cabin!
+  // Roommates have a natural affinity bonus, but any single adults across the whole colony can fall in love!
   let s1: CampMember | undefined;
   let s2: CampMember | undefined;
   let sharedRoomName: string | undefined;
 
-  if (shelter.rooms && shelter.rooms.length > 0) {
+  if (shelter.rooms && shelter.rooms.length > 0 && Math.random() < 0.50) {
     for (const room of shelter.rooms) {
       if (room.assignedMemberIds && room.assignedMemberIds.length >= 2) {
         const roomSingles = campMembers.filter(m => 
@@ -701,8 +727,9 @@ export function advanceOneMonth(state: GameState): GameState {
   const singleAdults = campMembers.filter(m => !m.isChild && (!m.datingStage || m.datingStage === 'single' || m.datingStage === 'crush'));
   if (!s1 || !s2) {
     if (singleAdults.length >= 2) {
-      s1 = singleAdults[0];
-      s2 = singleAdults[1];
+      const shuffled = [...singleAdults].sort(() => Math.random() - 0.5);
+      s1 = shuffled[0];
+      s2 = shuffled[1];
     }
   }
 
@@ -745,6 +772,23 @@ export function advanceOneMonth(state: GameState): GameState {
         type: 'milestone',
         timestamp: 'Wedding'
       });
+    }
+  }
+
+  // Floor sleeping desertion check: unhoused survivors with low trust may volunteer to leave
+  for (let i = campMembers.length - 1; i >= 0; i--) {
+    const m = campMembers[i];
+    if (m.isSleepingRough && m.trust < 30 && Math.random() < 0.40) {
+      newLogs.push({
+        id: 'desert_' + m.id + '_' + Date.now(),
+        day: currentDay,
+        text: '�=ު Colony Departure: Exhausted after sleeping on the freezing concrete floor for months without a bed, ' + m.name + ' packed their rucksack at dawn and volunteered to leave the sanctuary in search of better shelter (-5 Morale).',
+        type: 'camp',
+        timestamp: 'Departure'
+      });
+      campMembers.splice(i, 1);
+      shelter.morale = Math.max(10, (shelter.morale ?? 75) - 5);
+      break;
     }
   }
 
@@ -960,8 +1004,10 @@ export function advanceOneYear(state: GameState): GameState {
   const annualFoodDemand = totalConsumers * (rationPolicy === 'half' ? 180 : rationPolicy === 'full' ? 540 : 365);
 
   const annualGardenYield = (shelter.greenhouseLevel || 0) * 140;
+  const annualCoopYield = shelter.hasChickenCoop ? 450 : 0;
+  const annualWellYield = shelter.hasSanctuaryWell ? 800 : 0;
   const scoutsCount = campMembers.filter(m => m.role === 'scavenger').length;
-  const annualScoutFood = scoutsCount * 160;
+  const annualScoutFood = scoutsCount * 160 + annualCoopYield;
   const annualScoutMats = scoutsCount * 45;
 
   const existingFood = inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);

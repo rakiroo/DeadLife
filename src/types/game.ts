@@ -100,6 +100,17 @@ export interface SurvivorBackstory {
   journalThoughts: string[];
 }
 
+export interface FamilyHeirloom {
+  id: string;
+  name: string;
+  type: 'weapon' | 'ring' | 'journal' | 'tool' | 'locket';
+  bonusSkill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness';
+  bonusValue: number;
+  description: string;
+  passedFrom: string;
+  generation: number;
+}
+
 export interface SurvivorChild {
   id: string;
   name: string;
@@ -108,6 +119,7 @@ export interface SurvivorChild {
   stage: 'infant' | 'child' | 'teen' | 'adult';
   traits?: Trait[];
   skills?: { combat: number; medical: number; crafting: number; stealth: number; fitness: number };
+  lastMentoredDay?: number;
 }
 
 export interface Survivor {
@@ -139,6 +151,7 @@ export interface Survivor {
   romanceStage?: 'single' | 'crush' | 'dating' | 'engaged' | 'married';
   children?: SurvivorChild[];
   generation?: number;
+  heirlooms?: FamilyHeirloom[];
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';
@@ -185,6 +198,7 @@ export interface CampMember {
   relationships?: SurvivorRelationship[];
   isPregnant?: boolean;
   pregnancyMonths?: number;
+  isSleepingRough?: boolean;
 }
 
 export interface CampRoom {
@@ -231,6 +245,10 @@ export interface BaseShelter {
   hasMemorialGarden?: boolean;
   childrenBornCount?: number;
   marriagesCount?: number;
+  hasChickenCoop?: boolean;
+  chickenCoopLevel?: number;
+  hasSanctuaryWell?: boolean;
+  heirlooms?: FamilyHeirloom[];
 }
 
 export type ItemCategory = 'food' | 'water' | 'medical' | 'weapon' | 'tool' | 'resource';

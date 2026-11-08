@@ -658,18 +658,6 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
           const totalResidents = s.campMembers.length + 1;
           const isAtCapacity = totalResidents >= totalBeds;
 
-          if (isAtCapacity) {
-            return {
-              state: {
-                ...s,
-                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 5) }
-              },
-              log: 'I met ' + candidate.name + ' while looting ' + spotName + ', but our haven has no empty beds left (' + totalResidents + '/' + totalBeds + '). I gave them some clean water and directions to safety.',
-              outcomeTitle: 'No Vacant Beds at Haven',
-              outcomeText: 'You offered shelter to ' + candidate.name + ', but your colony is at full capacity (' + totalResidents + '/' + totalBeds + ' beds filled). Build more housing in the Base tab to take in more survivors. You shared water with them instead.'
-            };
-          }
-
           const newMember: CampMember = {
             id: candidate.id,
             name: candidate.name,
@@ -679,7 +667,8 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
             relation: 'Companion',
             bio: candidate.bio,
             health: candidate.health,
-            trust: candidate.trust,
+            trust: isAtCapacity ? 40 : candidate.trust,
+            isSleepingRough: isAtCapacity,
             daysTogether: 1,
             role: candidate.role,
             statusEffects: []
@@ -689,11 +678,19 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
               ...s,
               campMembers: [...s.campMembers, newMember],
               isCampEstablished: true,
+              shelter: {
+                ...s.shelter,
+                morale: isAtCapacity ? Math.max(10, (s.shelter.morale ?? 75) - 6) : s.shelter.morale
+              },
               stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
             },
-            log: 'While searching ' + spotName + ', I met ' + candidate.name + '. I shared supplies and they joined my camp as an ally!',
-            outcomeTitle: candidate.name + ' Joined Your Camp',
-            outcomeText: candidate.name + ' sheathed their weapon and shook your hand. "Appreciate you not pulling the trigger. I will pull my weight." The Camp tab is unlocked!'
+            log: isAtCapacity
+              ? 'While searching ' + spotName + ', I met ' + candidate.name + '. With no empty beds left, they agreed to sleep rough on the floor until we build a cabin.'
+              : 'While searching ' + spotName + ', I met ' + candidate.name + '. I shared supplies and they joined my camp as an ally!',
+            outcomeTitle: isAtCapacity ? candidate.name + ' Joined (Sleeping on Floor)' : candidate.name + ' Joined Your Camp',
+            outcomeText: isAtCapacity
+              ? candidate.name + ' shook your hand with tired relief: "Sleeping on the cold concrete floor beats getting ripped apart by walkers out here. But please, build a proper bunk soon." They joined your haven as an unhoused companion.'
+              : candidate.name + ' sheathed their weapon and shook your hand. "Appreciate you not pulling the trigger. I will pull my weight." The Camp tab is unlocked!'
           };
         }
       },
@@ -767,18 +764,6 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
             const totalResidents = s.campMembers.length + 1;
             const isAtCapacity = totalResidents >= totalBeds;
 
-            if (isAtCapacity) {
-              return {
-                state: {
-                  ...s,
-                  player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) }
-                },
-                log: 'I met ' + candidateName + ' at the Church Outpost, but our sanctuary had no vacant beds (' + totalResidents + '/' + totalBeds + '). We shared stories by the fire instead (+10 Sanity).',
-                outcomeTitle: 'Colony at Full Capacity',
-                outcomeText: 'You discussed defense tactics with ' + candidateName + ', but your haven has no empty beds left (' + totalResidents + '/' + totalBeds + ' beds). Build additional housing in the Base tab to recruit more allies. (+10 Sanity)'
-              };
-            }
-
             const member: CampMember = {
               id: candidateId,
               name: candidateName,
@@ -788,7 +773,8 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
               relation: 'Camp Member',
               bio: isFemale ? 'Rugged veteran. Brave, protective, and disciplined.' : 'Former collegiate runner. Energetic, alert, and dependable.',
               health: 95,
-              trust: 70,
+              trust: isAtCapacity ? 45 : 70,
+              isSleepingRough: isAtCapacity,
               daysTogether: 1,
               role: 'guard',
               statusEffects: []
@@ -798,12 +784,20 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
                 ...s,
                 campMembers: [...s.campMembers, member],
                 isCampEstablished: true,
+                shelter: {
+                  ...s.shelter,
+                  morale: isAtCapacity ? Math.max(10, (s.shelter.morale ?? 75) - 5) : s.shelter.morale
+                },
                 player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) },
                 stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
               },
-              log: 'I met ' + candidateName + ' at the Church Outpost. They agreed to team up and joined my camp as a guard!',
-              outcomeTitle: candidateName + ' Joined Your Camp',
-              outcomeText: 'By the sanctuary fire, you and ' + candidateName + ' discussed defense tactics. Convinced your group has a real survival plan, ' + candidateName + ' agreed to join your camp. (+20 Sanity)'
+              log: isAtCapacity
+                ? 'I met ' + candidateName + ' at the Church Outpost and brought them to camp. With no empty beds, they agreed to sleep rough on the floor until we expand our rooms.'
+                : 'I met ' + candidateName + ' at the Church Outpost. They agreed to team up and joined my camp as a guard!',
+              outcomeTitle: isAtCapacity ? candidateName + ' Joined (Sleeping on Floor)' : candidateName + ' Joined Your Camp',
+              outcomeText: isAtCapacity
+                ? 'You convinced ' + candidateName + ' to join, warning them they would have to sleep on the floor for now. "As long as there is a wall between me and the dead, I can manage. But do not keep me on concrete forever."'
+                : 'By the sanctuary fire, you and ' + candidateName + ' discussed defense tactics. Convinced your group has a real survival plan, ' + candidateName + ' agreed to join your camp. (+20 Sanity)'
             };
           } else {
             return {
