@@ -17,7 +17,7 @@ import { GraveyardScreen } from './components/GraveyardScreen';
 import { AmbitionsModal } from './components/AmbitionsModal';
 import { SettingsScreen } from './components/SettingsScreen';
 import { SandboxAmbition } from './data/ambitions';
-import { getRandomBackstory } from './data/backstories';
+import { getContextualBackstory } from './data/backstories';
 
 type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings';
 
@@ -26,7 +26,7 @@ const GRAVEYARD_KEY = 'deadlife_graveyard';
 
 export function createNewGameWithSurvivor(survivor: Survivor, career: Career): GameState {
   const spawnStory = getRandomSpawnStory(career.id);
-  const backstory = survivor.backstory || getRandomBackstory();
+  const backstory = survivor.backstory || getContextualBackstory(survivor, career);
   survivor.backstory = backstory;
 
   // Gather all starting loot from workplace
@@ -144,7 +144,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const initialLog: LogEntry = {
     id: 'log_init_' + Date.now(),
     day: 0,
-    text: spawnStory.intro + ' My personal stake: ' + backstory.hookText,
+    text: spawnStory.intro,
     type: 'milestone',
     timestamp: 'Morning'
   };
