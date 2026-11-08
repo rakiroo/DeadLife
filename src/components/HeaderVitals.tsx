@@ -163,7 +163,7 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
         {/* 1. Survivor Profile & Attributes Modal */}
         {showProfileModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl font-sans">
+            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl w-full max-w-xs p-4 space-y-3 shadow-2xl font-sans">
               <div className="flex items-start justify-between pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-base font-bold text-white tracking-tight">{player.name}</h2>
@@ -243,9 +243,9 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
         {/* 2. Pause & Settings Modal (Alert Sheet Style) */}
         {showPauseModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl font-sans text-center">
-              <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center mx-auto text-zinc-200">
-                <Settings className="w-6 h-6 text-zinc-300" />
+            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl w-full max-w-xs p-4 space-y-3 shadow-2xl font-sans text-center">
+              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center mx-auto text-zinc-200">
+                <Settings className="w-4 h-4 text-zinc-300" />
               </div>
 
               <div className="space-y-1">
@@ -268,7 +268,7 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
                 <button
                   type="button"
                   onClick={() => setShowPauseModal(false)}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
                 >
                   <Play className="w-4 h-4 fill-white" />
                   <span>Resume Survival</span>
@@ -281,7 +281,7 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
                       setShowPauseModal(false);
                       onOpenMenu();
                     }}
-                    className="w-full py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white border border-white/5 font-semibold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                    className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white border border-white/5 font-semibold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
                   >
                     <LogOut className="w-3.5 h-3.5 text-zinc-400" />
                     <span>Save & Return to Main Menu</span>

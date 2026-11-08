@@ -23,16 +23,16 @@ export const DeathScreen: React.FC<Props> = ({ gameState, onRestart }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in duration-300 select-none font-sans">
-      <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl max-w-sm w-full p-6 text-center space-y-5 shadow-2xl relative overflow-hidden">
+      <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl max-w-xs w-full p-4 text-center space-y-3 shadow-2xl relative overflow-hidden">
         {/* Skull Icon */}
-        <div className="w-16 h-16 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500 shadow-sm">
-          <Skull className="w-8 h-8" />
+        <div className="w-10 h-10 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500 shadow-sm">
+          <Skull className="w-5 h-5" />
         </div>
 
         {/* Name and Epitaph */}
         <div className="space-y-1">
           <span className="text-[11px] font-medium uppercase tracking-widest text-zinc-400">In Memoriam</span>
-          <h2 className="text-2xl font-bold text-white tracking-tight">{player.name}</h2>
+          <h2 className="text-lg font-bold text-white tracking-tight">{player.name}</h2>
           <p className="text-xs text-zinc-400">
             {player.profession} • Survived {day} {day === 1 ? 'Day' : 'Days'}
           </p>
@@ -72,7 +72,7 @@ export const DeathScreen: React.FC<Props> = ({ gameState, onRestart }) => {
         <button
           type="button"
           onClick={onRestart}
-          className="w-full py-4 px-4 rounded-2xl font-semibold text-sm bg-white hover:bg-zinc-100 text-zinc-950 flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
+          className="w-full py-2.5 px-3 rounded-xl font-semibold text-sm bg-white hover:bg-zinc-100 text-zinc-950 flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
         >
           <RefreshCw className="w-4 h-4" />
           <span>Begin New Life</span>
