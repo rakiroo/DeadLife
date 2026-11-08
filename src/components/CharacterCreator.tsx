@@ -279,7 +279,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
   return (
     <div className="h-screen max-h-screen flex flex-col bg-zinc-950 text-zinc-100 max-w-md mx-auto w-full select-none overflow-hidden font-sans">
       {/* 1. STICKY TOP HEADER WITH LIVE POINTS COUNTER */}
-      <header className="shrink-0 sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 px-4 py-2.5 flex items-center justify-between shadow-lg">
+      <header className="shrink-0 sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between shadow-lg">
         <button
           onClick={onBack}
           className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 active:scale-95"
@@ -288,23 +288,9 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
           <ArrowLeft className="w-4 h-4" />
         </button>
 
-        <div className="text-center">
-          <span className="font-bold text-xs uppercase tracking-wider text-zinc-200 block">Create Survivor</span>
-          <span className="text-[10px] text-zinc-500 font-mono">{selectedCareer.title}</span>
-        </div>
+        <span className="font-bold text-xs uppercase tracking-wider text-zinc-200">Create Survivor</span>
 
-        {/* Global Live Points Badge */}
-        <div 
-          className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold border flex items-center gap-1.5 shadow-sm transition-all ${
-            availablePoints >= 0 
-              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700/60' 
-              : 'bg-rose-950/90 text-rose-300 border-rose-700/60 animate-pulse'
-          }`}
-          title="Points available to allocate on skills or perks"
-        >
-          <span className="text-[10px] opacity-75">PTS:</span>
-          <span>{availablePoints >= 0 ? `+${availablePoints}` : availablePoints}</span>
-        </div>
+        <div className="w-7" />
       </header>
 
       {/* 2. SEGMENTED TAB NAVIGATION (NO MORE ENDLESS SCROLLING) */}
@@ -475,57 +461,20 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
             </section>
 
             {/* Job / Career Selection */}
-            <section className="space-y-3">
+            <section className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold block">
                     Job Before the Outbreak
                   </span>
                   <span className="text-[10px] text-zinc-500">
-                    Re-click your job anytime to reset skills to its default
+                    Sets spawn location & starting skills. Click again to reset skills.
                   </span>
-                </div>
-                {selectedCareer.bonusPoints && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
-                    +{selectedCareer.bonusPoints} Trait Pts
-                  </span>
-                )}
-              </div>
-
-              {/* Current Job Summary Banner */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-rose-950/30 to-zinc-900 border border-rose-500/50 shadow-md space-y-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-3xl">{selectedCareer.icon}</span>
-                    <div>
-                      <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-                        {selectedCareer.title}
-                        <span className="text-[10px] font-mono font-normal px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                          Active Job
-                        </span>
-                      </h3>
-                      <p className="text-xs text-zinc-400 leading-tight mt-0.5">{selectedCareer.description}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Starting location info */}
-                <div className="text-[11px] bg-zinc-950/70 p-2 rounded-xl border border-zinc-800/80 text-zinc-300 flex items-center justify-between">
-                  <span>📍 Spawn: <strong className="text-zinc-200">{selectedCareer.startingLocation.name}</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyCareerPreset(selectedCareer)}
-                    className="text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 underline flex items-center gap-1 active:scale-95"
-                    title="Reset your skills to this job's default"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Reset to Job Stats</span>
-                  </button>
                 </div>
               </div>
 
-              {/* Careers List */}
-              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {/* Careers List (Single clean list, no duplicates) */}
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {CAREERS.map((career) => {
                   const isSelected = selectedCareer.id === career.id;
                   return (
@@ -533,29 +482,35 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
                       key={career.id}
                       type="button"
                       onClick={() => handleSelectCareer(career)}
-                      className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center gap-3 ${
+                      className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-start gap-3 ${
                         isSelected
                           ? 'bg-rose-950/30 border-rose-500/80 text-zinc-100 ring-1 ring-rose-500/40 shadow-sm'
                           : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-850 hover:text-zinc-200'
                       }`}
                     >
-                      <span className="text-2xl shrink-0">{career.icon}</span>
+                      <span className="text-2xl shrink-0 mt-0.5">{career.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <span className={`text-xs font-bold ${isSelected ? 'text-zinc-100' : 'text-zinc-300'}`}>
                             {career.title}
                           </span>
-                          {isSelected ? (
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-900/60 text-rose-200 border border-rose-700/60">
-                              Re-click to Reset Stats
-                            </span>
-                          ) : career.bonusPoints ? (
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                              +{career.bonusPoints} pts
-                            </span>
-                          ) : null}
+                          <div className="flex items-center gap-1.5">
+                            {career.bonusPoints ? (
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                +{career.bonusPoints} pts
+                              </span>
+                            ) : null}
+                            {isSelected && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-900/60 text-rose-200 border border-rose-700/60">
+                                Active Job
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[11px] text-zinc-500 truncate mt-0.5">{career.description}</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">{career.description}</p>
+                        <div className="text-[10px] text-zinc-500 font-mono mt-1">
+                          📍 {career.startingLocation.name}
+                        </div>
                       </div>
                     </button>
                   );
@@ -748,6 +703,15 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         {activeTab === 'traits' && (
           <div className="space-y-3.5">
             {/* Active Traits Summary Banner / Pill Tray */}
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="text-zinc-400 font-mono text-[11px]">Points Balance:</span>
+              <span className={`font-mono font-bold text-xs ${
+                availablePoints >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              }`}>
+                {availablePoints >= 0 ? `+${availablePoints} PTS Available` : `${availablePoints} PTS (Overspent!)`}
+              </span>
+            </div>
+
             <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-2 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold">
