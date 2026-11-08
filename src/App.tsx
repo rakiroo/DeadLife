@@ -88,7 +88,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
               ...s,
               inventory: startingLoot.map(i => ({ ...i }))
             },
-            log: 'Day 0: You searched ' + career.startingLocation.name + ' and secured starting supplies: ' + itemsSummary + '.',
+            log: 'Day 0: I searched ' + career.startingLocation.name + ' and secured starting supplies: ' + itemsSummary + '.',
             outcomeTitle: 'Workplace Supplies Secured',
             outcomeText: 'You swept through ' + career.startingLocation.name + ' before locking down. All starting tools, weapons, and provisions have been packed into your supplies.'
           };
@@ -108,7 +108,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
                 barricadeIntegrity: 40
               }
             },
-            log: 'Day 0: You reinforced the doors of ' + career.startingLocation.name + ' and collected gear (+40% Barricade).',
+            log: 'Day 0: I reinforced the doors of ' + career.startingLocation.name + ' and collected gear (+40% Barricade).',
             outcomeTitle: 'Entryways Fortified',
             outcomeText: 'You nailed structural braces across the doors. The barricades hold firm against the street horde outside (+40% Integrity).'
           };
@@ -128,7 +128,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
                 sanity: Math.min(100, s.player.sanity + 15)
               }
             },
-            log: 'Day 0: You locked down ' + career.startingLocation.name + ' quietly, securing provisions and steadying your nerves (+15 Sanity).',
+            log: 'Day 0: I locked down ' + career.startingLocation.name + ' quietly, securing provisions and steadying your nerves (+15 Sanity).',
             outcomeTitle: 'Quiet Composure Maintained',
             outcomeText: 'You avoided making any noise. The infected shuffled past outside, completely unaware of your presence (+15 Sanity).'
           };
@@ -346,35 +346,35 @@ export function App() {
 
       if (item.category === 'food') {
         hunger = Math.min(100, hunger + 25);
-        itemLogText = `Consumed ${item.name}. Restored +25 hunger.`;
+        itemLogText = `I consumed ${item.name} (+25 hunger).`;
       } else if (item.category === 'water') {
         thirst = Math.min(100, thirst + 25);
-        itemLogText = `Drank clean water from ${item.name}. Restored +25 hydration.`;
+        itemLogText = `I drank clean water from ${item.name} (+25 hydration).`;
       } else if (item.id.includes('bandage') || item.id.includes('first_aid') || item.id.includes('gauze')) {
         health = Math.min(100, health + 15);
         statusEffects = statusEffects.filter(e => e.id !== 'bleeding');
-        itemLogText = `Applied sterile pressure dressing. Bleeding arrested.`;
+        itemLogText = `I applied a sterile pressure dressing. Bleeding stopped.`;
         itemLogType = 'medical';
       } else if (item.id.includes('insulin')) {
         health = Math.min(100, health + 10);
-        itemLogText = 'Injected insulin dose. Blood glucose and vitals stabilized (+10 HP).';
+        itemLogText = 'I injected insulin. Blood glucose stabilized (+10 HP).';
         itemLogType = 'medical';
       } else if (item.id.includes('inhaler') || item.id.includes('albuterol')) {
         health = Math.min(100, health + 5);
         prev.player.sanity = Math.min(100, prev.player.sanity + 15);
-        itemLogText = 'Used albuterol rescue inhaler. Cleared bronchial airways (+15 Sanity).';
+        itemLogText = 'I used my rescue inhaler. Airways cleared (+15 Sanity).';
         itemLogType = 'medical';
       } else if (item.id.includes('cigarette') || item.id.includes('tobacco')) {
         prev.player.sanity = Math.min(100, prev.player.sanity + 20);
-        itemLogText = 'Smoked a cigarette. Nerves calmed and withdrawal subsided (+20 Sanity).';
+        itemLogText = 'I smoked a cigarette. Nerves calmed down (+20 Sanity).';
         itemLogType = 'general';
       } else if (item.id.includes('antibiotic') || item.id.includes('alcohol')) {
         health = Math.min(100, health + 10);
         statusEffects = statusEffects.filter(e => e.id !== 'bacterial_infection');
-        itemLogText = `Applied antiseptic and treatment. Sepsis arrested.`;
+        itemLogText = `I treated the wound with antiseptic. Infection cleared.`;
         itemLogType = 'medical';
       } else {
-        itemLogText = `Inspected ${item.name} from supplies.`;
+        itemLogText = `I checked ${item.name} in my pack.`;
       }
 
       const newLog: LogEntry = {
@@ -448,7 +448,7 @@ export function App() {
       const newLog: LogEntry = {
         id: `log_talk_${Date.now()}`,
         day: prev.day,
-        text: `You checked in and talked with ${member.name}. Camp morale improved (+Trust).`,
+        text: `I checked in and talked with ${member.name}. Camp morale improved (+Trust).`,
         type: 'camp',
         timestamp: 'Camp Care'
       };
@@ -478,7 +478,7 @@ export function App() {
       const newLog: LogEntry = {
         id: `log_gift_${Date.now()}`,
         day: prev.day,
-        text: `You shared food with ${member.name}. Their loyalty is deepened (+Trust & Health).`,
+        text: `I shared food with ${member.name}. Camp loyalty deepened (+Trust & Health).`,
         type: 'camp',
         timestamp: 'Camp Care'
       };
@@ -503,7 +503,7 @@ export function App() {
       const newLog: LogEntry = {
         id: `log_exile_${Date.now()}`,
         day: prev.day,
-        text: `You banished ${member.name} from the camp. They walked out into the ruins as an enemy.`,
+        text: `I banished ${member.name} from the camp. They walked out into the ruins.`,
         type: 'camp',
         timestamp: 'Exile'
       };
@@ -589,7 +589,7 @@ export function App() {
           }
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Ambushed at the pharmacy backdoor! Your fitness & combat skills reduced the damage (-${mitigatedDamage}% HP).`;
+          logText = `Ambushed at the pharmacy backdoor! My fitness & combat skills reduced the damage (-${mitigatedDamage}% HP).`;
         }
       } else if (locationId === 'supermarket') {
         const chefBonus = (profession.includes('cook') || profession.includes('chef')) ? 2 : 0;
@@ -601,7 +601,7 @@ export function App() {
           logText = `Scavenged Costway Supermarket: Hauled back canned meals and clean water.${chefBonus > 0 ? ' (Culinary career bonus: found extra sealed rations!)' : ''}`;
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Cornered in aisle 4 by infected! You fought your way free taking (-${mitigatedDamage}% HP).`;
+          logText = `Cornered in aisle 4 by infected! I fought my way free taking (-${mitigatedDamage}% HP).`;
         }
       } else if (locationId === 'police_precinct') {
         const copBonus = (profession.includes('police') || profession.includes('security') || profession.includes('firefighter')) ? 1 : 0;
@@ -613,7 +613,7 @@ export function App() {
           logText = `Scavenged 3rd Precinct Station: Cleared the armory locker and recovered shotgun ammunition and a tactical vest!`;
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Swarmed by infected in the station sally port! Escaped with injuries (-${mitigatedDamage}% HP).`;
+          logText = `Swarmed by infected in the station sally port! I escaped with injuries (-${mitigatedDamage}% HP).`;
         }
       } else {
         const craftBonus = (profession.includes('carpenter') || profession.includes('mechanic') || profession.includes('electrician')) ? 2 : 0;
@@ -625,7 +625,7 @@ export function App() {
           logText = `Scavenged Pioneer Lumber: Retrieved structural wood planks and nails for defense.${craftBonus > 0 ? ' (Crafting career bonus: gathered extra lumber!)' : ''}`;
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Fell from the lumber yard fence while evading infected (-${mitigatedDamage}% HP).`;
+          logText = `I fell from the lumber yard fence while evading infected (-${mitigatedDamage}% HP).`;
         }
       }
 

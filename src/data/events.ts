@@ -32,7 +32,7 @@ export const DAY_ONE_EVENT: EventDilemma = {
             ...state,
             inventory: [...state.inventory, ...foundItems]
           },
-          log: 'You searched the area: Found 2 cans of beans, 2 bottles of water, and a kitchen knife.',
+          log: 'I searched the area and found 2 cans of beans, 2 bottles of water, and a kitchen knife.',
           outcomeTitle: 'Supplies Secured',
           outcomeText: 'You gathered emergency food and water to stay alive.'
         };
@@ -53,7 +53,7 @@ export const DAY_ONE_EVENT: EventDilemma = {
             ...state,
             inventory: [...state.inventory, ...foundItems]
           },
-          log: 'You searched for first aid: Found sterile gauze, antiseptic, and clean water.',
+          log: 'I searched for first aid and found sterile gauze, antiseptic, and clean water.',
           outcomeTitle: 'First Aid Stockpiled',
           outcomeText: 'You secured medical supplies to treat cuts and stop bleeding.'
         };
@@ -74,7 +74,7 @@ export const DAY_ONE_EVENT: EventDilemma = {
             ...state,
             inventory: [...state.inventory, ...foundItems]
           },
-          log: 'You scavenged for tools: Found a claw hammer, 3 wood planks, and duct tape.',
+          log: 'I scavenged for tools and found a claw hammer, 3 wood planks, and duct tape.',
           outcomeTitle: 'Tools & Wood Acquired',
           outcomeText: 'You now have materials to board up windows and defend yourself.'
         };
@@ -110,7 +110,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 ],
                 stats: { ...s.stats, zombiesEliminated: s.stats.zombiesEliminated + 1 }
               },
-              log: 'From cover inside ' + loc + ', you ambushed both raiders before they could enter and seized their weapons.',
+              log: 'From cover inside ' + loc + ', I ambushed both raiders before they could enter and seized their weapons.',
               outcomeTitle: 'Ambush Successful — Weapons Captured',
               outcomeText: 'Your patience paid off. You took down both hostiles before they could shoot and stripped their bodies of a shotgun and shells.'
             };
@@ -127,7 +127,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 ...s,
                 player: { ...s.player, sanity: Math.min(100, s.player.sanity + 5) }
               },
-              log: 'You hid quietly behind cover inside ' + loc + ' until the armed men moved down the road.',
+              log: 'I hid quietly behind cover inside ' + loc + ' until the armed men moved down the road.',
               outcomeTitle: 'Passed Undetected',
               outcomeText: 'One of them kicked the outer door of ' + loc + ', paused, muttered that it looked abandoned, and moved away.'
             };
@@ -148,7 +148,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                     { id: 'canned_food_trade', name: 'Military Rations (MRE)', category: 'food', quantity: 4, description: 'Ready-to-eat field meal.' }
                   ]
                 },
-                log: 'You traded medical supplies through the door of ' + loc + ' for 4 military food rations.',
+                log: 'I traded medical supplies through the door of ' + loc + ' for 4 military food rations.',
                 outcomeTitle: 'Tense Barter Concluded',
                 outcomeText: 'The raiders took the medicine, agreed not to cause trouble, and moved down the street.'
               };
@@ -159,7 +159,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   shelter: { ...s.shelter, barricadeIntegrity: Math.max(10, s.shelter.barricadeIntegrity - 25) },
                   player: { ...s.player, health: Math.max(20, s.player.health - 20) }
                 },
-                log: 'The raiders fired a shotgun blast through the door of ' + loc + ' the moment you called out.',
+                log: 'The raiders fired a shotgun blast through the door of ' + loc + ' the moment I called out.',
                 outcomeTitle: 'Ambushed at the Door',
                 outcomeText: 'Buckshot blew through the door frame. You returned fire and drove them away, but took superficial wounds (-20% HP).'
               };
@@ -189,7 +189,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   shelter: { ...s.shelter, barricadeIntegrity: Math.max(10, s.shelter.barricadeIntegrity - 15) },
                   stats: { ...s.stats, zombiesEliminated: s.stats.zombiesEliminated + 2 }
                 },
-                log: 'You took down both zombies quietly before they could fully crawl into ' + loc + '.',
+                log: 'I took down both zombies quietly before they could fully crawl into ' + loc + '.',
                 outcomeTitle: 'Silent Defense Successful',
                 outcomeText: 'You neutralized the intruders without making noise. The damaged window frame will need repairs.'
               };
@@ -205,7 +205,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   },
                   stats: { ...s.stats, zombiesEliminated: s.stats.zombiesEliminated + 2 }
                 },
-                log: 'You took down both zombies inside ' + loc + ', but sustained a bleeding scratch on your arm.',
+                log: 'I took down both zombies inside ' + loc + ', but sustained a bleeding scratch on my arm.',
                 outcomeTitle: 'Cleared — With Injury',
                 outcomeText: 'The zombies are down, but you are bleeding. Use a bandage to stop the blood loss.'
               };
@@ -227,7 +227,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 },
                 stats: { ...s.stats, zombiesEliminated: s.stats.zombiesEliminated + 2 }
               },
-              log: 'Two loud gunshots echoed out of ' + loc + ', dropping both zombies instantly.',
+              log: 'I fired two shots inside ' + loc + ', dropping both zombies instantly.',
               outcomeTitle: 'Zombies Dropped — Noise Made',
               outcomeText: 'The threat was eliminated fast, but the gunfire echoed down the street and lowered your stealth.'
             };
@@ -244,7 +244,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 player: { ...s.player, sanity: Math.max(15, s.player.sanity - 10) },
                 shelter: { ...s.shelter, barricadeIntegrity: Math.max(20, s.shelter.barricadeIntegrity - 20) }
               },
-              log: 'You slammed and bolted the inner door inside ' + loc + ', locking the zombies in the broken side room.',
+              log: 'I slammed and bolted the inner door inside ' + loc + ', locking the zombies in the broken side room.',
               outcomeTitle: 'Room Sealed Off',
               outcomeText: 'You blocked off the infected room inside ' + loc + ' while keeping yourself safe.'
             };
@@ -272,7 +272,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   ...s,
                   player: { ...s.player, sanity: Math.max(10, s.player.sanity - 10) }
                 },
-                log: 'Under her wet jacket, you found fresh bite marks wrapped in cloth. You refused entry to keep ' + loc + ' safe.',
+                log: 'Under her wet jacket, I found fresh bite marks wrapped in cloth. I refused entry to keep ' + loc + ' safe.',
                 outcomeTitle: 'Infection Detected',
                 outcomeText: 'She admitted she was bitten hours ago. You turned her away to protect ' + loc + '.'
               };
@@ -295,7 +295,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   isCampEstablished: true,
                   stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
                 },
-                log: 'You found no bites on her. Dr. Rebecca Young has joined you at ' + loc + '! The Camp tab is now open.',
+                log: 'I found no bites on her. Dr. Rebecca Young has joined me at ' + loc + '! The Camp tab is now open.',
                 outcomeTitle: 'Survivor Recruited',
                 outcomeText: 'She passed the health check and joined your group. Her medical training will speed up recovery from wounds!'
               };
@@ -315,7 +315,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 inventory: updatedInv,
                 player: { ...s.player, sanity: Math.max(10, s.player.sanity - 8) }
               },
-              log: 'You slid a can of food outside the entrance of ' + loc + ' and told her to keep moving.',
+              log: 'I slid a can of food outside the entrance of ' + loc + ' and told her to keep moving.',
               outcomeTitle: 'Safety First',
               outcomeText: 'She took the food, thanked you through tears, and vanished into the rain. A tough choice, but ' + loc + ' remains secure.'
             };
@@ -338,7 +338,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   },
                   shelter: { ...s.shelter, barricadeIntegrity: Math.max(10, s.shelter.barricadeIntegrity - 30) }
                 },
-                log: 'Disaster! She reanimated at 4 AM inside ' + loc + ' and attacked before you could react.',
+                log: 'Disaster! She reanimated at 4 AM inside ' + loc + ' and attacked before I could react.',
                 outcomeTitle: 'Nightmare Turn',
                 outcomeText: 'She had hidden a lethal bite under her scarf. You put her down with a hammer, but took injuries during the struggle.'
               };
@@ -349,7 +349,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                   player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) },
                   stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
                 },
-                log: 'She was genuinely just starved and exhausted. She cried tears of relief inside ' + loc + '.',
+                log: 'She was genuinely starved and exhausted. She cried tears of relief inside ' + loc + '.',
                 outcomeTitle: 'Gamble Paid Off',
                 outcomeText: 'A warm meal stabilized her. She swore eternal loyalty to you.'
               };
@@ -387,7 +387,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 inventory: inv,
                 stats: { ...s.stats, scavengeRuns: s.stats.scavengeRuns + 1 }
               },
-              log: 'You sneaked across to the delivery van, grabbed 3 cans of soup and 3 bottles of water, and returned to ' + loc + ' safely.',
+              log: 'I sneaked across to the delivery van, grabbed 3 cans of soup and 3 bottles of water, and returned to ' + loc + ' safely.',
               outcomeTitle: 'Successful Haul',
               outcomeText: 'You moved like a shadow and brought back vital supplies without alerting any zombies.'
             };
@@ -400,7 +400,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
           execute: (s: GameState) => {
             return {
               state: s,
-              log: 'You watched the street from inside ' + loc + ' and decided not to take any risks.',
+              log: 'I watched the street from inside ' + loc + ' and decided not to take any risks.',
               outcomeTitle: 'Played It Safe',
               outcomeText: 'Surviving long-term means knowing when to stay put.'
             };
@@ -431,7 +431,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 inventory: inv,
                 player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) }
               },
-              log: 'You fed the stray dog and let it curl up inside ' + loc + '. It is now a loyal companion that alerts you when danger approaches!',
+              log: 'I fed the stray dog and let it curl up inside ' + loc + '. It is now a loyal companion that alerts me when danger approaches!',
               outcomeTitle: 'Loyal Companion Found',
               outcomeText: 'The dog wagged its tail and fell asleep near you. Having a loyal friend in the apocalypse lifts your spirits greatly (+20 Sanity).'
             };
@@ -444,7 +444,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
           execute: (s: GameState) => {
             return {
               state: s,
-              log: 'You tapped on the window of ' + loc + ' until the dog quietly trotted away.',
+              log: 'I tapped on the window of ' + loc + ' until the dog quietly trotted away.',
               outcomeTitle: 'Silence Maintained',
               outcomeText: 'The dog trotted away down the road. You avoided any barking that might draw zombies.'
             };
@@ -474,7 +474,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 shelter: { ...s.shelter, fuelGallons: Math.max(0, s.shelter.fuelGallons - 0.5) },
                 player: { ...s.player, thirst: Math.min(100, s.player.thirst + 15) }
               },
-              log: 'You boiled the rainwater inside ' + loc + ' until all bacteria were destroyed.',
+              log: 'I boiled the rainwater inside ' + loc + ' until all bacteria were destroyed.',
               outcomeTitle: 'Water Sterilized',
               outcomeText: 'The boiling killed any bacteria. The water is safe to drink.'
             };
@@ -490,7 +490,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 ...s,
                 shelter: { ...s.shelter, storedRainwater: 0 }
               },
-              log: 'You emptied the contaminated rainwater tank at ' + loc + '.',
+              log: 'I emptied the contaminated rainwater tank at ' + loc + '.',
               outcomeTitle: 'Tank Drained',
               outcomeText: 'Better thirsty than getting sick. You will wait for clean fresh rain.'
             };
@@ -537,7 +537,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 isCampEstablished: true,
                 stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
               },
-              log: 'You let Sora Takahashi inside ' + loc + ' just before the street horde arrived. He joined your camp as a builder and gardener!',
+              log: 'I let Sora Takahashi inside ' + loc + ' just before the street horde arrived. He joined my camp as a builder and gardener!',
               outcomeTitle: 'Sora Rescued & Joined Camp',
               outcomeText: 'Sora bowed with deep gratitude and shared fresh seeds from his satchel. Having him in camp unlocks green thumb cultivation!'
             };
@@ -553,7 +553,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
                 ...s,
                 player: { ...s.player, sanity: Math.max(10, s.player.sanity - 10) }
               },
-              log: 'You refused entry to the traveler knocking on the door of ' + loc + '.',
+              log: 'I refused entry to the traveler knocking on the door of ' + loc + '.',
               outcomeTitle: 'Door Remained Locked',
               outcomeText: 'You heard hurried footsteps running down the street, followed by distant infected groans. A grim choice.'
             };
@@ -661,7 +661,7 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
               isCampEstablished: true,
               stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
             },
-            log: 'While searching ' + spotName + ', you met ' + candidate.name + '. You shared supplies and they joined your camp as an ally!',
+            log: 'While searching ' + spotName + ', I met ' + candidate.name + '. I shared supplies and they joined my camp as an ally!',
             outcomeTitle: candidate.name + ' Joined Your Camp',
             outcomeText: candidate.name + ' sheathed their weapon and shook your hand. "Appreciate you not pulling the trigger. I will pull my weight." The Camp tab is unlocked!'
           };
@@ -688,7 +688,7 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
               inventory: inv,
               player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) }
             },
-            log: 'You traded calmly with ' + candidate.name + ' at ' + spotName + '. Exchanged surplus supplies peacefully (+10 Sanity).',
+            log: 'I traded calmly with ' + candidate.name + ' at ' + spotName + '. Exchanged surplus supplies peacefully (+10 Sanity).',
             outcomeTitle: 'Peaceful Trade Concluded',
             outcomeText: 'You exchanged items without hostility. ' + candidate.name + ' nodded respectfully and moved down the hall.'
           };
@@ -701,7 +701,7 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
         execute: (s: GameState) => {
           return {
             state: { ...s },
-            log: 'You ordered ' + candidate.name + ' to leave ' + spotName + '. They backed away with their hands raised.',
+            log: 'I ordered ' + candidate.name + ' to leave ' + spotName + '. They backed away with their hands raised.',
             outcomeTitle: 'Survivor Backed Off',
             outcomeText: 'Taking no chances, you held your ground until they retreated into the alley. Your perimeter remains secure.'
           };
@@ -753,7 +753,7 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
                 player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) },
                 stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
               },
-              log: 'You met ' + candidateName + ' at the Church Outpost. They agreed to team up and joined your camp as a guard!',
+              log: 'I met ' + candidateName + ' at the Church Outpost. They agreed to team up and joined my camp as a guard!',
               outcomeTitle: candidateName + ' Joined Your Camp',
               outcomeText: 'By the sanctuary fire, you and ' + candidateName + ' discussed defense tactics. Convinced your group has a real survival plan, ' + candidateName + ' agreed to join your camp. (+20 Sanity)'
             };
@@ -763,7 +763,7 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
                 ...s,
                 player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) }
               },
-              log: 'You spent an evening resting by the fire at the Church Outpost, lifting your morale (+20 Sanity).',
+              log: 'I spent an evening resting by the fire at the Church Outpost, lifting my morale (+20 Sanity).',
               outcomeTitle: 'Peaceful Evening by the Fire',
               outcomeText: 'Warm food and friendly conversation restored your spirit (+20 Sanity).'
             };
@@ -790,7 +790,7 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
               ...s,
               inventory: inv
             },
-            log: 'You bartered at the Church Outpost: Traded surplus items for 2 cans of peaches and 2 purified water jugs.',
+            log: 'I bartered at the Church Outpost: Traded surplus items for 2 cans of peaches and 2 purified water jugs.',
             outcomeTitle: 'Fair Barter Concluded',
             outcomeText: 'The outpost quartermaster shook your hand and traded clean water and canned fruit. The community welcomes you back anytime.'
           };

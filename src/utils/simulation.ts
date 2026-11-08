@@ -151,7 +151,7 @@ export function advanceOneDay(state: GameState): GameState {
     newLogs.push({
       id: `log_thirst_${Date.now()}_${Math.random()}`,
       day: currentDay,
-      text: `⚠️ DEHYDRATION (Day ${daysWithoutWater}): Your mouth is dry as ash. Severe headache and muscle cramps (-${dehydrationDamage}% HP).`,
+      text: `⚠️ DEHYDRATION (Day ${daysWithoutWater}): My mouth is dry as ash. Severe headache and muscle cramps (-${dehydrationDamage}% HP).`,
       type: 'hazard',
       timestamp: 'Dawn'
     });
