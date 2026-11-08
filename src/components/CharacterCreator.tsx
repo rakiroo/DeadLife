@@ -269,7 +269,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
   return (
     <div className="h-screen max-h-screen flex flex-col bg-zinc-950 text-zinc-100 max-w-md mx-auto w-full select-none overflow-hidden font-sans">
       {/* 1. STICKY TOP HEADER WITH LIVE POINTS COUNTER */}
-      <header className="shrink-0 sticky top-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 px-4 py-3 flex items-center justify-between shadow-lg">
+      <header className="shrink-0 sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-2xl border-b border-white/5 px-4 py-3 flex items-center justify-between shadow-lg">
         <button
           onClick={onBack}
           className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 active:scale-95"
@@ -284,14 +284,14 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
       </header>
 
       {/* 2. SEGMENTED TAB NAVIGATION (NO MORE ENDLESS SCROLLING) */}
-      <nav className="shrink-0 bg-zinc-900/90 border-b border-zinc-800 px-2 py-1.5 grid grid-cols-3 gap-1 z-30">
+      <nav className="shrink-0 bg-white/[0.03] border-b border-white/5 px-2 py-1.5 grid grid-cols-3 gap-1 z-30">
         <button
           type="button"
           onClick={() => setActiveTab('identity')}
           className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all border ${
             activeTab === 'identity'
-              ? 'bg-zinc-800 border-zinc-700 text-zinc-100 shadow-sm'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+              ? 'bg-white/10 border-white/10 text-white font-semibold shadow-sm'
+              : 'text-zinc-400 hover:text-white border-transparent'
           }`}
         >
           <User className="w-3.5 h-3.5 text-rose-400" />
@@ -303,8 +303,8 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
           onClick={() => setActiveTab('skills')}
           className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all border ${
             activeTab === 'skills'
-              ? 'bg-zinc-800 border-zinc-700 text-zinc-100 shadow-sm'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+              ? 'bg-white/10 border-white/10 text-white font-semibold shadow-sm'
+              : 'text-zinc-400 hover:text-white border-transparent'
           }`}
         >
           <Activity className="w-3.5 h-3.5 text-cyan-400" />
@@ -319,8 +319,8 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
           onClick={() => setActiveTab('traits')}
           className={`py-2 px-1 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all border relative ${
             activeTab === 'traits'
-              ? 'bg-zinc-800 border-zinc-700 text-zinc-100 shadow-sm'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850'
+              ? 'bg-white/10 border-white/10 text-white font-semibold shadow-sm'
+              : 'text-zinc-400 hover:text-white border-transparent'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -896,7 +896,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
       </div>
 
       {/* 4. STICKY BOTTOM ACTION FOOTER */}
-      <footer className="shrink-0 sticky bottom-0 z-40 p-3.5 bg-zinc-950/95 border-t border-zinc-800 backdrop-blur-md shadow-2xl">
+      <footer className="shrink-0 sticky bottom-0 z-40 p-4 bg-zinc-950/80 border-t border-white/5 backdrop-blur-2xl shadow-2xl">
         {availablePoints < 0 ? (
           <div className="text-xs text-rose-400 flex items-center justify-center gap-1.5 mb-2 font-mono">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -916,7 +916,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
           type="button"
           disabled={!canStart}
           onClick={handleBegin}
-          className={`w-full py-3 px-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-2 ${
+          className={`w-full py-4 px-4 rounded-2xl font-semibold text-sm tracking-wide transition-all shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] ${
             canStart
               ? 'bg-rose-600 hover:bg-rose-500 text-white active:scale-98 shadow-rose-950/50'
               : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'
