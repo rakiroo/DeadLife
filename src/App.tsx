@@ -9,8 +9,6 @@ import { DilemmaModal } from './components/DilemmaModal';
 import { DilemmaResultModal } from './components/DilemmaResultModal';
 import { BottomActionBar, ActiveTab } from './components/BottomActionBar';
 import { InventoryTab } from './components/InventoryTab';
-import { ShelterTab } from './components/ShelterTab';
-import { CampTab } from './components/CampTab';
 import { ActivitiesTab } from './components/ActivitiesTab';
 import { DeathScreen } from './components/DeathScreen';
 import { TitleScreen } from './components/TitleScreen';
@@ -232,11 +230,7 @@ export function App() {
   // Keep active tab valid based on current unlocked features
   useEffect(() => {
     if (!gameState) return;
-    if (activeTab === 'shelter' && !gameState.shelter?.isEstablished) {
-      setActiveTab('journal');
-    } else if (activeTab === 'camp' && !gameState.isCampEstablished && (!gameState.campMembers || gameState.campMembers.length === 0)) {
-      setActiveTab('journal');
-    }
+    // Tab validation simplified
   }, [activeTab, gameState?.shelter?.isEstablished, gameState?.isCampEstablished, gameState?.campMembers?.length]);
 
   // Save game state whenever it updates and player is alive
@@ -855,16 +849,15 @@ export function App() {
     <div className="h-screen max-h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden font-sans select-none">
       <div className="w-full max-w-md mx-auto flex flex-col h-full max-h-screen bg-zinc-950 border-x border-zinc-900 shadow-2xl relative overflow-hidden">
         {/* Top Sticky Vitals */}
-        <HeaderVitals state={gameState} onOpenMenu={() => setScreen('title')} />
+        <HeaderVitals state={gameState} onOpenMenu={() => setScreen('title')} compact={activeTab !== 'journal'} />
 
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
           {activeTab === 'journal' && <JournalFeed logs={gameState.logs} onOpenAmbitions={() => setShowAmbitionsModal(true)} />}
-          {activeTab === 'inventory' && <InventoryTab gameState={gameState} onUseItem={handleUseItem} />}
-          {activeTab === 'shelter' && <ShelterTab gameState={gameState} onRepairBarricade={handleRepairBarricade} />}
-          {activeTab === 'camp' && (
-            <CampTab
+          {activeTab === 'inventory' && (
+            <InventoryTab
               gameState={gameState}
+              onUseItem={handleUseItem}
               onRoleChange={handleRoleChange}
               onTalkSurvivor={handleTalkSurvivor}
               onGiftSurvivor={handleGiftSurvivor}

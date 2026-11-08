@@ -10,9 +10,10 @@ interface Props {
   state: GameState;
   onOpenMenu?: () => void;
   onOpenSettings?: () => void;
+  compact?: boolean;
 }
 
-export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
+export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu, compact = false }) => {
   const { player, weather, temperatureCelsius } = state;
   const [showPauseModal, setShowPauseModal] = useState(false);
 
@@ -65,7 +66,9 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
           </div>
         </div>
 
-        {/* Character Identity: Name, Profession & Age */}
+        {!compact && (
+          <>
+            {/* Character Identity: Name, Profession & Age */}
         <div className="flex items-center justify-between pt-0.5">
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-bold text-white tracking-tight truncate">
@@ -211,6 +214,9 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
             <span className="font-bold text-emerald-400">{player.fitnessSkill}<span className="text-zinc-600 font-normal">/10</span></span>
           </div>
         </div>
+
+</>
+        )}
 
         {/* Pause & Settings Modal (Only opens when explicitly clicking settings icon) */}
         {showPauseModal && (
