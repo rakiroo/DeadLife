@@ -94,6 +94,8 @@ export interface SurvivorBackstory {
   chapter?: number;
   lastChapterDay?: number;
   status: 'searching' | 'clue_found' | 'resolved';
+  outcome?: 'reunited' | 'bitten_survived' | 'deceased' | 'mercy' | 'avenged';
+  outcomeSummary?: string;
   journalThoughts: string[];
 }
 
