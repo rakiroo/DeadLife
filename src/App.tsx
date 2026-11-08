@@ -17,7 +17,6 @@ import { DeathScreen } from './components/DeathScreen';
 import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
-import { generateAIDilemma } from './services/aiStoryteller';
 
 type ScreenState = 'title' | 'creator' | 'game' | 'graveyard';
 
