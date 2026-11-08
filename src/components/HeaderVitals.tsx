@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Heart, Droplets, Utensils, ShieldAlert, CloudRain, Sun, CloudFog, Snowflake, 
-  Settings, X, Shield, HeartPulse, Hammer, EyeOff, Activity, 
+  Settings, Shield, HeartPulse, Hammer, EyeOff, Activity, 
   LogOut, Play
 } from 'lucide-react';
 import { GameState, WeatherType } from '../types/game';
@@ -14,7 +14,6 @@ interface Props {
 
 export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
   const { player, weather, temperatureCelsius } = state;
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
 
   const getWeatherIcon = (w: WeatherType) => {
@@ -68,13 +67,8 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
 
         {/* Character Identity: Name, Profession & Age */}
         <div className="flex items-center justify-between pt-0.5">
-          <button
-            type="button"
-            onClick={() => setShowProfileModal(true)}
-            className="text-left group transition-all flex-1 min-w-0"
-            title="Tap to view Skills & Perks"
-          >
-            <h1 className="text-base font-bold text-white tracking-tight group-hover:text-rose-400 transition-colors truncate">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-bold text-white tracking-tight truncate">
               {player.name}
             </h1>
             <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-0.5 font-sans">
@@ -82,8 +76,9 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
               <span className="text-zinc-600">•</span>
               <span className="shrink-0">Age {player.age}</span>
             </div>
-          </button>
+          </div>
 
+          {/* Status Effects */}
           {player.statusEffects.length > 0 && (
             <div className="flex gap-1 overflow-x-auto py-0.5 shrink-0 ml-2">
               {player.statusEffects.map((eff, idx) => (
@@ -179,104 +174,45 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
           </div>
         </div>
 
-        {/* 1. Survivor Profile & Attributes Modal */}
-        {showProfileModal && (
-          <div 
-            onClick={() => setShowProfileModal(false)}
-            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-          >
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-xs shadow-2xl flex flex-col max-h-[80vh] overflow-hidden font-sans my-auto"
-            >
-              {/* Sticky Modal Header */}
-              <div className="px-4 py-3 flex items-center justify-between border-b border-white/5 bg-zinc-900/90 shrink-0">
-                <div>
-                  <h2 className="text-sm font-bold text-white tracking-tight">{player.name}</h2>
-                  <p className="text-[11px] text-zinc-400">{player.profession} • Age {player.age}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowProfileModal(false)}
-                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/15 text-zinc-300 flex items-center justify-center transition-colors"
-                  title="Close"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Scrollable Modal Content */}
-              <div className="p-4 overflow-y-auto space-y-3 flex-1">
-                {/* Attributes Grid */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-semibold text-zinc-400 block px-0.5">
-                    Attributes
-                  </span>
-                  <div className="grid grid-cols-2 gap-1.5 text-xs">
-                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-zinc-300"><Shield className="w-3.5 h-3.5 text-rose-500" /> Combat</span>
-                      <span className="font-mono font-bold text-white">{player.combatSkill}/10</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-zinc-300"><HeartPulse className="w-3.5 h-3.5 text-cyan-400" /> First Aid</span>
-                      <span className="font-mono font-bold text-white">{player.medicalSkill}/10</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-zinc-300"><Hammer className="w-3.5 h-3.5 text-amber-400" /> Crafting</span>
-                      <span className="font-mono font-bold text-white">{player.craftingSkill}/10</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-zinc-300"><EyeOff className="w-3.5 h-3.5 text-indigo-400" /> Stealth</span>
-                      <span className="font-mono font-bold text-white">{player.stealthSkill}/10</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 col-span-2 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-zinc-300"><Activity className="w-3.5 h-3.5 text-emerald-400" /> Fitness</span>
-                      <span className="font-mono font-bold text-white">{player.fitnessSkill}/10</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Traits & Perks */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-semibold text-zinc-400 block px-0.5">
-                    Traits & Habits
-                  </span>
-                  {player.traits.length === 0 ? (
-                    <p className="text-xs text-zinc-500 italic px-0.5">No special traits picked.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {player.traits.map(t => (
-                        <span
-                          key={t.id}
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${
-                            t.type === 'positive'
-                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
-                              : 'bg-rose-500/15 text-rose-300 border-rose-500/25'
-                          }`}
-                        >
-                          {t.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom Close Button */}
-              <div className="p-3 border-t border-white/5 bg-zinc-900/90 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowProfileModal(false)}
-                  className="w-full py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs active:scale-[0.98] transition-all"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
+        {/* Tiny Responsive Attributes Row Directly Below Health Bars */}
+        <div className="grid grid-cols-5 gap-1 pt-0.5 text-center text-[10px] font-mono">
+          <div className="bg-white/[0.03] border border-white/5 rounded-xl py-1 px-1 flex flex-col items-center justify-center" title="Combat Skill">
+            <span className="text-zinc-500 text-[9px] uppercase tracking-tight flex items-center gap-0.5">
+              <Shield className="w-2.5 h-2.5 text-rose-500" /> Cbt
+            </span>
+            <span className="font-bold text-rose-400">{player.combatSkill}<span className="text-zinc-600 font-normal">/10</span></span>
           </div>
-        )}
 
-        {/* 2. Pause & Settings Modal */}
+          <div className="bg-white/[0.03] border border-white/5 rounded-xl py-1 px-1 flex flex-col items-center justify-center" title="First Aid / Medical Skill">
+            <span className="text-zinc-500 text-[9px] uppercase tracking-tight flex items-center gap-0.5">
+              <HeartPulse className="w-2.5 h-2.5 text-cyan-400" /> Med
+            </span>
+            <span className="font-bold text-cyan-400">{player.medicalSkill}<span className="text-zinc-600 font-normal">/10</span></span>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/5 rounded-xl py-1 px-1 flex flex-col items-center justify-center" title="Crafting Skill">
+            <span className="text-zinc-500 text-[9px] uppercase tracking-tight flex items-center gap-0.5">
+              <Hammer className="w-2.5 h-2.5 text-amber-400" /> Crf
+            </span>
+            <span className="font-bold text-amber-400">{player.craftingSkill}<span className="text-zinc-600 font-normal">/10</span></span>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/5 rounded-xl py-1 px-1 flex flex-col items-center justify-center" title="Stealth Skill">
+            <span className="text-zinc-500 text-[9px] uppercase tracking-tight flex items-center gap-0.5">
+              <EyeOff className="w-2.5 h-2.5 text-indigo-400" /> Stl
+            </span>
+            <span className="font-bold text-indigo-400">{player.stealthSkill}<span className="text-zinc-600 font-normal">/10</span></span>
+          </div>
+
+          <div className="bg-white/[0.03] border border-white/5 rounded-xl py-1 px-1 flex flex-col items-center justify-center" title="Fitness Skill">
+            <span className="text-zinc-500 text-[9px] uppercase tracking-tight flex items-center gap-0.5">
+              <Activity className="w-2.5 h-2.5 text-emerald-400" /> Fit
+            </span>
+            <span className="font-bold text-emerald-400">{player.fitnessSkill}<span className="text-zinc-600 font-normal">/10</span></span>
+          </div>
+        </div>
+
+        {/* Pause & Settings Modal (Only opens when explicitly clicking settings icon) */}
         {showPauseModal && (
           <div 
             onClick={() => setShowPauseModal(false)}
