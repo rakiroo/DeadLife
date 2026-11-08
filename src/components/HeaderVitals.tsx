@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Heart, Droplets, Utensils, ShieldAlert, CloudRain, Sun, CloudFog, Snowflake, 
-  Settings, X, Shield, HeartPulse, Hammer, EyeOff, Activity, MapPin, 
+  Settings, X, Shield, HeartPulse, Hammer, EyeOff, Activity, 
   LogOut, Play
 } from 'lucide-react';
 import { GameState, WeatherType } from '../types/game';
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
-  const { player, weather, temperatureCelsius, startingLocation } = state;
+  const { player, weather, temperatureCelsius } = state;
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPauseModal, setShowPauseModal] = useState(false);
 
@@ -105,11 +105,11 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
             {player.traits.map(t => (
               <span
                 key={t.id}
-                className={'px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ' + (
+                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${
                   t.type === 'positive'
                     ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                     : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                )}
+                }`}
                 title={t.description}
               >
                 {t.name}
@@ -181,98 +181,121 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
 
         {/* 1. Survivor Profile & Attributes Modal */}
         {showProfileModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl w-full max-w-xs p-4 space-y-3 shadow-2xl font-sans">
-              <div className="flex items-start justify-between pb-3 border-b border-white/5">
+          <div 
+            onClick={() => setShowProfileModal(false)}
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-xs shadow-2xl flex flex-col max-h-[80vh] overflow-hidden font-sans my-auto"
+            >
+              {/* Sticky Modal Header */}
+              <div className="px-4 py-3 flex items-center justify-between border-b border-white/5 bg-zinc-900/90 shrink-0">
                 <div>
-                  <h2 className="text-base font-bold text-white tracking-tight">{player.name}</h2>
-                  <p className="text-xs text-zinc-400">{player.profession} • Age {player.age}</p>
+                  <h2 className="text-sm font-bold text-white tracking-tight">{player.name}</h2>
+                  <p className="text-[11px] text-zinc-400">{player.profession} • Age {player.age}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowProfileModal(false)}
                   className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/15 text-zinc-300 flex items-center justify-center transition-colors"
+                  title="Close"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="text-[11px] text-zinc-300 bg-white/[0.04] p-3 rounded-2xl border border-white/5 space-y-1">
-                <div className="font-semibold text-zinc-200 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-rose-400" /> Spawn Location:
-                </div>
-                <div className="text-zinc-400 font-mono">{startingLocation.name} ({startingLocation.type})</div>
-              </div>
-
-              <div className="space-y-2">
-                <span className="text-xs font-semibold text-zinc-400 block px-0.5">
-                  Attributes
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-zinc-300"><Shield className="w-3.5 h-3.5 text-rose-500" /> Combat</span>
-                    <span className="font-mono font-bold text-white">{player.combatSkill}/10</span>
-                  </div>
-                  <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-zinc-300"><HeartPulse className="w-3.5 h-3.5 text-cyan-400" /> First Aid</span>
-                    <span className="font-mono font-bold text-white">{player.medicalSkill}/10</span>
-                  </div>
-                  <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-zinc-300"><Hammer className="w-3.5 h-3.5 text-amber-400" /> Crafting</span>
-                    <span className="font-mono font-bold text-white">{player.craftingSkill}/10</span>
-                  </div>
-                  <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-zinc-300"><EyeOff className="w-3.5 h-3.5 text-indigo-400" /> Stealth</span>
-                    <span className="font-mono font-bold text-white">{player.stealthSkill}/10</span>
-                  </div>
-                  <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/5 col-span-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-zinc-300"><Activity className="w-3.5 h-3.5 text-emerald-400" /> Fitness</span>
-                    <span className="font-mono font-bold text-white">{player.fitnessSkill}/10</span>
+              {/* Scrollable Modal Content */}
+              <div className="p-4 overflow-y-auto space-y-3 flex-1">
+                {/* Attributes Grid */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-zinc-400 block px-0.5">
+                    Attributes
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-zinc-300"><Shield className="w-3.5 h-3.5 text-rose-500" /> Combat</span>
+                      <span className="font-mono font-bold text-white">{player.combatSkill}/10</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-zinc-300"><HeartPulse className="w-3.5 h-3.5 text-cyan-400" /> First Aid</span>
+                      <span className="font-mono font-bold text-white">{player.medicalSkill}/10</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-zinc-300"><Hammer className="w-3.5 h-3.5 text-amber-400" /> Crafting</span>
+                      <span className="font-mono font-bold text-white">{player.craftingSkill}/10</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-zinc-300"><EyeOff className="w-3.5 h-3.5 text-indigo-400" /> Stealth</span>
+                      <span className="font-mono font-bold text-white">{player.stealthSkill}/10</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white/[0.04] border border-white/5 col-span-2 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-zinc-300"><Activity className="w-3.5 h-3.5 text-emerald-400" /> Fitness</span>
+                      <span className="font-mono font-bold text-white">{player.fitnessSkill}/10</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Traits & Perks */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-zinc-400 block px-0.5">
+                    Traits & Habits
+                  </span>
+                  {player.traits.length === 0 ? (
+                    <p className="text-xs text-zinc-500 italic px-0.5">No special traits picked.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {player.traits.map(t => (
+                        <span
+                          key={t.id}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${
+                            t.type === 'positive'
+                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
+                              : 'bg-rose-500/15 text-rose-300 border-rose-500/25'
+                          }`}
+                        >
+                          {t.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-zinc-400 block px-0.5">
-                  Traits & Perks
-                </span>
-                {player.traits.length === 0 ? (
-                  <p className="text-xs text-zinc-500 italic px-0.5">No special traits picked.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {player.traits.map(t => (
-                      <span
-                        key={t.id}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
-                          t.type === 'positive'
-                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
-                            : 'bg-rose-500/15 text-rose-300 border-rose-500/25'
-                        }`}
-                      >
-                        {t.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
+              {/* Bottom Close Button */}
+              <div className="p-3 border-t border-white/5 bg-zinc-900/90 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="w-full py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs active:scale-[0.98] transition-all"
+                >
+                  Done
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* 2. Pause & Settings Modal (Alert Sheet Style) */}
+        {/* 2. Pause & Settings Modal */}
         {showPauseModal && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl w-full max-w-xs p-4 space-y-3 shadow-2xl font-sans text-center">
+          <div 
+            onClick={() => setShowPauseModal(false)}
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-xs p-4 space-y-3 shadow-2xl font-sans text-center my-auto"
+            >
               <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center mx-auto text-zinc-200">
                 <Settings className="w-4 h-4 text-zinc-300" />
               </div>
 
-              <div className="space-y-1">
-                <h2 className="text-lg font-bold text-white tracking-tight">Game Paused</h2>
-                <p className="text-xs text-zinc-400">{player.name} • {player.profession}</p>
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-bold text-white tracking-tight">Game Paused</h2>
+                <p className="text-[11px] text-zinc-400">{player.name} • {player.profession}</p>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/5 text-xs text-zinc-300 text-left space-y-1">
+              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/5 text-xs text-zinc-300 text-left space-y-1">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Day:</span>
                   <span className="font-mono font-bold text-white">{state.day}</span>
@@ -283,13 +306,13 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
                 </div>
               </div>
 
-              <div className="space-y-2 pt-2">
+              <div className="space-y-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setShowPauseModal(false)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
                 >
-                  <Play className="w-4 h-4 fill-white" />
+                  <Play className="w-3.5 h-3.5 fill-white" />
                   <span>Resume Survival</span>
                 </button>
 
