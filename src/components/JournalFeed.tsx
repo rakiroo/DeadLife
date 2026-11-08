@@ -41,7 +41,7 @@ export const JournalFeed: React.FC<Props> = ({ logs }) => {
         <div key={group.day} className="space-y-1.5">
           {/* Day Header - BitLife Age style in bold blue */}
           <h3 className="text-base font-bold text-sky-400 font-sans tracking-tight">
-            Day: {group.day} {group.day === 1 ? 'day' : 'days'}
+            Day: {group.day}
           </h3>
 
           {/* Clean, compact event lines without bulky card containers */}
