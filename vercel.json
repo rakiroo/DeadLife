@@ -1,4 +1,5 @@
 {
+  "name": "deadlife",
   "framework": "vite",
   "rewrites": [
     {
