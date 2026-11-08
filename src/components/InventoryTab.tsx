@@ -180,8 +180,29 @@ export const InventoryTab: React.FC<Props> = ({
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-xs font-bold text-white">{member.name}</h3>
-                    <p className="text-[11px] text-zinc-400">{member.profession} • Age {member.age}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h3 className="text-xs font-bold text-white truncate">{member.name}</h3>
+                      {member.relation && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-white/10 text-amber-300 border border-white/10 shrink-0">
+                          {member.relation}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5 truncate">{member.profession} • Age {member.age}</p>
+                    {(member.combatSkill !== undefined) && (
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 mt-1 flex-wrap">
+                        <span className="text-zinc-500">Skills:</span>
+                        <span className="text-rose-400 font-semibold">Cbt {member.combatSkill}</span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-cyan-400 font-semibold">Med {member.medicalSkill}</span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-amber-400 font-semibold">Crf {member.craftingSkill}</span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-indigo-400 font-semibold">Stl {member.stealthSkill}</span>
+                        <span className="text-zinc-600">•</span>
+                        <span className="text-emerald-400 font-semibold">Fit {member.fitnessSkill}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right font-mono text-[11px]">
                     <span className="text-emerald-400 font-bold">HP {member.health}%</span>

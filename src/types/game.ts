@@ -136,6 +136,11 @@ export interface CampMember {
   profession: string;
   health: number;
   trust: number;
+  combatSkill?: number;
+  medicalSkill?: number;
+  craftingSkill?: number;
+  stealthSkill?: number;
+  fitnessSkill?: number;
   role: CampRole;
   isBittenSuspect?: boolean;
   statusEffects: StatusEffect[];

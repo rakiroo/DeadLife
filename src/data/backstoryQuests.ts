@@ -1,7 +1,137 @@
-import { EventDilemma, GameState, CampMember } from '../types/game';
+import { EventDilemma, GameState, CampMember, CampRole } from '../types/game';
 
 // Check and trigger the next episodic chapter pop-up for the player's backstory
 // Spanned across 5 meaningful chapters over 15-20+ days of survival with branching outcomes!
+
+function getPlayerLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  return parts.length > 1 ? parts[parts.length - 1] : '';
+}
+
+function generateCompanionFromBackstory(
+  player: { name: string; age: number },
+  bs: any,
+  status: 'healthy' | 'amputee' = 'healthy'
+): CampMember {
+  const lastName = getPlayerLastName(player.name);
+  const target = bs.targetName;
+  const relation = bs.relation;
+  const isFamily = bs.theme === 'family' || bs.theme === 'love';
+  const isPet = bs.theme === 'pet';
+
+  // 1. Inherit player's last name for family members like in BitLife!
+  let fullName = target;
+  if (isFamily && lastName && !target.includes(' ')) {
+    fullName = target + ' ' + lastName;
+  } else if (isPet) {
+    fullName = target;
+  }
+
+  // 2. Realistic age calculation relative to player
+  let age = player.age;
+  if (relation.includes('Father') || relation.includes('Mother')) {
+    age = Math.max(player.age + 20, 58);
+  } else if (relation.includes('Son') || relation.includes('Daughter')) {
+    age = Math.min(Math.max(7, player.age - 20), 22);
+  } else if (relation.includes('Brother') || relation.includes('Sister')) {
+    age = Math.max(12, player.age - 3);
+  } else if (relation.includes('Twin')) {
+    age = player.age;
+  } else if (isPet) {
+    age = 3;
+  }
+
+  // 3. Gender inference
+  let gender: 'male' | 'female' = 'male';
+  if (
+    relation.includes('Mother') || 
+    relation.includes('Sister') || 
+    relation.includes('Daughter') || 
+    (relation.includes('Spouse') && (target === 'Elena' || target === 'Hannah' || target === 'Rachel' || target === 'Martha'))
+  ) {
+    gender = 'female';
+  }
+
+  // 4. Individualized stats (1-10) like BitLife / RPGs
+  let combatSkill = 4;
+  let medicalSkill = 4;
+  let craftingSkill = 4;
+  let stealthSkill = 4;
+  let fitnessSkill = 4;
+  let role: CampRole = 'guard';
+  let profession = 'Resilient Companion';
+
+  if (isPet) {
+    combatSkill = 7;
+    medicalSkill = 1;
+    craftingSkill = 1;
+    stealthSkill = 8;
+    fitnessSkill = 9;
+    role = 'guard';
+    profession = 'Camp Guardian & Early Warning';
+  } else if (relation.includes('Father')) {
+    combatSkill = 6;
+    medicalSkill = 3;
+    craftingSkill = 8;
+    stealthSkill = 3;
+    fitnessSkill = 4;
+    role = 'craftsman';
+    profession = 'Retired Tradesman & Builder';
+  } else if (relation.includes('Mother') || bs.id.includes('mom')) {
+    combatSkill = 3;
+    medicalSkill = 9;
+    craftingSkill = 5;
+    stealthSkill = 4;
+    fitnessSkill = 4;
+    role = 'medic';
+    profession = 'Field Caregiver & Nurse';
+  } else if (relation.includes('Brother') || relation.includes('Sister') || age < 18) {
+    combatSkill = 4;
+    medicalSkill = 2;
+    craftingSkill = 3;
+    stealthSkill = 7;
+    fitnessSkill = 8;
+    role = 'scavenger';
+    profession = 'Agile Student & Scout';
+  } else if (relation.includes('Friend') || target === 'Lucas') {
+    combatSkill = 6;
+    medicalSkill = 2;
+    craftingSkill = 4;
+    stealthSkill = 6;
+    fitnessSkill = 8;
+    role = 'scavenger';
+    profession = 'Athletic Scavenger';
+  } else if (relation.includes('Spouse')) {
+    combatSkill = 6;
+    medicalSkill = 5;
+    craftingSkill = 5;
+    stealthSkill = 5;
+    fitnessSkill = 6;
+    role = 'guard';
+    profession = 'Devoted Partner & Defender';
+  }
+
+  return {
+    id: 'rescued_' + bs.id + '_' + Date.now(),
+    name: fullName,
+    gender,
+    age,
+    relation: isPet ? 'Pet Dog 🐕' : (relation + (status === 'amputee' ? ' 🩹' : '')),
+    profession: status === 'amputee' ? (profession + ' (Amputee Survivor)') : profession,
+    bio: isPet ? ('Faithful four-legged companion of ' + player.name + '.') : (relation + ' of ' + player.name + '. Rescued from the ruins.'),
+    health: status === 'amputee' ? 70 : 95,
+    trust: 100,
+    daysTogether: 1,
+    combatSkill,
+    medicalSkill,
+    craftingSkill,
+    stealthSkill,
+    fitnessSkill,
+    role,
+    statusEffects: []
+  };
+}
+
 export function getNextBackstoryDilemma(state: GameState, currentDay: number): EventDilemma | null {
   const bs = state.player.backstory;
   if (!bs || bs.status === 'resolved') return null;
@@ -264,19 +394,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           consequenceSummary: 'Slay the walkers and rescue ' + target + ' into camp (+100% Mind/Sanity)!',
           execute: (state: GameState) => {
             const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'reunited', outcomeSummary: 'Rescued alive and healthy' };
-            const petCompanion: CampMember = {
-              id: 'pet_' + bs.id,
-              name: target + ' (' + relation + ')',
-              age: 3,
-              profession: 'Loyal Camp Guardian',
-              relation: relation + ' 🐕',
-              bio: 'Devoted companion. Barks to alert camp of approaching danger.',
-              health: 90,
-              trust: 100,
-              daysTogether: 1,
-              role: 'guard',
-              statusEffects: []
-            };
+            const petCompanion = generateCompanionFromBackstory(state.player, bs, 'healthy');
 
             return {
               state: {
@@ -515,19 +633,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             
             if (hasMedSkill) {
               const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'bitten_survived', outcomeSummary: 'Saved through emergency limb amputation' };
-              const companion: CampMember = {
-                id: 'rescued_amputee_' + bs.id,
-                name: target + ' (' + relation + ')',
-                age: relation.includes('Brother') || relation.includes('Sister') ? 17 : 30,
-                profession: 'Scarred Veteran Survivor',
-                relation: relation + ' 🩹',
-                bio: 'Brave survivor. Survived an infected bite thanks to emergency field amputation.',
-                health: 75,
-                trust: 100,
-                daysTogether: 1,
-                role: 'guard',
-                statusEffects: []
-              };
+              const companion = generateCompanionFromBackstory(state.player, bs, 'amputee');
 
               return {
                 state: {
@@ -606,19 +712,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         consequenceSummary: 'Rescue ' + target + ' alive and healthy. They join your camp as a loyal ally (+100% Mind/Sanity)!',
         execute: (state: GameState) => {
           const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'reunited', outcomeSummary: 'Rescued alive and healthy' };
-          const companion: CampMember = {
-            id: 'rescued_alive_' + bs.id,
-            name: target + ' (' + relation + ')',
-            age: relation.includes('Brother') || relation.includes('Sister') || relation.includes('Friend') ? 17 : relation.includes('Father') || relation.includes('Mother') ? 62 : 26,
-            profession: relation.includes('Father') ? 'Retired Veteran' : relation.includes('Mother') ? 'Caregiver & Medic' : relation.includes('Brother') || relation.includes('Sister') ? 'Resilient Student' : 'Devoted Companion',
-            relation: relation,
-            bio: 'Rescued loved one. Bound by blood and shared survival.',
-            health: 100,
-            trust: 100,
-            daysTogether: 1,
-            role: 'guard',
-            statusEffects: []
-          };
+          const companion = generateCompanionFromBackstory(state.player, bs, 'healthy');
 
           return {
             state: {
