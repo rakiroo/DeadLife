@@ -459,11 +459,38 @@ export function advanceOneDay(state: GameState): GameState {
       }
     }
 
+    let isSleepingRough = member.isSleepingRough;
+    if (isSleepingRough) {
+      if (hasBedAvailable) {
+        isSleepingRough = false;
+        trust = Math.min(100, trust + 15);
+        newLogs.push({
+          id: 'bed_found_' + member.id + '_' + Date.now(),
+          day: currentDay,
+          text: '������️ Bed Assigned: Space opened up in camp! ' + member.name + ' was moved off the floor into a proper bed (+Trust).',
+          type: 'camp',
+          timestamp: 'Morning'
+        });
+      } else {
+        trust = Math.max(10, trust - 1);
+        if (Math.random() < 0.15) {
+          newLogs.push({
+            id: 'rough_' + member.id + '_' + Date.now(),
+            day: currentDay,
+            text: '⚠️ Discontent: ' + member.name + ' complained about sleeping on the freezing concrete floor without a mattress (-Trust).',
+            type: 'camp',
+            timestamp: 'Night'
+          });
+        }
+      }
+    }
+
     updatedMembers.push({
       ...member,
       health: memberHealth,
       trust,
-      daysTogether
+      daysTogether,
+      isSleepingRough
     });
   }
 
@@ -744,7 +771,7 @@ export function advanceOneMonth(state: GameState): GameState {
       newLogs.push({
         id: 'dating_' + Date.now(),
         day: currentDay,
-        text: '❤️ Romance Blooms: After weeks of working side by side, ' + s1.name + ' and ' + s2.name + ' have officially started dating! Smiles have returned to the haven.',
+        text: sharedRoomName ? ('❤️ Romance in ' + sharedRoomName + ': Sharing quarters for months brought ' + s1.name + ' and ' + s2.name + ' closer together. They have officially started dating!') : ('❤️ Romance Blooms: Spending long evenings together around the camp, ' + s1.name + ' and ' + s2.name + ' have fallen in love and started dating!'),
         type: 'camp',
         timestamp: 'Romance'
       });

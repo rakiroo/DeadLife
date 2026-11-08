@@ -1442,6 +1442,20 @@ export const BaseTab: React.FC<Props> = ({
                 <span>Gift Food Rations</span>
               </button>
 
+              {onPraiseSurvivor && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerFeedback(`Commended ${selectedMember.name} for their dedicated duty (+Trust & Morale).`, () => onPraiseSurvivor(selectedMember.id));
+                    setSelectedMember(null);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 flex items-center justify-center gap-1.5"
+                >
+                  <Award className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Commend & Praise Duty (+Trust)</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setSelectedMember(null)}

@@ -113,7 +113,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
 
   // Identity state
   const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [name, setName] = useState(MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]);
+  const [name, setName] = useState(() => MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]);
   const [age, setAge] = useState<number>(28);
   const [selectedCareer, setSelectedCareer] = useState<Career>(CAREERS[0]);
 
