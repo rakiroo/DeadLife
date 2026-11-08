@@ -181,29 +181,31 @@ export function getNextBackstoryDilemma(
     return null;
   }
 
-  // 1. Activity Lore Triggers: Player actions in the world directly trigger chapters that make sense!
-  if (source === 'radio' && chapter === 1) {
+  // 1. Activity Lore Triggers: Player actions in the world directly trigger milestones with sensible cooldowns
+  const daysSinceLast = currentDay - lastDay;
+  if (source === 'radio' && chapter === 1 && currentDay >= 3) {
     return generateChapterDilemma(state, bs, 1, currentDay);
   }
-  if (source === 'vehicle' && chapter === 2) {
+  if (source === 'vehicle' && chapter === 2 && daysSinceLast >= 5) {
     return generateChapterDilemma(state, bs, 2, currentDay);
   }
-  if (source === 'recon' && (chapter === 3 || chapter === 4)) {
+  if (source === 'recon' && (chapter === 3 || chapter === 4) && daysSinceLast >= 6) {
     return generateChapterDilemma(state, bs, chapter, currentDay);
   }
-  if (source === 'scavenge' && locationId === bs.targetLocationId && chapter === 5) {
+  if (source === 'scavenge' && locationId === bs.targetLocationId && chapter === 5 && daysSinceLast >= 7) {
     return generateChapterDilemma(state, bs, 5, currentDay);
   }
 
-  // 2. Day Progression: Organic, non-forced chance when time passes
+  // 2. Day Progression: Organic, spaced out chance across longer survival days!
   if (source === 'day_advance') {
-    // Don't trigger two chapters on the exact same day
     if (currentDay <= lastDay) return null;
 
-    const daysSinceLast = currentDay - lastDay;
-    const shouldTrigger = (chapter === 1 && currentDay >= 2 && Math.random() < 0.50) ||
-                          (chapter > 1 && daysSinceLast >= 2 && Math.random() < 0.55) ||
-                          (daysSinceLast >= 4); // Guarantees story progresses after a few days of survival
+    // Spaced out over longer days of survival so the journey feels vast and natural:
+    const shouldTrigger = (chapter === 1 && (currentDay >= 9 || (currentDay >= 5 && Math.random() < 0.22))) ||
+                          (chapter === 2 && (daysSinceLast >= 14 || (daysSinceLast >= 7 && Math.random() < 0.18))) ||
+                          (chapter === 3 && (daysSinceLast >= 16 || (daysSinceLast >= 8 && Math.random() < 0.16))) ||
+                          (chapter === 4 && (daysSinceLast >= 18 || (daysSinceLast >= 9 && Math.random() < 0.15))) ||
+                          (chapter === 5 && (daysSinceLast >= 20 || (daysSinceLast >= 10 && Math.random() < 0.15)));
 
     if (shouldTrigger && chapter <= 5) {
       return generateChapterDilemma(state, bs, chapter, currentDay);
@@ -227,7 +229,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (chapterNum === 1) {
     return {
       id: 'bs_ch1_' + bs.id + '_' + currentDay,
-      title: target + ': The First Lead (Chapter 1/5)',
+      title: target + ': The First Lead',
       category: 'discovery',
       dangerLevel: 'low',
       description: isPet
@@ -237,12 +239,12 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch1_investigate',
           text: isPet ? 'Whistle our two-tone call and mark the direction on my map' : 'Record the radio frequency and map the signal vector toward ' + target,
-          consequenceSummary: 'Documents the lead (+10 Sanity). Advances your search to Chapter 2.',
+          consequenceSummary: 'Documents the lead (+10 Sanity). Secures a direct heading to search.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 1, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
-              log: 'I documented the first signal vector toward ' + target + '. I have a direct heading to search. Chapter 1 resolved.',
+              log: 'I documented the first signal vector toward ' + target + '. I have a direct heading to search.',
               outcomeTitle: 'Signal Mapped',
               outcomeText: 'I recorded the coordinates on my map. ' + target + ' is out there, and I now have a solid lead to follow.'
             };
@@ -251,12 +253,12 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch1_cautious',
           text: 'Keep low, listen carefully, and conserve equipment power',
-          consequenceSummary: 'Maintains stealth and preserves battery life. Advances to Chapter 2.',
+          consequenceSummary: 'Maintains stealth and preserves battery life while noting the signal.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 1, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs } },
-              log: 'I listened in silence, tracing the sound echoes toward ' + target + ' while keeping my position concealed. Chapter 1 resolved.',
+              log: 'I listened in silence, tracing the sound echoes toward ' + target + ' while keeping my position concealed.',
               outcomeTitle: 'Silent Recon',
               outcomeText: 'I pinned the acoustic direction without giving away my hiding spot. The search continues.'
             };
@@ -272,7 +274,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (chapterNum === 2) {
     return {
       id: 'bs_ch2_' + bs.id + '_' + currentDay,
-      title: target + ': The Abandoned Trail (Chapter 2/5)',
+      title: target + ': The Abandoned Trail',
       category: 'discovery',
       dangerLevel: 'medium',
       description: isPet
@@ -284,7 +286,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch2_search_vehicle',
           text: 'Search the abandoned vehicle cabin for supplies and route notes',
-          consequenceSummary: 'Scavenge emergency food & clean water (+Supplies). Advances to Chapter 3.',
+          consequenceSummary: 'Scavenge emergency food & clean water (+Supplies). Continues following the trail.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 2, currentDay);
             const loot = [
@@ -299,7 +301,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             }
             return {
               state: { ...state, inventory: inv, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
-              log: 'I searched the trail vehicle, securing emergency food and water, and found fresh tracks left by ' + target + '. Chapter 2 resolved.',
+              log: 'I searched the trail vehicle, securing emergency food and water, and found fresh tracks left by ' + target + '.',
               outcomeTitle: 'Supplies & Trail Secured',
               outcomeText: 'I recovered canned stew and water from the glovebox, and spotted fresh footprints leading toward the next district.'
             };
@@ -308,12 +310,12 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch2_track_prints',
           text: 'Follow the mud tracks immediately without stopping to loot',
-          consequenceSummary: 'Maintains rapid pursuit along the avenue. Advances to Chapter 3.',
+          consequenceSummary: 'Maintains rapid pursuit along the avenue. Continues following the trail.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 2, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
-              log: 'I tracked the footprints through the alley without pausing, closing the distance on ' + target + '. Chapter 2 resolved.',
+              log: 'I tracked the footprints through the alley without pausing, closing the distance on ' + target + '.',
               outcomeTitle: 'Rapid Pursuit',
               outcomeText: 'I kept my eyes glued to the mud prints. ' + target + ' was moving fast, staying ahead of wandering infected.'
             };
@@ -329,7 +331,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (chapterNum === 3) {
     return {
       id: 'bs_ch3_' + bs.id + '_' + currentDay,
-      title: target + ': The Narrow Escape (Chapter 3/5)',
+      title: target + ': The Narrow Escape',
       category: 'hazard',
       dangerLevel: 'medium',
       description: isPet
@@ -339,21 +341,21 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch3_ambush_walkers',
           text: 'Sneak behind the infected, eliminate them quietly, and retrieve the belongings',
-          consequenceSummary: 'Uses combat & stealth to recover ' + target + '\'s gear safely. Advances to Chapter 4.',
+          consequenceSummary: 'Uses combat & stealth to recover ' + target + '\'s gear safely. Keeps the trail hot.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 3, currentDay);
             const success = state.player.combatSkill >= 4 || state.player.stealthSkill >= 4 || Math.random() < 0.75;
             if (success) {
               return {
                 state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 15) }, stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 2 } },
-                log: 'I eliminated the walkers in the underpass and recovered ' + target + '\'s personal belongings. The trail is hot! Chapter 3 resolved.',
+                log: 'I eliminated the walkers in the underpass and recovered ' + target + '\'s personal belongings. The trail is hot!',
                 outcomeTitle: 'Belongings Recovered',
                 outcomeText: 'Two swift strikes put the walkers down. I inspected the belongings—' + target + ' escaped through the eastern tunnel.'
               };
             } else {
               return {
                 state: { ...state, player: { ...state.player, backstory: updatedBs, health: Math.max(10, state.player.health - 10) }, stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 1 } },
-                log: 'A walker lunged as I reached for the belongings, grazing my arm (-10% HP). I fought it off and secured the clue. Chapter 3 resolved.',
+                log: 'A walker lunged as I reached for the belongings, grazing my arm (-10% HP). I fought it off and secured the clue.',
                 outcomeTitle: 'Scraped by Walkers',
                 outcomeText: 'I took down the walker, but caught a sharp scrape across my shoulder. I held onto ' + target + '\'s belongings.'
               };
@@ -363,12 +365,12 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch3_distract_decoy',
           text: 'Throw a heavy brick down the avenue to lure the walkers away from the gear',
-          consequenceSummary: 'Clever distraction avoids all combat injury. Advances to Chapter 4.',
+          consequenceSummary: 'Clever distraction avoids all combat injury. Keeps the trail hot.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 3, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
-              log: 'I hurled a brick against a metal roll-up door, drawing the walkers away, and grabbed ' + target + '\'s belongings cleanly. Chapter 3 resolved.',
+              log: 'I hurled a brick against a metal roll-up door, drawing the walkers away, and grabbed ' + target + '\'s belongings cleanly.',
               outcomeTitle: 'Distraction Worked',
               outcomeText: 'The clatter echoed down the block. The infected shuffled away, giving me a clear window to retrieve the clue.'
             };
@@ -384,7 +386,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (chapterNum === 4) {
     return {
       id: 'bs_ch4_' + bs.id + '_' + currentDay,
-      title: target + ': The Safehouse Clue (Chapter 4/5)',
+      title: target + ': The Safehouse Clue',
       category: 'discovery',
       dangerLevel: 'low',
       description: isPet
@@ -394,12 +396,12 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch4_prepare_final_push',
           text: 'Sharpen weapons, pack emergency medicine, and prepare for the final push',
-          consequenceSummary: 'Final staging: Prepares mind and gear (+20 Sanity). Advances to Chapter 5 Climax!',
+          consequenceSummary: 'Final staging: Prepares mind and gear (+20 Sanity). Prepares for the final encounter.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 4, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 20) } },
-              log: 'I found ' + target + '\'s fresh chalk message! They are holding out at the stone courtyard. Preparing my final rescue push. Chapter 4 resolved.',
+              log: 'I found ' + target + '\'s fresh chalk message! They are holding out at the stone courtyard. Preparing my final rescue push.',
               outcomeTitle: 'Location Pinpointed',
               outcomeText: 'The message was written recently. The ink and chalk are fresh. I know the exact courtyard where ' + target + ' is waiting (+20 Sanity).'
             };
@@ -408,12 +410,12 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         {
           id: 'ch4_scout_perimeter',
           text: 'Scout the sanctuary perimeter from distance to map infected numbers',
-          consequenceSummary: 'Tactical scouting reveals the courtyard layout. Advances to Chapter 5 Climax!',
+          consequenceSummary: 'Tactical scouting reveals the courtyard layout. Prepares for the final encounter.',
           execute: (state: GameState) => {
             const updatedBs = advanceBackstoryChapter(bs, 4, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 15) } },
-              log: 'I scouted the perimeter around ' + target + '\'s location with binoculars. Mapped the safe breaches. Chapter 4 resolved.',
+              log: 'I scouted the perimeter around ' + target + '\'s location with binoculars. Mapped the safe breaches.',
               outcomeTitle: 'Breach Point Mapped',
               outcomeText: 'I spotted the stone courtyard through my lenses. A few infected are pacing the gates, but the rear fence is passable.'
             };
@@ -432,7 +434,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (isPet) {
     return {
       id: 'bs_ch5_' + bs.id + '_' + currentDay,
-      title: target + ': The Courtyard Stand (Chapter 5/5 Climax)',
+      title: target + ': The Courtyard Stand',
       category: 'hazard',
       dangerLevel: 'high',
       description: 'I breach the courtyard gates! ' + target + ' is trapped on top of an overturned truck, snarling bravely with a bleeding paw as three walkers snap at the rear bumper. ' + target + ' spots me and lets out a desperate, joyful howl!',
@@ -505,7 +507,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
       // Ironic Justice: Found already turned!
       return {
         id: 'bs_ch5_' + bs.id + '_' + currentDay,
-        title: target + ': The Ironic Justice (Chapter 5/5 Climax)',
+        title: target + ': The Ironic Justice',
         category: 'hazard',
         dangerLevel: 'medium',
         description: 'I breach the fenced supply depot. The stolen truck is crashed against a concrete pylon, doors hanging open. Dragging itself across the gravel is ' + target + '—already transformed into a snarling, decaying crawler with his jaw slackened and eyes milky white.',
@@ -541,7 +543,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
       // Live Confrontation
       return {
         id: 'bs_ch5_' + bs.id + '_' + currentDay,
-        title: target + ': The Final Confrontation (Chapter 5/5 Climax)',
+        title: target + ': The Final Confrontation',
         category: 'hazard',
         dangerLevel: 'high',
         description: 'Behind the depot fence, I corner ' + target + ' loading our stolen emergency supplies into his truck. He turns around with his weapon raised and sneers: "You tracked me across half the city? You should have stayed dead in that cellar!"',
@@ -608,7 +610,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (outcomeScenario === 0) {
     return {
       id: 'bs_ch5_sad_' + bs.id + '_' + currentDay,
-      title: target + ': The Final Stand (Chapter 5/5 Climax)',
+      title: target + ': The Final Stand',
       category: 'hazard',
       dangerLevel: 'low',
       description: 'I breach the sanctuary courtyard and kick the stone shed door open with tears of anticipation. But silence answers. On the bloodstained floorboards lie three neutralized walkers with crushed skulls. Slumped against the altar wall is ' + target + '\'s cold body, holding an empty revolver and a folded note addressed to me: "' + s.player.name + ' — I ran out of bullets. I am sorry I could not hold out longer. Take my supplies and live. Do not let our story die here."',
@@ -668,7 +670,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   if (outcomeScenario === 1) {
     return {
       id: 'bs_ch5_bitten_' + bs.id + '_' + currentDay,
-      title: target + ': The Feverish Goodbye (Chapter 5/5 Climax)',
+      title: target + ': The Feverish Goodbye',
       category: 'hazard',
       dangerLevel: 'high',
       description: 'I smash the padlock open and rush inside with a cry of joy, but my blood runs cold. Slumped against the altar, ' + target + ' is shivering violently with black veins spiderwebbing up their neck. Under their torn sleeve is a dark, inflamed bite mark. They look up with feverish, tear-filled eyes: "' + s.player.name + '... you came... I fought as long as I could... but I was bitten three hours ago... Please, do not let me become one of those monsters."',
@@ -750,7 +752,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   // SCENARIO 3 (HEROIC HAPPY RESCUE): Reunited Alive & Healthy!
   return {
     id: 'bs_ch5_alive_' + bs.id + '_' + currentDay,
-    title: target + ': Reunited at the Sanctuary (Chapter 5/5 Climax)',
+    title: target + ': Reunited at the Sanctuary',
     category: 'discovery',
     dangerLevel: 'medium',
     description: 'I breach the sanctuary courtyard! Two walkers are clawing at the stone tool shed door, but the wood hasn\'t given way! From inside, ' + target + '\'s voice shouts with fierce defiance: "Stay back, I have a pipe!" ' + target + ' is completely unbitten and fighting for their life!',

@@ -226,6 +226,123 @@ function getCompanionHappenings(state: GameState): string[] {
   ];
 }
 
+// Dynamic Backstory Story Sprinkles: Contextual thoughts, memories, and search clues that evolve as days pass
+function getBackstoryDailySprinkles(state: GameState): string[] {
+  const bs = state.player.backstory;
+  if (!bs) return [];
+
+  const isFather = Boolean(bs.relation && bs.relation.toLowerCase().includes("father")) || Boolean(bs.id && (bs.id.includes("dad") || bs.id.includes("father")));
+  const isMother = Boolean(bs.relation && bs.relation.toLowerCase().includes("mother")) || Boolean(bs.id && (bs.id.includes("mom") || bs.id.includes("mother")));
+  const target = isFather ? "Dad" : (isMother ? "Mom" : bs.targetName);
+  const stage = bs.chapter || 1;
+  const isSearching = bs.status === "searching";
+
+  const sprinkles: string[] = [];
+
+  // 1. Existing template journal thoughts
+  if (bs.journalThoughts && bs.journalThoughts.length > 0) {
+    sprinkles.push(...bs.journalThoughts);
+  }
+
+  // 2. Character-specific deep emotional sprinkles
+  if (isFather) {
+    sprinkles.push(
+      "I checked the oil dipstick on an abandoned car, remembering Dad teaching me how to listen to engine rattles.",
+      "Every blue pickup truck I spot in an alley makes my breath catch, hoping against hope that Dad is inside.",
+      "Dad always kept a spare house key hidden inside his leather belt. I checked my pockets, feeling a hollow ache.",
+      "I remembered Dad staying up late fixing broken furniture after work. That kind of grit is keeping me alive today.",
+      "The smell of cold rain on asphalt reminds me of Sunday drives with Dad before sirens replaced birdsong.",
+      "I took a deep breath and reminded myself of Dad's golden rule: never rush blindly into an unchecked room.",
+      "I saw an old carpenter pencil on a broken workbench. Dad always had one tucked behind his ear.",
+      "I stayed awake through the small hours listening to wind howl, wondering where Dad found shelter tonight.",
+      "I remembered Dad gripping my shoulder when I had a nightmare as a kid. I need that reassurance right now.",
+      "I checked the laces on my boots. Dad always taught me that if your feet fail in bad weather, you're done for."
+    );
+  } else if (isMother) {
+    sprinkles.push(
+      "I checked the expiration dates on medical supplies, remembering Mom's neat clinic charts.",
+      "Mom always kept an emergency tea tin in the pantry. What I wouldn't give to sit across from her at our kitchen table.",
+      "I wrapped my scarf tight against the chill, hearing Mom's voice reminding me to bundle up.",
+      "Whenever the dark feels overwhelming, I replay Mom's calm voice from her last text message.",
+      "I looked at the hospital district skyline. Somewhere among those quiet blocks, Mom was on duty when the world broke.",
+      "Mom survived long hospital night shifts without breaking a sweat. I inherited her endurance; I will find her.",
+      "I found a handwritten clinic prescription in the debris. The neat cursive reminded me so sharply of Mom.",
+      "I kept Mom's photograph tucked close to my chest. It feels like an armor against the silence.",
+      "Mom always told me to be patient when repairing something fragile. I carried that patience with me today.",
+      "I checked every medicine shelf I passed, half-hoping Mom had organized the gauze rolls with her trademark labels."
+    );
+  } else if (bs.theme === "pet") {
+    sprinkles.push(
+      "I whistled low between my teeth at dusk, half-hoping to hear familiar paws padding across the cracked asphalt.",
+      "I checked a torn dog biscuit box scattered outside a corner bodega, wondering if " + target + " scavenged food here.",
+      "I still keep the worn tennis ball in my pocket. The fuzzy felt is worn smooth from years of games with " + target + ".",
+      "In the quiet before sunrise, I thought I heard " + target + "'s distant bark bounce off the high brick walls.",
+      "My shelter feels too quiet at night without " + target + "'s warm fur curled against my boots.",
+      "I saw paw prints pressed into dried mud near a storm drain. I crouched and measured them with my palm.",
+      "I held " + target + "'s leather leash in my hands. I promised I would bring him home safely."
+    );
+  } else if (bs.relation && (bs.relation.includes("Brother") || bs.relation.includes("Sister") || bs.relation.includes("Son") || bs.relation.includes("Daughter"))) {
+    sprinkles.push(
+      "I kept " + target + "'s favorite keepsake tucked into my pack. I promised I would walk home together.",
+      "I remembered laughing with " + target + " in the living room the night before the lockdown. It feels like a lifetime ago.",
+      "I checked the school crossing signs down the avenue, thinking of " + target + "'s smile.",
+      "I swore I would protect " + target + ". No matter how many blocks of infected stand in the way, I will reach them.",
+      "I paused in a ransacked toy store aisle, seeing a plush toy " + target + " would have adored."
+    );
+  } else if (bs.relation && bs.relation.includes("Friend")) {
+    sprinkles.push(
+      "I tapped the radio button three times, waiting for " + target + "'s signature reply across Channel 4.",
+      "I remembered sprinting through track practice with " + target + ". That speed is saving my life in these ruins.",
+      "If anyone has the stubbornness to outlast this outbreak, it is " + target + ". I know they are fighting somewhere out there.",
+      "I checked the radio batteries, keeping the dial tuned to " + target + "'s frequency."
+    );
+  } else if (bs.theme === "love") {
+    sprinkles.push(
+      "I turned my wedding ring around my finger, drawing quiet resolve from thoughts of " + target + ".",
+      "I carried a picture of " + target + " inside my jacket. Every sunrise survived brings me closer to seeing them again.",
+      "The city feels cold and empty, but my promise to rendezvous with " + target + " keeps my fire lit."
+    );
+  } else if (bs.theme === "rival") {
+    sprinkles.push(
+      "I checked the fresh tire tracks in the mud, tightening my grip on my weapon. " + target + " cannot run forever.",
+      "I remembered " + target + "'s sneer as he locked me in the tool basement. Surviving this outbreak is my ultimate payback.",
+      "I will track " + target + " to the edge of the world if that's what it takes to reclaim our stolen gear."
+    );
+  }
+
+  // 3. Search milestone progress sprinkles (evolving as clues are uncovered!)
+  if (isSearching) {
+    if (stage === 1) {
+      sprinkles.push(
+        "I kept my emergency receiver clipped to my collar, listening through static for any civilian chatter mentioning " + target + ".",
+        "I scanned the abandoned bulletin boards near the avenue, checking for missing persons notes about " + target + "."
+      );
+    } else if (stage >= 2) {
+      sprinkles.push(
+        "I reviewed the trail notes I found at the vehicle. " + target + " walked east toward the inner district.",
+        "I kept an eye on tire tracks and abandoned civilian sedans, tracking the path " + target + " took after leaving the car.",
+        "Knowing " + target + " survived Day 0 gave me fresh momentum to clear the avenue today."
+      );
+    }
+    if (stage >= 3) {
+      sprinkles.push(
+        "I held onto the personal belongings I recovered from the underpass. The trail is hot, and I am closing the distance on " + target + ".",
+        "Every fortified intersection I cross brings me deeper into the district where " + target + " dropped their pack.",
+        "I checked the stitched gear I retrieved. " + target + " is outmaneuvering the infected; I just have to catch up."
+      );
+    }
+    if (stage >= 4) {
+      sprinkles.push(
+        "I visualized the chalk message on the transit wall: " + target + " is barricaded at the stone courtyard. Hold on, I am coming.",
+        "I sharpened my weapons at sunset, calculating the remaining blocks between my shelter and " + target + "'s refuge.",
+        "The courtyard coordinates are burned into my mind. Soon, this endless search will reach its answer."
+      );
+    }
+  }
+
+  return sprinkles;
+}
+
 // Master generator that guarantees rich, non-repeating lines with heavy zombie atmosphere
 export function generateDailyHappenings(state: GameState, currentDay: number, weather: WeatherType): string[] {
   const result: string[] = [];
@@ -254,11 +371,12 @@ export function generateDailyHappenings(state: GameState, currentDay: number, we
     result.push(chosenWeather[Math.floor(Math.random() * chosenWeather.length)]);
   }
 
-  // 3. Personal Backstory reflection thoughts
-  if (state.player.backstory && state.player.backstory.journalThoughts && Math.random() < 0.35) {
-    const thoughts = state.player.backstory.journalThoughts.filter(t => !recentTexts.includes(t) && !result.includes(t));
-    if (thoughts.length > 0) {
-      result.push(thoughts[Math.floor(Math.random() * thoughts.length)]);
+  // 3. Dynamic Backstory story sprinkles (contextual thoughts, memories & search clues)
+  if (state.player.backstory && Math.random() < 0.50) {
+    const backstorySprinkles = getBackstoryDailySprinkles(state);
+    const freshSprinkles = backstorySprinkles.filter(t => !recentTexts.includes(t) && !result.includes(t));
+    if (freshSprinkles.length > 0) {
+      result.push(freshSprinkles[Math.floor(Math.random() * freshSprinkles.length)]);
     }
   }
 
