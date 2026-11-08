@@ -76,7 +76,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
   // Navigation
   const [activeTab, setActiveTab] = useState<CreatorTab>('identity');
   const [traitCategory, setTraitCategory] = useState<TraitCategory>('all');
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Identity state
   const [gender, setGender] = useState<'male' | 'female'>('male');
@@ -152,12 +151,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
   // Total available points to spend (can be positive, zero, or negative if overspent)
   const availablePoints = (careerBaseSkillSum + careerBonus + ageProfile.bonusPoints + traitPoints) - currentStatSum;
 
-  // Show a temporary banner notification
-  const showToast = (msg: string) => {
-    setStatusMessage(msg);
-    setTimeout(() => setStatusMessage(null), 2500);
-  };
-
   // Reset stats to zero: puts all points into availablePoints pool so user can allocate from scratch
   const handleResetStatsToZero = () => {
     setStats({
@@ -167,7 +160,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
       stealth: 0,
       fitness: 0
     });
-    showToast('All skills reset to 0! Allocate points as you like.');
   };
 
   // Restore stats to career preset
@@ -179,7 +171,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
       stealth: career.stats.stealth,
       fitness: career.stats.fitness
     });
-    showToast(`Restored default skills for ${career.title}!`);
   };
 
   // When a career is clicked:
@@ -197,7 +188,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         stealth: career.stats.stealth,
         fitness: career.stats.fitness
       });
-      showToast(`Selected ${career.title} with default skills.`);
     }
   };
 
@@ -343,13 +333,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
         </button>
       </nav>
 
-      {/* TOAST STATUS MESSAGE NOTIFICATION */}
-      {statusMessage && (
-        <div className="shrink-0 bg-rose-950/80 border-b border-rose-800/80 px-3 py-1.5 text-center text-xs text-rose-200 font-mono animate-fadeIn">
-          {statusMessage}
-        </div>
-      )}
-
       {/* 3. TAB CONTENT VIEWS */}
       <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 overscroll-contain">
         {/* ============================================================== */}
@@ -468,7 +451,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
                     Job Before the Outbreak
                   </span>
                   <span className="text-[10px] text-zinc-500">
-                    Sets spawn location & starting skills. Click again to reset skills.
+                    Sets starting skills & background. Click again to reset skills.
                   </span>
                 </div>
               </div>
@@ -508,9 +491,6 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
                           </div>
                         </div>
                         <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">{career.description}</p>
-                        <div className="text-[10px] text-zinc-500 font-mono mt-1">
-                          📍 {career.startingLocation.name}
-                        </div>
                       </div>
                     </button>
                   );
@@ -942,7 +922,7 @@ export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
               : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'
           }`}
         >
-          <span>Start Game (Day 0 — {selectedCareer.startingLocation.name})</span>
+          <span>Start Game (Day 0)</span>
         </button>
       </footer>
     </div>
