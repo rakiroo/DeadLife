@@ -132,6 +132,32 @@ function generateCompanionFromBackstory(
   };
 }
 
+
+function isChapterPrerequisiteMet(bs: any, targetChapter: number): boolean {
+  if (targetChapter <= 1) return true;
+  const completed = bs.completedChapters || [];
+  for (let c = 1; c < targetChapter; c++) {
+    if (!completed.includes(c)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function advanceBackstoryChapter(bs: any, chapterNum: number, currentDay: number, isFinal: boolean = false) {
+  const completed = bs.completedChapters ? [...bs.completedChapters] : [];
+  if (!completed.includes(chapterNum)) {
+    completed.push(chapterNum);
+  }
+  return {
+    ...bs,
+    chapter: isFinal ? chapterNum + 1 : chapterNum + 1,
+    completedChapters: completed,
+    lastChapterDay: currentDay,
+    status: isFinal ? ('resolved' as const) : ('clue_found' as const)
+  };
+}
+
 export function getNextBackstoryDilemma(
   state: GameState,
   currentDay: number,
@@ -141,8 +167,19 @@ export function getNextBackstoryDilemma(
   const bs = state.player.backstory;
   if (!bs || bs.status === 'resolved') return null;
 
+  // Proofing 1: If a dilemma is already pending/open, never overwrite or skip ahead!
+  if (state.activeDilemma) return null;
+
   const chapter = bs.chapter || 1;
   const lastDay = bs.lastChapterDay || 0;
+
+  // Proofing 2: Never trigger two chapters on the same day
+  if (currentDay <= lastDay) return null;
+
+  // Proofing 3: STRICT SEQUENCE GATE! Can never trigger chapter N unless all (1..N-1) are explicitly completed!
+  if (!isChapterPrerequisiteMet(bs, chapter)) {
+    return null;
+  }
 
   // 1. Activity Lore Triggers: Player actions in the world directly trigger chapters that make sense!
   if (source === 'radio' && chapter === 1) {
@@ -154,7 +191,7 @@ export function getNextBackstoryDilemma(
   if (source === 'recon' && (chapter === 3 || chapter === 4)) {
     return generateChapterDilemma(state, bs, chapter, currentDay);
   }
-  if (source === 'scavenge' && locationId === bs.targetLocationId && chapter >= 4) {
+  if (source === 'scavenge' && locationId === bs.targetLocationId && chapter === 5) {
     return generateChapterDilemma(state, bs, 5, currentDay);
   }
 
@@ -200,7 +237,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: isPet ? 'Whistle our two-tone call and mark the direction on my map' : 'Record the radio frequency and map the signal vector toward ' + target,
           consequenceSummary: 'Documents the lead (+10 Sanity). Advances your search to Chapter 2.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 2, lastChapterDay: currentDay, status: 'clue_found' as const };
+            const updatedBs = advanceBackstoryChapter(bs, 1, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
               log: 'I documented the first signal vector toward ' + target + ' (' + relation + '). I have a direct heading to search. Chapter 1 resolved.',
@@ -214,7 +251,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Keep low, listen carefully, and conserve equipment power',
           consequenceSummary: 'Maintains stealth and preserves battery life. Advances to Chapter 2.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 2, lastChapterDay: currentDay, status: 'clue_found' as const };
+            const updatedBs = advanceBackstoryChapter(bs, 1, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs } },
               log: 'I listened in silence, tracing the sound echoes toward ' + target + ' while keeping my position concealed. Chapter 1 resolved.',
@@ -247,7 +284,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Search the abandoned vehicle cabin for supplies and route notes',
           consequenceSummary: 'Scavenge emergency food & clean water (+Supplies). Advances to Chapter 3.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 3, lastChapterDay: currentDay };
+            const updatedBs = advanceBackstoryChapter(bs, 2, currentDay);
             const loot = [
               { id: 'ch2_food', name: 'Canned Beef Stew', category: 'food' as const, quantity: 2, description: 'Rations salvaged on the trail.' },
               { id: 'ch2_water', name: 'Spring Water Jug', category: 'water' as const, quantity: 1, description: 'Clean drinking water.' }
@@ -271,7 +308,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Follow the mud tracks immediately without stopping to loot',
           consequenceSummary: 'Maintains rapid pursuit along the avenue. Advances to Chapter 3.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 3, lastChapterDay: currentDay };
+            const updatedBs = advanceBackstoryChapter(bs, 2, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
               log: 'I tracked the footprints through the alley without pausing, closing the distance on ' + target + '. Chapter 2 resolved.',
@@ -302,7 +339,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Sneak behind the infected, eliminate them quietly, and retrieve the belongings',
           consequenceSummary: 'Uses combat & stealth to recover ' + target + '\'s gear safely. Advances to Chapter 4.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 4, lastChapterDay: currentDay };
+            const updatedBs = advanceBackstoryChapter(bs, 3, currentDay);
             const success = state.player.combatSkill >= 4 || state.player.stealthSkill >= 4 || Math.random() < 0.75;
             if (success) {
               return {
@@ -326,7 +363,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Throw a heavy brick down the avenue to lure the walkers away from the gear',
           consequenceSummary: 'Clever distraction avoids all combat injury. Advances to Chapter 4.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 4, lastChapterDay: currentDay };
+            const updatedBs = advanceBackstoryChapter(bs, 3, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 10) } },
               log: 'I hurled a brick against a metal roll-up door, drawing the walkers away, and grabbed ' + target + '\'s belongings cleanly. Chapter 3 resolved.',
@@ -357,7 +394,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Sharpen weapons, pack emergency medicine, and prepare for the final push',
           consequenceSummary: 'Final staging: Prepares mind and gear (+20 Sanity). Advances to Chapter 5 Climax!',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 5, lastChapterDay: currentDay };
+            const updatedBs = advanceBackstoryChapter(bs, 4, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 20) } },
               log: 'I found ' + target + '\'s fresh chalk message! They are holding out at the stone courtyard. Preparing my final rescue push. Chapter 4 resolved.',
@@ -371,7 +408,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Scout the sanctuary perimeter from distance to map infected numbers',
           consequenceSummary: 'Tactical scouting reveals the courtyard layout. Advances to Chapter 5 Climax!',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 5, lastChapterDay: currentDay };
+            const updatedBs = advanceBackstoryChapter(bs, 4, currentDay);
             return {
               state: { ...state, player: { ...state.player, backstory: updatedBs, sanity: Math.min(100, state.player.sanity + 15) } },
               log: 'I scouted the perimeter around ' + target + '\'s location with binoculars. Mapped the safe breaches. Chapter 4 resolved.',
@@ -403,7 +440,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Charge the walkers with my melee weapon and pull ' + target + ' down to safety',
           consequenceSummary: 'Slay the walkers and rescue ' + target + ' into camp (+100% Mind/Sanity)!',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'reunited', outcomeSummary: 'Rescued alive and healthy' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Rescued alive and healthy' };
             const petCompanion = generateCompanionFromBackstory(state.player, bs, 'healthy');
 
             return {
@@ -425,7 +462,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Dispatch the walkers from distance, then immediately bandage ' + target + '\'s bleeding paw',
           consequenceSummary: 'Treats ' + target + '\'s wound with sterile dressing (+Guardian at full 100% Health).',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'reunited', outcomeSummary: 'Treated wounds and welcomed into camp' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Treated wounds and welcomed into camp' };
             const petCompanion: CampMember = {
               id: 'pet_' + bs.id,
               name: target + ' (' + relation + ')',
@@ -476,7 +513,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             text: 'Put a clean bullet through ' + target + '\'s skull and reclaim our stolen emergency cache',
             consequenceSummary: 'Poetic justice: Reclaims military MREs, clean water, and shotgun (+5 Food, +4 Water, +Shotgun, +100% Sanity)!',
             execute: (state: GameState) => {
-              const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'avenged', outcomeSummary: 'Found turned into walker; put down and cache reclaimed' };
+              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'avenged', outcomeSummary: 'Found turned into walker; put down and cache reclaimed' };
               const loot = [
                 { id: 'reclaimed_food_5', name: 'Military Rations (5)', category: 'food' as const, quantity: 5, description: 'Reclaimed emergency food.' },
                 { id: 'reclaimed_water_4', name: 'Clean Bottled Water (4)', category: 'water' as const, quantity: 4, description: 'Clean drinking water.' },
@@ -512,7 +549,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             text: 'Draw my weapon, fire first, and eliminate ' + target + ' on the spot',
             consequenceSummary: 'Vengeance delivered. Reclaim the full stolen cache (+5 Food, +4 Water, +Shotgun, +30 Sanity).',
             execute: (state: GameState) => {
-              const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'avenged', outcomeSummary: 'Confronted and eliminated traitor; reclaimed cache' };
+              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'avenged', outcomeSummary: 'Confronted and eliminated traitor; reclaimed cache' };
               const loot = [
                 { id: 'reclaimed_food_5', name: 'Military Rations (5)', category: 'food' as const, quantity: 5, description: 'Reclaimed emergency food.' },
                 { id: 'reclaimed_water_4', name: 'Clean Bottled Water (4)', category: 'water' as const, quantity: 4, description: 'Clean drinking water.' },
@@ -537,7 +574,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             text: 'Disarm him at gunpoint, take all the supplies, and exile him into the wasteland',
             consequenceSummary: 'Merciful justice: Strip his gear and exile him unarmed (+20 Sanity).',
             execute: (state: GameState) => {
-              const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'avenged', outcomeSummary: 'Disarmed and exiled into the ruins' };
+              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'avenged', outcomeSummary: 'Disarmed and exiled into the ruins' };
               const loot = [
                 { id: 'reclaimed_food_5', name: 'Military Rations (5)', category: 'food' as const, quantity: 5, description: 'Reclaimed emergency food.' },
                 { id: 'reclaimed_water_4', name: 'Clean Bottled Water (4)', category: 'water' as const, quantity: 4, description: 'Clean drinking water.' }
@@ -579,7 +616,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Carry ' + target + ' to the sanctuary garden, dig a proper grave, and carve a stone memorial marker',
           consequenceSummary: 'Gives eternal peace and emotional closure (+Permanent Resolve, +25 Sanity, inherits heirloom weapon).',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'deceased', outcomeSummary: 'Found fallen after heroic stand; laid to rest with dignity' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Found fallen after heroic stand; laid to rest with dignity' };
             const heirloom = { id: 'heirloom_gun', name: target + "\'s Service Revolver", category: 'weapon' as const, quantity: 1, description: 'Heirloom revolver carried by ' + target + '.' };
             let inv = [...state.inventory, heirloom];
 
@@ -605,7 +642,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Collect ' + target + '\'s belongings, seal the shed, and swear an oath to survive until the end of the world',
           consequenceSummary: 'Hardened survivor mindset (+Permanent determination).',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'deceased', outcomeSummary: 'Swore survival oath over their memory' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Swore survival oath over their memory' };
             return {
               state: {
                 ...state,
@@ -642,7 +679,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
             const hasMedSkill = state.player.medicalSkill >= 4 || state.inventory.some(i => i.id.includes('knife') || i.id.includes('scalpel') || i.id.includes('saw'));
             
             if (hasMedSkill) {
-              const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'bitten_survived', outcomeSummary: 'Saved through emergency limb amputation' };
+              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'bitten_survived', outcomeSummary: 'Saved through emergency limb amputation' };
               const companion = generateCompanionFromBackstory(state.player, bs, 'amputee');
 
               return {
@@ -657,7 +694,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
                 outcomeText: 'I bound the tourniquet and severed the infected tissue before sepsis spread. The fever broke by dawn! ' + target + ' is alive and safe in our camp! (Mind restored to 100%)'
               };
             } else {
-              const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'deceased', outcomeSummary: 'Succumbed to infected bite despite triage attempt' };
+              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Succumbed to infected bite despite triage attempt' };
               return {
                 state: {
                   ...state,
@@ -675,7 +712,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Sit beside ' + target + ', hold their hand, and stay together through their final lucid hours',
           consequenceSummary: 'Stay by their side so they never die alone. Deep emotional closure.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'deceased', outcomeSummary: 'Held their hand through their final peaceful hours' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Held their hand through their final peaceful hours' };
             return {
               state: {
                 ...state,
@@ -692,7 +729,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Fulfill their dying wish: grant a swift, painless mercy before the fever turns their mind',
           consequenceSummary: 'Honors their final request. Spares them the agony of turning.',
           execute: (state: GameState) => {
-            const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'mercy', outcomeSummary: 'Granted peaceful mercy before turning' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'mercy', outcomeSummary: 'Granted peaceful mercy before turning' };
             return {
               state: {
                 ...state,
@@ -721,7 +758,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
         text: 'Strike down both walkers, smash the padlock, and pull ' + target + ' into my arms!',
         consequenceSummary: 'Rescue ' + target + ' alive and healthy. They join your camp as a loyal ally (+100% Mind/Sanity)!',
         execute: (state: GameState) => {
-          const updatedBs = { ...bs, chapter: 6, status: 'resolved' as const, outcome: 'reunited', outcomeSummary: 'Rescued alive and healthy' };
+          const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Rescued alive and healthy' };
           const companion = generateCompanionFromBackstory(state.player, bs, 'healthy');
 
           return {

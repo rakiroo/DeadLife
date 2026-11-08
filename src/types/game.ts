@@ -92,6 +92,7 @@ export interface SurvivorBackstory {
   targetLocationId: string;
   clueFound?: boolean;
   chapter?: number;
+  completedChapters?: number[];
   lastChapterDay?: number;
   status: 'searching' | 'clue_found' | 'resolved';
   outcome?: 'reunited' | 'bitten_survived' | 'deceased' | 'mercy' | 'avenged';
