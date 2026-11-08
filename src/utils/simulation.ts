@@ -290,8 +290,18 @@ export function advanceOneDay(state: GameState): GameState {
     };
   });
 
-  // Pick a random dilemma if alive and none active
+  // Pick a dilemma if alive and none active
   let nextDilemma = state.activeDilemma;
+
+  // 1. Backstory Episodic Chapter Pop-Up (PRIORITY: advances player's personal story!)
+  if (!nextDilemma && !isDead && state.player.backstory && state.player.backstory.status !== 'resolved') {
+    const backstoryDilemma = getNextBackstoryDilemma(state, currentDay);
+    if (backstoryDilemma) {
+      nextDilemma = backstoryDilemma;
+    }
+  }
+
+  // 2. Random micro-dilemma or survival event
   if (!nextDilemma && !isDead && Math.random() < 0.65) {
     if (Math.random() < 0.45) {
       nextDilemma = getRandomMicroDilemma(state) || getRandomSurvivalEvent(state);

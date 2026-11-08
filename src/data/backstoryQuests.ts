@@ -150,16 +150,16 @@ export function getNextBackstoryDilemma(state: GameState, currentDay: number): E
   if (chapter === 1 && currentDay >= 1) {
     return generateChapterDilemma(state, bs, 1, currentDay);
   }
-  if (chapter === 2 && currentDay >= 3) {
+  if (chapter === 2 && currentDay >= 2) {
     return generateChapterDilemma(state, bs, 2, currentDay);
   }
-  if (chapter === 3 && currentDay >= 6) {
+  if (chapter === 3 && currentDay >= 3) {
     return generateChapterDilemma(state, bs, 3, currentDay);
   }
-  if (chapter === 4 && currentDay >= 10) {
+  if (chapter === 4 && currentDay >= 4) {
     return generateChapterDilemma(state, bs, 4, currentDay);
   }
-  if (chapter === 5 && currentDay >= 15) {
+  if (chapter === 5 && currentDay >= 5) {
     return generateChapterDilemma(state, bs, 5, currentDay);
   }
 

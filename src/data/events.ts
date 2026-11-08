@@ -291,7 +291,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
               return {
                 state: {
                   ...s,
-                  campMembers: [...s.campMembers, newMember],
+                  campMembers: s.campMembers.some(m => m.name.includes('Rebecca')) ? s.campMembers : [...s.campMembers, newMember],
                   isCampEstablished: true,
                   stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
                 },
@@ -502,9 +502,9 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
 
   // If player has established shelter or camp: Knocking survivors arrive!
   const hasShelterOrCamp = state.shelter.isEstablished || state.isCampEstablished || state.campMembers.length > 0;
-  const hasSora = state.campMembers.some(m => m.id === 'survivor_sora');
+  const soraAlreadyPresent = state.campMembers.some(m => m.id === 'survivor_sora' || m.name.includes('Sora')) || state.logs.some(l => l.text.includes('Sora'));
 
-  if (hasShelterOrCamp && !hasSora) {
+  if (hasShelterOrCamp && !soraAlreadyPresent) {
     events.push({
       id: 'knocking_sora_botanist',
       title: 'Frantic Knocking at ' + loc,
@@ -563,7 +563,19 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
     });
   }
 
-  return events;
+  // Prevent unique survivor recruitment events from repeating once encountered or joined
+  const hasRebecca = state.campMembers.some(m => m.name.includes('Rebecca')) || 
+                     state.logs.some(l => l.text.includes('Rebecca') || l.text.includes('Dr. Rebecca Young') || l.text.includes('bite marks wrapped in cloth') || l.text.includes('Knocking in the Rain'));
+
+    const hasStrayDog = state.campMembers.some(m => m.name.includes('Dog') || m.relation.includes('Dog')) || 
+                      state.logs.some(l => l.text.includes('stray dog'));
+
+  return events.filter(e => {
+    if (e.id === 'feverish_survivor_gate' && hasRebecca) return false;
+    if ((e.id === 'hurried_knocks_entrance' || e.id === 'knocking_sora_botanist') && soraAlreadyPresent) return false;
+    if (e.id === 'stray_dog_window' && hasStrayDog) return false;
+    return true;
+  });
 }
 
 export function getRandomSurvivalEvent(state: GameState): EventDilemma | null {
