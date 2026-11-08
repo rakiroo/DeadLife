@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career } from './types/game';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
-import { advanceOneDay, advanceOneWeek } from './utils/simulation';
+import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear } from './utils/simulation';
+import { LegacySuccessionModal } from './components/LegacySuccessionModal';
+import { TimeAdvanceWarningModal } from './components/TimeAdvanceWarningModal';
 import { HeaderVitals } from './components/HeaderVitals';
 import { JournalFeed } from './components/JournalFeed';
 import { getRandomSpawnStory } from './data/spawnStories';
@@ -218,6 +220,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('journal');
   const [graveyard, setGraveyard] = useState<CemeteryRecord[]>([]);
   const [showAmbitionsModal, setShowAmbitionsModal] = useState<boolean>(false);
+  const [pendingTimeWarning, setPendingTimeWarning] = useState<{ type: 'month' | 'year'; foodNeeded: number; waterNeeded: number; currentFood: number; currentWater: number } | null>(null);
 
   // Load graveyard records on mount
   useEffect(() => {
@@ -305,6 +308,53 @@ export function App() {
   const handleClearGraveyard = () => {
     setGraveyard([]);
     localStorage.removeItem(GRAVEYARD_KEY);
+  };
+
+  // Time Progression: +1 Month
+  const handleAdvanceMonth = () => {
+    if (!gameState) return;
+    const totalConsumers = Math.max(1, gameState.campMembers.length + 1);
+    const rationPolicy = gameState.shelter.rationPolicy ?? 'standard';
+    const foodNeeded = totalConsumers * (rationPolicy === 'half' ? 15 : rationPolicy === 'full' ? 45 : 30);
+    const waterNeeded = totalConsumers * 30;
+    const currentFood = gameState.inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);
+    const currentWater = gameState.inventory.filter(i => i.category === 'water').reduce((sum, i) => sum + i.quantity, 0);
+
+    if (currentFood < foodNeeded || currentWater < waterNeeded) {
+      setPendingTimeWarning({ type: 'month', foodNeeded, waterNeeded, currentFood, currentWater });
+      return;
+    }
+    setActiveTab('journal');
+    setGameState(prev => prev ? advanceOneMonth(prev) : null);
+  };
+
+  // Time Progression: +1 Year
+  const handleAdvanceYear = () => {
+    if (!gameState) return;
+    const totalConsumers = Math.max(1, gameState.campMembers.length + 1);
+    const rationPolicy = gameState.shelter.rationPolicy ?? 'standard';
+    const foodNeeded = totalConsumers * (rationPolicy === 'half' ? 180 : rationPolicy === 'full' ? 540 : 365);
+    const waterNeeded = totalConsumers * 365;
+    const currentFood = gameState.inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);
+    const currentWater = gameState.inventory.filter(i => i.category === 'water').reduce((sum, i) => sum + i.quantity, 0);
+
+    if (currentFood < foodNeeded || currentWater < waterNeeded) {
+      setPendingTimeWarning({ type: 'year', foodNeeded, waterNeeded, currentFood, currentWater });
+      return;
+    }
+    setActiveTab('journal');
+    setGameState(prev => prev ? advanceOneYear(prev) : null);
+  };
+
+  const handleConfirmPendingTimeAdvance = () => {
+    if (!pendingTimeWarning || !gameState) return;
+    setActiveTab('journal');
+    if (pendingTimeWarning.type === 'month') {
+      setGameState(prev => prev ? advanceOneMonth(prev) : null);
+    } else {
+      setGameState(prev => prev ? advanceOneYear(prev) : null);
+    }
+    setPendingTimeWarning(null);
   };
 
   // Time Progression: +1 Day
@@ -665,7 +715,7 @@ export function App() {
     });
   };
 
-  const handleUpgradeFacility = (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'defense') => {
+  const handleUpgradeFacility = (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'schoolhouse' | 'nursery' | 'memorial_garden') => {
     if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
@@ -693,6 +743,25 @@ export function App() {
         if (medItem) medItem.quantity -= 2;
         updatedShelter.infirmaryLevel = (updatedShelter.infirmaryLevel || 0) + 1;
         logText = 'Established camp infirmary and triage beds (Tier ' + updatedShelter.infirmaryLevel + ') for sterile medical recovery.';
+      } else if (facilityId === 'schoolhouse') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 4);
+        const nailItem = updatedInv.find(i => i.id.includes('nail') && i.quantity >= 10);
+        if (woodItem) woodItem.quantity -= 4;
+        if (nailItem) nailItem.quantity -= 10;
+        updatedShelter.hasSchoolhouse = true;
+        logText = 'Constructed the Colony Schoolhouse! Children enrolled will gain +1 to all attributes annually.';
+      } else if (facilityId === 'nursery') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 3);
+        if (woodItem) woodItem.quantity -= 3;
+        updatedShelter.hasNursery = true;
+        updatedShelter.morale = Math.min(100, (updatedShelter.morale ?? 75) + 20);
+        logText = 'Built the Sanctuary Nursery & Daycare! Provides safe cribs for infants (+20% Colony Hope).';
+      } else if (facilityId === 'memorial_garden') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 2);
+        if (woodItem) woodItem.quantity -= 2;
+        updatedShelter.hasMemorialGarden = true;
+        updatedShelter.morale = Math.min(100, (updatedShelter.morale ?? 75) + 10);
+        logText = 'Dedicated the Memorial Garden & Cemetery to honor fallen founders and ancestors.';
       }
 
       updatedInv = updatedInv.filter(i => i.quantity > 0);
@@ -761,6 +830,232 @@ export function App() {
         ...prev.shelter,
         securityProtocol: protocol
       }
+    } : null);
+  };
+
+  // Romance & Courting
+  const handleCourtSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const newTrust = Math.min(100, member.trust + 15);
+      const isDating = newTrust >= 55;
+
+      const updatedMembers = prev.campMembers.map(m =>
+        m.id === memberId ? { 
+          ...m, 
+          trust: newTrust,
+          datingStage: isDating ? ('dating' as const) : m.datingStage
+        } : m
+      );
+
+      const logText = isDating
+        ? '?? Confession of Feelings: I confessed my feelings to ' + member.name + ' under the evening watch. We held hands and agreed to face the apocalypse together as a couple!'
+        : 'I spent an hour chatting and laughing with ' + member.name + ' by the candlelight (+Affection & Trust).';
+
+      return {
+        ...prev,
+        campMembers: updatedMembers,
+        player: {
+          ...prev.player,
+          datingTargetId: isDating ? member.id : prev.player.datingTargetId,
+          datingTargetName: isDating ? member.name : prev.player.datingTargetName,
+          romanceStage: isDating ? 'dating' : prev.player.romanceStage,
+          sanity: Math.min(100, prev.player.sanity + 12)
+        },
+        logs: [...prev.logs, {
+          id: 'court_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'camp' as const,
+          timestamp: 'Romance'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Marriage Proposal
+  const handleProposeMarriage = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      // Update room to share quarters
+      const rooms = prev.shelter.rooms ? [...prev.shelter.rooms] : [
+        { id: 'room_cots_1', name: 'Makeshift Cots & Lean-To', type: 'cots' as const, capacity: 2, comfort: 20, assignedMemberIds: [] },
+        { id: 'room_bunk_1', name: 'Main Fortified Bunkhouse', type: 'bunk' as const, capacity: 2, comfort: 45, assignedMemberIds: [] }
+      ];
+
+      // Assign to private room
+      const privateRoom = rooms.find(r => r.type === 'cabin' || r.capacity >= 2) || rooms[0];
+      if (privateRoom) {
+        privateRoom.assignedMemberIds = Array.from(new Set([...(privateRoom.assignedMemberIds || []), member.id]));
+      }
+
+      const updatedMembers = prev.campMembers.map(m =>
+        m.id === memberId ? {
+          ...m,
+          trust: 100,
+          datingStage: 'married' as const,
+          spouseId: 'player',
+          spouseName: prev.player.name
+        } : m
+      );
+
+      const logText = '?? WEDDING CEREMONY: ' + prev.player.name + ' and ' + member.name + ' were married in the courtyard! Lanterns glowed, wildflowers decorated the altar, and the entire sanctuary cheered. We have moved into shared quarters (+25 Morale).';
+
+      return {
+        ...prev,
+        campMembers: updatedMembers,
+        player: {
+          ...prev.player,
+          spouseId: member.id,
+          spouseName: member.name,
+          romanceStage: 'married',
+          sanity: 100
+        },
+        shelter: {
+          ...prev.shelter,
+          marriagesCount: (prev.shelter.marriagesCount || 0) + 1,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 25),
+          rooms
+        },
+        logs: [...prev.logs, {
+          id: 'wedding_player_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'milestone' as const,
+          timestamp: 'Wedding'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Try for a baby / Start a family
+  const handleHaveBaby = () => {
+    if (!gameState || !gameState.player.spouseName) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+      const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Julian', 'Elias', 'Finn'];
+      const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy'];
+      const chosenName = babyGender === 'male' 
+        ? boyNames[Math.floor(Math.random() * boyNames.length)]
+        : girlNames[Math.floor(Math.random() * girlNames.length)];
+      const surname = prev.player.name.split(' ').slice(-1)[0] || 'Vance';
+      const fullName = chosenName + ' ' + surname;
+
+      const newChild = {
+        id: 'child_player_' + Date.now(),
+        name: fullName,
+        age: 0,
+        gender: babyGender as 'male' | 'female',
+        stage: 'infant' as const,
+        skills: {
+          combat: Math.floor(prev.player.combatSkill * 0.5) + 2,
+          medical: Math.floor(prev.player.medicalSkill * 0.5) + 2,
+          crafting: Math.floor(prev.player.craftingSkill * 0.5) + 2,
+          stealth: Math.floor(prev.player.stealthSkill * 0.5) + 2,
+          fitness: Math.floor(prev.player.fitnessSkill * 0.5) + 2
+        }
+      };
+
+      const existingChildren = prev.player.children ? [...prev.player.children] : [];
+
+      const logText = '?? A Child Born in the Ruins: ' + prev.player.spouseName + ' gave birth to a healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' named ' + fullName + '! The entire haven gathered to welcome our child. Hope and joy reign in our colony (+25 Morale).';
+
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          children: [...existingChildren, newChild],
+          sanity: 100
+        },
+        shelter: {
+          ...prev.shelter,
+          childrenBornCount: (prev.shelter.childrenBornCount || 0) + 1,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 25)
+        },
+        logs: [...prev.logs, {
+          id: 'birth_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'milestone' as const,
+          timestamp: 'New Life'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Succession / Passing the Torch
+  const handleSelectSuccessor = (candidateId: string) => {
+    if (!gameState || !gameState.legacySuccessionPrompt) return;
+    const prompt = gameState.legacySuccessionPrompt;
+    const candidate = prompt.candidates.find(c => c.id === candidateId);
+    if (!candidate) return;
+
+    setGameState(prev => {
+      if (!prev) return null;
+      const isOffspring = candidate.isOffspring;
+      const newGeneration = (prev.player.generation || 1) + 1;
+
+      // Filter successor out of camp members
+      const updatedMembers = prev.campMembers.filter(m => m.id !== candidate.id);
+
+      const successorSurvivor: Survivor = {
+        name: candidate.name,
+        age: candidate.age,
+        ageGroup: candidate.age < 30 ? 'Prime' : candidate.age < 50 ? 'Middle-Aged' : 'Senior',
+        profession: candidate.profession,
+        bio: isOffspring 
+          ? "Second-generation survivor born in the sanctuary, carrying forward their parent's dream."
+          : 'Trusted colony companion chosen by consensus to lead the sanctuary.',
+        health: 100,
+        sanity: 85,
+        hunger: 80,
+        thirst: 85,
+        infectionRisk: 0,
+        combatSkill: candidate.skills.combat,
+        medicalSkill: candidate.skills.medical,
+        craftingSkill: candidate.skills.crafting,
+        stealthSkill: candidate.skills.stealth,
+        fitnessSkill: candidate.skills.fitness,
+        traits: prev.player.traits ? prev.player.traits.slice(0, 2) : [],
+        statusEffects: [],
+        isDead: false,
+        romanceStage: 'single',
+        generation: newGeneration,
+        children: []
+      };
+
+      const newLog: LogEntry = {
+        id: 'succession_' + Date.now(),
+        day: prev.day,
+        text: '?? GENERATION ' + newGeneration + ' COMMENCES: ' + candidate.name + ' has stepped forward and claimed leadership of ' + prev.shelter.name + '. The colony perseveres!',
+        type: 'milestone',
+        timestamp: 'Succession'
+      };
+
+      return {
+        ...prev,
+        player: successorSurvivor,
+        campMembers: updatedMembers,
+        legacySuccessionPrompt: null,
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  const handleDeclineSuccession = () => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      legacySuccessionPrompt: null
     } : null);
   };
 
@@ -1208,6 +1503,9 @@ export function App() {
               onUpgradeFacility={handleUpgradeFacility}
               onSetRationPolicy={handleSetRationPolicy}
               onSetSecurityProtocol={handleSetSecurityProtocol}
+              onCourtSurvivor={handleCourtSurvivor}
+              onProposeMarriage={handleProposeMarriage}
+              onHaveBaby={handleHaveBaby}
             />
           )}
           {activeTab === 'inventory' && (
@@ -1233,6 +1531,8 @@ export function App() {
           onTabChange={setActiveTab}
           onAdvanceDay={handleAdvanceDay}
           onAdvanceWeek={handleAdvanceWeek}
+          onAdvanceMonth={handleAdvanceMonth}
+          onAdvanceYear={handleAdvanceYear}
           disabled={gameState.player.isDead || !!gameState.activeDilemma || !!gameState.dilemmaResult}
           gameState={gameState}
         />
@@ -1259,6 +1559,29 @@ export function App() {
           <DilemmaResultModal
             result={gameState.dilemmaResult}
             onClose={() => setGameState(prev => prev ? ({ ...prev, dilemmaResult: null }) : null)}
+          />
+        )}
+
+        
+        {/* Resource Deficit Warning Modal for Month/Year Advances */}
+        {pendingTimeWarning && (
+          <TimeAdvanceWarningModal
+            type={pendingTimeWarning.type}
+            foodNeeded={pendingTimeWarning.foodNeeded}
+            waterNeeded={pendingTimeWarning.waterNeeded}
+            currentFood={pendingTimeWarning.currentFood}
+            currentWater={pendingTimeWarning.currentWater}
+            onConfirm={handleConfirmPendingTimeAdvance}
+            onCancel={() => setPendingTimeWarning(null)}
+          />
+        )}
+
+        {/* Generational Succession & Legacy Modal */}
+        {gameState.legacySuccessionPrompt && (
+          <LegacySuccessionModal
+            prompt={gameState.legacySuccessionPrompt}
+            onSelectSuccessor={handleSelectSuccessor}
+            onDeclineSuccession={handleDeclineSuccession}
           />
         )}
 

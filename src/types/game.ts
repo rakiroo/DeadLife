@@ -100,6 +100,16 @@ export interface SurvivorBackstory {
   journalThoughts: string[];
 }
 
+export interface SurvivorChild {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'male' | 'female';
+  stage: 'infant' | 'child' | 'teen' | 'adult';
+  traits?: Trait[];
+  skills?: { combat: number; medical: number; crafting: number; stealth: number; fitness: number };
+}
+
 export interface Survivor {
   name: string;
   gender?: 'male' | 'female';
@@ -122,9 +132,23 @@ export interface Survivor {
   isDead: boolean;
   deathCause?: string;
   backstory?: SurvivorBackstory;
+  spouseId?: string;
+  spouseName?: string;
+  datingTargetId?: string;
+  datingTargetName?: string;
+  romanceStage?: 'single' | 'crush' | 'dating' | 'engaged' | 'married';
+  children?: SurvivorChild[];
+  generation?: number;
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';
+
+export interface SurvivorRelationship {
+  targetId: string;
+  targetName: string;
+  score: number; // 0 - 100
+  status: 'Best Friend' | 'Friend' | 'Dating' | 'Spouse' | 'Rival' | 'Acquaintance';
+}
 
 export interface CampMember {
   id: string;
@@ -151,7 +175,16 @@ export interface CampMember {
   morale?: number;
   opinionOfLeader?: number;
   spouseId?: string;
+  spouseName?: string;
   partnerId?: string;
+  partnerName?: string;
+  datingStage?: 'single' | 'crush' | 'dating' | 'engaged' | 'married';
+  isChild?: boolean;
+  stage?: 'infant' | 'child' | 'teen' | 'adult';
+  parentNames?: string[];
+  relationships?: SurvivorRelationship[];
+  isPregnant?: boolean;
+  pregnancyMonths?: number;
 }
 
 export interface CampRoom {
@@ -193,6 +226,11 @@ export interface BaseShelter {
   facilities?: CampFacility[];
   greenhouseLevel?: number;
   infirmaryLevel?: number;
+  hasSchoolhouse?: boolean;
+  hasNursery?: boolean;
+  hasMemorialGarden?: boolean;
+  childrenBornCount?: number;
+  marriagesCount?: number;
 }
 
 export type ItemCategory = 'food' | 'water' | 'medical' | 'weapon' | 'tool' | 'resource';
@@ -272,6 +310,14 @@ export interface GameState {
     daysSurvived: number;
     scavengeRuns: number;
     peopleSaved: number;
+    marriagesHeld?: number;
+    childrenRaised?: number;
   };
   ribbons: string[];
+  legacySuccessionPrompt?: {
+    cause: string;
+    deceasedName: string;
+    deceasedAge: number;
+    candidates: { id: string; name: string; relation: string; profession: string; age: number; isOffspring: boolean; skills: { combat: number; medical: number; crafting: number; stealth: number; fitness: number } }[];
+  } | null;
 }

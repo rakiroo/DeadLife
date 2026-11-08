@@ -1,4 +1,4 @@
-import { GameState, LogEntry, WeatherType, StatusEffect } from '../types/game';
+import { GameState, LogEntry, WeatherType, StatusEffect, CampMember } from '../types/game';
 import { getRandomSurvivalEvent } from '../data/events';
 import { generateDailyHappenings } from '../data/dailyHappenings';
 import { getRandomMicroDilemma } from '../data/microDilemmas';
@@ -532,5 +532,446 @@ export function advanceOneWeek(state: GameState): GameState {
   return {
     ...currentState,
     logs: [...currentState.logs, recapLog].slice(-150)
+  };
+}
+
+
+export function advanceOneMonth(state: GameState): GameState {
+  if (state.player.isDead) return state;
+
+  let currentState = { ...state };
+  const currentDay = currentState.day + 30;
+  const newLogs: LogEntry[] = [];
+  let inventory = currentState.inventory.map(i => ({ ...i }));
+  let campMembers = currentState.campMembers.map(m => ({ ...m }));
+  let shelter = { ...currentState.shelter };
+  let player = { ...currentState.player };
+
+  // 1. Resource Balance: 30 days of consumption vs production
+  const totalConsumers = Math.max(1, campMembers.length + 1);
+  const rationPolicy = shelter.rationPolicy ?? 'standard';
+  const foodPerPerson = rationPolicy === 'half' ? 15 : rationPolicy === 'full' ? 45 : 30;
+  const waterPerPerson = 30;
+
+  const totalFoodNeeded = totalConsumers * foodPerPerson;
+  const totalWaterNeeded = totalConsumers * waterPerPerson;
+
+  const greenhouseLevel = shelter.greenhouseLevel || 0;
+  const gardenFoodYield = greenhouseLevel * 12;
+  const waterCollectorLevel = shelter.waterCollectorLevel || 1;
+  const rainwaterYield = waterCollectorLevel * 18;
+  const scoutsCount = campMembers.filter(m => m.role === 'scavenger').length;
+  const scoutFoodYield = scoutsCount * 14;
+  const scoutWaterYield = scoutsCount * 10;
+  const scoutMatsYield = scoutsCount * 4;
+
+  const totalFoodGenerated = gardenFoodYield + scoutFoodYield;
+  const totalWaterGenerated = rainwaterYield + scoutWaterYield;
+
+  const existingFood = inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);
+  const existingWater = inventory.filter(i => i.category === 'water').reduce((sum, i) => sum + i.quantity, 0);
+
+  let toDeduct = Math.min(existingFood, totalFoodNeeded);
+  for (const item of inventory) {
+    if (item.category === 'food' && toDeduct > 0) {
+      const take = Math.min(item.quantity, toDeduct);
+      item.quantity -= take;
+      toDeduct -= take;
+    }
+  }
+
+  if (gardenFoodYield > 0) {
+    inventory.push({
+      id: 'harvest_veg_' + Date.now(),
+      name: 'Greenhouse Harvest Rations',
+      category: 'food',
+      quantity: gardenFoodYield,
+      description: 'Monthly yield of fresh potatoes, carrots, and beans.'
+    });
+  }
+
+  let toDeductWater = Math.min(existingWater, totalWaterNeeded);
+  for (const item of inventory) {
+    if (item.category === 'water' && toDeductWater > 0) {
+      const take = Math.min(item.quantity, toDeductWater);
+      item.quantity -= take;
+      toDeductWater -= take;
+    }
+  }
+
+  if (scoutMatsYield > 0) {
+    inventory.push({
+      id: 'scout_wood_' + Date.now(),
+      name: 'Lumber Planks (2x4)',
+      category: 'resource',
+      quantity: scoutMatsYield,
+      description: 'Lumber salvaged by scout teams over the past month.'
+    });
+  }
+
+  inventory = inventory.filter(i => i.quantity > 0);
+
+  const starvationOccurred = existingFood + totalFoodGenerated < totalFoodNeeded;
+  const thirstOccurred = existingWater + totalWaterGenerated < totalWaterNeeded;
+
+  if (starvationOccurred || thirstOccurred) {
+    player.health = Math.max(15, player.health - 25);
+    player.sanity = Math.max(10, player.sanity - 20);
+    shelter.morale = Math.max(10, (shelter.morale ?? 75) - 25);
+    newLogs.push({
+      id: 'famine_' + Date.now(),
+      day: currentDay,
+      text: '⚠️ MONTHLY FAMINE: Stockpiles ran low during the month. Half-rations and rationing kept survivors alive, but hunger and fatigue took a heavy toll (-25% HP, -25 Morale).',
+      type: 'hazard',
+      timestamp: 'Month End'
+    });
+  } else {
+    shelter.morale = Math.min(100, (shelter.morale ?? 75) + 5);
+    player.sanity = Math.min(100, player.sanity + 10);
+  }
+
+  // 2. Autonomous Romances, Marriages & Co-habitation
+  const singleAdults = campMembers.filter(m => !m.isChild && (!m.datingStage || m.datingStage === 'single' || m.datingStage === 'crush'));
+  if (singleAdults.length >= 2 && Math.random() < 0.45) {
+    const s1 = singleAdults[0];
+    const s2 = singleAdults[1];
+    if (!s1.datingStage || s1.datingStage === 'single') {
+      s1.datingStage = 'dating';
+      s2.datingStage = 'dating';
+      s1.partnerId = s2.id;
+      s1.partnerName = s2.name;
+      s2.partnerId = s1.id;
+      s2.partnerName = s1.name;
+      newLogs.push({
+        id: 'dating_' + Date.now(),
+        day: currentDay,
+        text: '❤️ Romance Blooms: After weeks of working side by side, ' + s1.name + ' and ' + s2.name + ' have officially started dating! Smiles have returned to the haven.',
+        type: 'camp',
+        timestamp: 'Romance'
+      });
+    } else if (s1.datingStage === 'dating') {
+      s1.datingStage = 'married';
+      s2.datingStage = 'married';
+      s1.spouseId = s2.id;
+      s1.spouseName = s2.name;
+      s2.spouseId = s1.id;
+      s2.spouseName = s1.name;
+      shelter.marriagesCount = (shelter.marriagesCount || 0) + 1;
+      shelter.morale = Math.min(100, (shelter.morale ?? 75) + 15);
+
+      if (shelter.rooms && shelter.rooms.length > 0) {
+        const sharedRoom = shelter.rooms.find(r => r.type === 'cabin' || r.capacity >= 2) || shelter.rooms[0];
+        if (sharedRoom) {
+          sharedRoom.assignedMemberIds = Array.from(new Set([...(sharedRoom.assignedMemberIds || []), s1.id, s2.id]));
+        }
+      }
+
+      newLogs.push({
+        id: 'wedding_' + Date.now(),
+        day: currentDay,
+        text: '💍 Wedding at the Haven: ' + s1.name + ' and ' + s2.name + ' exchanged vows in the courtyard at sunset! The entire colony toasted, and they moved into shared quarters together (+15 Morale).',
+        type: 'milestone',
+        timestamp: 'Wedding'
+      });
+    }
+  }
+
+  // 3. Autonomous Babies & Family Births
+  const marriedCouples = campMembers.filter(m => m.datingStage === 'married' && m.spouseId);
+  const playerMarried = player.romanceStage === 'married';
+  const hasNursery = shelter.hasNursery;
+  const birthChance = hasNursery ? 0.40 : 0.25;
+
+  if ((marriedCouples.length > 0 || playerMarried) && !starvationOccurred && Math.random() < birthChance) {
+    const isPlayerBaby = playerMarried && Math.random() < 0.5;
+    const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+    const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
+    const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
+    const babyName = babyGender === 'male' 
+      ? boyNames[Math.floor(Math.random() * boyNames.length)]
+      : girlNames[Math.floor(Math.random() * girlNames.length)];
+
+    if (isPlayerBaby) {
+      if (!player.children) player.children = [];
+      const newChild = {
+        id: 'child_player_' + Date.now(),
+        name: babyName + ' ' + (player.name.split(' ').slice(-1)[0] || 'Vance'),
+        age: 0,
+        gender: babyGender as 'male' | 'female',
+        stage: 'infant' as const,
+        skills: {
+          combat: Math.floor(player.combatSkill * 0.5) + 1,
+          medical: Math.floor(player.medicalSkill * 0.5) + 1,
+          crafting: Math.floor(player.craftingSkill * 0.5) + 1,
+          stealth: Math.floor(player.stealthSkill * 0.5) + 1,
+          fitness: Math.floor(player.fitnessSkill * 0.5) + 1,
+        }
+      };
+      player.children.push(newChild);
+
+      newLogs.push({
+        id: 'birth_player_' + Date.now(),
+        day: currentDay,
+        text: '🍼 A Miracle Born: Your spouse gave birth to a beautiful baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' named ' + newChild.name + '! You cradled your child as lanterns flickered. The settlement celebrates our future (+25 Morale).',
+        type: 'milestone',
+        timestamp: 'New Life'
+      });
+    } else if (marriedCouples.length > 0) {
+      const parent = marriedCouples[0];
+      const babySurname = parent.name.split(' ').slice(-1)[0] || 'Haven';
+      const babyFullName = babyName + ' ' + babySurname;
+      const babyMember: CampMember = {
+        id: 'baby_' + Date.now(),
+        name: babyFullName,
+        gender: babyGender,
+        age: 0,
+        relation: 'Colony Infant',
+        profession: 'Colony Child',
+        health: 100,
+        trust: 100,
+        isChild: true,
+        stage: 'infant',
+        role: 'idle',
+        statusEffects: [],
+        combatSkill: 1,
+        medicalSkill: 1,
+        craftingSkill: 1,
+        stealthSkill: 1,
+        fitnessSkill: 1,
+        parentNames: [parent.name, parent.spouseName || 'Spouse']
+      };
+      campMembers.push(babyMember);
+      shelter.childrenBornCount = (shelter.childrenBornCount || 0) + 1;
+
+      newLogs.push({
+        id: 'birth_camp_' + Date.now(),
+        day: currentDay,
+        text: '🍼 New Life in the Apocalypse: ' + parent.name + ' and ' + (parent.spouseName || 'their spouse') + ' welcomed a baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' named ' + babyFullName + '! The entire settlement gathered to celebrate (+20 Morale).',
+        type: 'milestone',
+        timestamp: 'New Life'
+      });
+    }
+    shelter.morale = Math.min(100, (shelter.morale ?? 75) + 20);
+  }
+
+  const monthlyRecap: LogEntry = {
+    id: 'month_recap_' + Date.now(),
+    day: currentDay,
+    text: '📅 30 Days Advanced (Day ' + currentDay + '): Another month concluded. Food harvest: +' + totalFoodGenerated + ' rations, Water: +' + totalWaterGenerated + 'L. Settlement population: ' + (campMembers.length + 1) + ' survivors.',
+    type: 'milestone',
+    timestamp: 'Month End'
+  };
+
+  return {
+    ...currentState,
+    day: currentDay,
+    inventory,
+    campMembers,
+    shelter,
+    player,
+    logs: [...currentState.logs, ...newLogs, monthlyRecap].slice(-150)
+  };
+}
+
+export function advanceOneYear(state: GameState): GameState {
+  if (state.player.isDead) return state;
+
+  let currentState = { ...state };
+  const currentDay = currentState.day + 365;
+  const newLogs: LogEntry[] = [];
+  let player = { ...currentState.player };
+  let shelter = { ...currentState.shelter };
+  let campMembers = currentState.campMembers.map(m => ({ ...m }));
+  let inventory = currentState.inventory.map(i => ({ ...i }));
+
+  // 1. Everyone ages by 1 year!
+  player.age += 1;
+  const hasSchool = shelter.hasSchoolhouse;
+
+  campMembers = campMembers.map(member => {
+    const newAge = member.age + 1;
+    let stage = member.stage;
+    let isChild = member.isChild;
+    let profession = member.profession;
+    let combatSkill = member.combatSkill || 3;
+    let medicalSkill = member.medicalSkill || 3;
+    let craftingSkill = member.craftingSkill || 3;
+    let stealthSkill = member.stealthSkill || 3;
+    let fitnessSkill = member.fitnessSkill || 3;
+
+    if (isChild && hasSchool) {
+      combatSkill += 1;
+      medicalSkill += 1;
+      craftingSkill += 1;
+      stealthSkill += 1;
+      fitnessSkill += 1;
+    }
+
+    if (newAge >= 18) {
+      if (isChild) {
+        newLogs.push({
+          id: 'grad_' + member.id + '_' + Date.now(),
+          day: currentDay,
+          text: '🎓 Coming of Age: ' + member.name + ' has turned 18! Born and raised in our haven, they graduate into a full adult survivor, ready to defend and build our colony.',
+          type: 'milestone',
+          timestamp: 'Graduation'
+        });
+      }
+      isChild = false;
+      stage = 'adult';
+      if (profession === 'Colony Child' || profession === 'Colony Infant') {
+        profession = 'Haven Pioneer';
+      }
+    } else if (newAge >= 13) {
+      stage = 'teen';
+      if (profession === 'Colony Infant') profession = 'Colony Apprentice';
+    } else if (newAge >= 4) {
+      stage = 'child';
+      if (profession === 'Colony Infant') profession = 'Colony Child';
+    } else {
+      stage = 'infant';
+    }
+
+    return {
+      ...member,
+      age: newAge,
+      stage,
+      isChild,
+      profession,
+      combatSkill: Math.min(10, combatSkill),
+      medicalSkill: Math.min(10, medicalSkill),
+      craftingSkill: Math.min(10, craftingSkill),
+      stealthSkill: Math.min(10, stealthSkill),
+      fitnessSkill: Math.min(10, fitnessSkill)
+    };
+  });
+
+  if (player.children && player.children.length > 0) {
+    player.children = player.children.map(c => {
+      const newChildAge = c.age + 1;
+      let newStage: 'infant' | 'child' | 'teen' | 'adult' = 'infant';
+      if (newChildAge >= 18) newStage = 'adult';
+      else if (newChildAge >= 13) newStage = 'teen';
+      else if (newChildAge >= 4) newStage = 'child';
+      return {
+        ...c,
+        age: newChildAge,
+        stage: newStage
+      };
+    });
+  }
+
+  // 2. Annual Resource Balance
+  const totalConsumers = Math.max(1, campMembers.length + 1);
+  const rationPolicy = shelter.rationPolicy ?? 'standard';
+  const annualFoodDemand = totalConsumers * (rationPolicy === 'half' ? 180 : rationPolicy === 'full' ? 540 : 365);
+
+  const annualGardenYield = (shelter.greenhouseLevel || 0) * 140;
+  const scoutsCount = campMembers.filter(m => m.role === 'scavenger').length;
+  const annualScoutFood = scoutsCount * 160;
+  const annualScoutMats = scoutsCount * 45;
+
+  const existingFood = inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);
+
+  let toDeductFood = Math.min(existingFood, annualFoodDemand);
+  for (const item of inventory) {
+    if (item.category === 'food' && toDeductFood > 0) {
+      const take = Math.min(item.quantity, toDeductFood);
+      item.quantity -= take;
+      toDeductFood -= take;
+    }
+  }
+
+  if (annualGardenYield > 0) {
+    inventory.push({
+      id: 'annual_harvest_' + Date.now(),
+      name: 'Annual Greenhouse Surplus',
+      category: 'food',
+      quantity: Math.min(100, annualGardenYield),
+      description: 'Preserved root vegetables and jarred beans from the past year.'
+    });
+  }
+
+  if (annualScoutMats > 0) {
+    inventory.push({
+      id: 'annual_timber_' + Date.now(),
+      name: 'Structural Timber Studs',
+      category: 'resource',
+      quantity: Math.min(50, annualScoutMats),
+      description: 'Lumber stockpiled by scavengers over 365 days of expeditions.'
+    });
+  }
+
+  inventory = inventory.filter(i => i.quantity > 0);
+
+  // 3. Old Age & Mortality Check
+  let promptSuccession: GameState['legacySuccessionPrompt'] = null;
+
+  if (player.age >= 72 && Math.random() < 0.35) {
+    player.isDead = true;
+    player.deathCause = 'passed away peacefully of old age at ' + player.age + ', surrounded by family in the sanctuary';
+
+    const adultChildren = (player.children || []).filter(c => c.age >= 18).map(c => ({
+      id: c.id,
+      name: c.name,
+      relation: 'Adult Child',
+      profession: 'Dynasty Heir',
+      age: c.age,
+      isOffspring: true,
+      skills: c.skills || { combat: 6, medical: 6, crafting: 6, stealth: 6, fitness: 6 }
+    }));
+
+    const companionCandidates = campMembers.filter(m => !m.isChild && m.trust >= 60).map(m => ({
+      id: m.id,
+      name: m.name,
+      relation: m.relation || 'Trusted Ally',
+      profession: m.profession,
+      age: m.age,
+      isOffspring: false,
+      skills: {
+        combat: m.combatSkill || 5,
+        medical: m.medicalSkill || 5,
+        crafting: m.craftingSkill || 5,
+        stealth: m.stealthSkill || 5,
+        fitness: m.fitnessSkill || 5
+      }
+    }));
+
+    const candidates = [...adultChildren, ...companionCandidates];
+    if (candidates.length > 0) {
+      promptSuccession = {
+        cause: 'Old Age',
+        deceasedName: player.name,
+        deceasedAge: player.age,
+        candidates
+      };
+    }
+
+    newLogs.push({
+      id: 'death_oldage_' + Date.now(),
+      day: currentDay,
+      text: '🕊️ A Pioneer Passes: ' + player.name + ' passed away peacefully of old age at ' + player.age + '. The entire haven gathered to honor the founder of our sanctuary.',
+      type: 'milestone',
+      timestamp: 'In Memoriam'
+    });
+  }
+
+  const yearRecap: LogEntry = {
+    id: 'year_recap_' + Date.now(),
+    day: currentDay,
+    text: '📆 1 YEAR ADVANCED (Day ' + currentDay + '): 365 days have passed. You are now age ' + player.age + '. The colony endures with ' + (campMembers.length + 1) + ' residents.',
+    type: 'milestone',
+    timestamp: 'Annual Chronicle'
+  };
+
+  return {
+    ...currentState,
+    day: currentDay,
+    player,
+    shelter,
+    campMembers,
+    inventory,
+    legacySuccessionPrompt: promptSuccession,
+    logs: [...currentState.logs, ...newLogs, yearRecap].slice(-150)
   };
 }
