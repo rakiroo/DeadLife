@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, EventChoice, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career } from './types/game';
+import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career } from './types/game';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
 import { advanceOneDay, advanceOneWeek } from './utils/simulation';
 import { HeaderVitals } from './components/HeaderVitals';
 import { JournalFeed } from './components/JournalFeed';
-import { StartingLocationTab } from './components/StartingLocationTab';
 import { getRandomSpawnStory } from './data/spawnStories';
 import { DilemmaModal } from './components/DilemmaModal';
 import { DilemmaResultModal } from './components/DilemmaResultModal';
@@ -26,8 +25,90 @@ const GRAVEYARD_KEY = 'deadlife_graveyard';
 export function createNewGameWithSurvivor(survivor: Survivor, career: Career): GameState {
   const spawnStory = getRandomSpawnStory(career.id);
 
+  // Gather all starting loot from workplace
+  const startingLoot: InventoryItem[] = [];
+  for (const spot of career.startingLocation.lootSpots) {
+    for (const item of spot.loot) {
+      const existing = startingLoot.find(i => i.id === item.id);
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        startingLoot.push({ ...item });
+      }
+    }
+  }
+
+  const itemsSummary = startingLoot.map(i => i.name + ' (x' + i.quantity + ')').join(', ');
+
+  // Interactive Day 0 Opening Dilemma
+  const dayZeroDilemma: EventDilemma = {
+    id: 'spawn_dilemma_' + Date.now(),
+    title: spawnStory.title || 'Day 0: The Outbreak Begins',
+    category: 'discovery',
+    dangerLevel: 'low',
+    description: spawnStory.fullStory,
+    choices: [
+      {
+        id: 'loot_all_workplace',
+        text: 'Scavenge ' + career.startingLocation.name + ' thoroughly for all supplies',
+        consequenceSummary: 'Gathers all starting tools, weapons, food, and water into your inventory.',
+        execute: (s: GameState) => {
+          return {
+            state: {
+              ...s,
+              inventory: startingLoot.map(i => ({ ...i }))
+            },
+            log: 'Day 0: You searched ' + career.startingLocation.name + ' and secured starting supplies: ' + itemsSummary + '.',
+            outcomeTitle: 'Workplace Supplies Secured',
+            outcomeText: 'You swept through ' + career.startingLocation.name + ' before locking down. All starting tools, weapons, and provisions have been packed into your supplies.'
+          };
+        }
+      },
+      {
+        id: 'barricade_and_loot',
+        text: 'Quickly grab essential tools and hammer heavy braces across the doors',
+        consequenceSummary: 'Gathers starting gear and reinforces entryways (+40% Barricade).',
+        execute: (s: GameState) => {
+          return {
+            state: {
+              ...s,
+              inventory: startingLoot.map(i => ({ ...i })),
+              shelter: {
+                ...s.shelter,
+                barricadeIntegrity: 40
+              }
+            },
+            log: 'Day 0: You reinforced the doors of ' + career.startingLocation.name + ' and collected gear (+40% Barricade).',
+            outcomeTitle: 'Entryways Fortified',
+            outcomeText: 'You nailed structural braces across the doors. The barricades hold firm against the street horde outside (+40% Integrity).'
+          };
+        }
+      },
+      {
+        id: 'quiet_lockdown',
+        text: 'Pack emergency rations, kill the lights, and stay low in the shadows',
+        consequenceSummary: 'Secures provisions while keeping calm and composed (+15 Sanity).',
+        execute: (s: GameState) => {
+          return {
+            state: {
+              ...s,
+              inventory: startingLoot.map(i => ({ ...i })),
+              player: {
+                ...s.player,
+                sanity: Math.min(100, s.player.sanity + 15)
+              }
+            },
+            log: 'Day 0: You locked down ' + career.startingLocation.name + ' quietly, securing provisions and steadying your nerves (+15 Sanity).',
+            outcomeTitle: 'Quiet Composure Maintained',
+            outcomeText: 'You avoided making any noise. The infected shuffled past outside, completely unaware of your presence (+15 Sanity).'
+          };
+        }
+      }
+    ]
+  };
+
   const initialLog: LogEntry = {
-    id: `log_init_${Date.now()}`,
+    id: 'log_init_' + Date.now(),
     day: 0,
     text: spawnStory.intro,
     type: 'milestone',
@@ -50,7 +131,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
         id: s.id,
         name: s.name,
         description: s.description,
-        searched: false,
+        searched: true,
         loot: s.loot.map(item => ({ ...item }))
       })),
       hasLeftStartingSpot: false
@@ -71,9 +152,9 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
       generatorOperational: false,
       fuelGallons: 0
     },
-    inventory: [], // Starts completely empty until looted!
+    inventory: [],
     logs: [initialLog],
-    activeDilemma: null,
+    activeDilemma: dayZeroDilemma,
     dilemmaResult: null,
     daysWithoutFood: 0,
     daysWithoutWater: 0,
@@ -118,14 +199,12 @@ export function App() {
   // Keep active tab valid based on current unlocked features
   useEffect(() => {
     if (!gameState) return;
-    if (activeTab === 'spawn' && gameState.startingLocation?.hasLeftStartingSpot) {
-      setActiveTab('journal');
-    } else if (activeTab === 'shelter' && !gameState.shelter?.isEstablished) {
+    if (activeTab === 'shelter' && !gameState.shelter?.isEstablished) {
       setActiveTab('journal');
     } else if (activeTab === 'camp' && !gameState.isCampEstablished && (!gameState.campMembers || gameState.campMembers.length === 0)) {
       setActiveTab('journal');
     }
-  }, [activeTab, gameState?.startingLocation?.hasLeftStartingSpot, gameState?.shelter?.isEstablished, gameState?.isCampEstablished, gameState?.campMembers?.length]);
+  }, [activeTab, gameState?.shelter?.isEstablished, gameState?.isCampEstablished, gameState?.campMembers?.length]);
 
   // Save game state whenever it updates and player is alive
   useEffect(() => {
@@ -168,7 +247,7 @@ export function App() {
   const handleStartCustomGame = (survivor: Survivor, career: Career) => {
     const freshGame = createNewGameWithSurvivor(survivor, career);
     setGameState(freshGame);
-    setActiveTab('spawn');
+    setActiveTab('journal');
     setScreen('game');
   };
 
@@ -515,128 +594,6 @@ export function App() {
     setActiveTab('journal');
   };
 
-  // Day 0 / Starting Spot: Loot a specific spot
-  const handleLootSpot = (spotId: string) => {
-    if (!gameState) return;
-    setGameState(prev => {
-      if (!prev) return null;
-      const spot = prev.startingLocation.lootSpots.find(s => s.id === spotId);
-      if (!spot || spot.searched) return prev;
-
-      let updatedInv = [...prev.inventory];
-      for (const item of spot.loot) {
-        const existing = updatedInv.find(i => i.id === item.id);
-        if (existing) {
-          updatedInv = updatedInv.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
-        } else {
-          updatedInv.push({ ...item });
-        }
-      }
-
-      const updatedSpots = prev.startingLocation.lootSpots.map(s =>
-        s.id === spotId ? { ...s, searched: true } : s
-      );
-
-      const itemsFoundText = spot.loot.map(i => `${i.name} (x${i.quantity})`).join(', ');
-      const newLog: LogEntry = {
-        id: `log_loot_${Date.now()}`,
-        day: prev.day,
-        text: `Looted ${spot.name} in ${prev.startingLocation.name}. Secured: ${itemsFoundText}. Supplies updated!`,
-        type: 'loot',
-        timestamp: 'Looting'
-      };
-
-      // If player is surviving alone without a camp, trigger an exciting survivor discovery in the loot spot!
-      let dilemmaToTrigger = null;
-      if (prev.campMembers.length === 0) {
-        dilemmaToTrigger = getLootSpotSurvivorDilemma(prev, spot.name);
-      }
-
-      return {
-        ...prev,
-        inventory: updatedInv,
-        startingLocation: {
-          ...prev.startingLocation,
-          lootSpots: updatedSpots
-        },
-        activeDilemma: dilemmaToTrigger,
-        logs: [...prev.logs, newLog].slice(-150)
-      };
-    });
-  };
-
-  // Fortify current starting spot into official Base Shelter
-  const handleFortifyShelter = () => {
-    if (!gameState) return;
-    setGameState(prev => {
-      if (!prev) return null;
-      const hasCompanions = prev.campMembers.length > 0;
-      const companionsNames = prev.campMembers.map(m => m.name).join(' & ');
-      const shelterName = hasCompanions
-        ? `${prev.startingLocation.name} (Our Camp & Shelter)`
-        : `${prev.startingLocation.name} (Safehouse)`;
-      const logText = hasCompanions
-        ? `You and ${companionsNames} worked together to fortify ${prev.startingLocation.name} into your shared camp and shelter! Heavy barricades secured.`
-        : `Decided to fortify ${prev.startingLocation.name} into your permanent survival shelter. Barricades hammered and shelter systems operational!`;
-
-      const newLog: LogEntry = {
-        id: `log_fortify_${Date.now()}`,
-        day: prev.day,
-        text: logText,
-        type: 'milestone',
-        timestamp: 'Action'
-      };
-
-      return {
-        ...prev,
-        isCampEstablished: hasCompanions ? true : prev.isCampEstablished,
-        shelter: {
-          ...prev.shelter,
-          isEstablished: true,
-          name: shelterName,
-          type: prev.startingLocation.type,
-          defenseRating: hasCompanions ? 55 : 45,
-          stealthRating: 50,
-          warmthRating: 65,
-          barricadeIntegrity: hasCompanions ? 70 : 55,
-          maxRainwater: 20,
-          storedRainwater: 2
-        },
-        startingLocation: {
-          ...prev.startingLocation,
-          hasLeftStartingSpot: true
-        },
-        logs: [...prev.logs, newLog].slice(-150)
-      };
-    });
-    setActiveTab(gameState.campMembers.length > 0 ? 'camp' : 'shelter');
-  };
-
-  // Leave starting spot to scout the city on foot
-  const handleLeaveStartingSpot = () => {
-    if (!gameState) return;
-    setGameState(prev => {
-      if (!prev) return null;
-      const newLog: LogEntry = {
-        id: `log_leave_${Date.now()}`,
-        day: prev.day,
-        text: `You abandoned your spawn location at ${prev.startingLocation.name} to scout the city for safehouses or survivor camps.`,
-        type: 'milestone',
-        timestamp: 'Action'
-      };
-
-      return {
-        ...prev,
-        startingLocation: {
-          ...prev.startingLocation,
-          hasLeftStartingSpot: true
-        },
-        logs: [...prev.logs, newLog].slice(-150)
-      };
-    });
-    setActiveTab('journal');
-  };
-
   // SCREEN ROUTING
   if (screen === 'title') {
     return (
@@ -691,14 +648,6 @@ export function App() {
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
           {activeTab === 'journal' && <JournalFeed logs={gameState.logs} />}
-          {activeTab === 'spawn' && (
-            <StartingLocationTab
-              gameState={gameState}
-              onLootSpot={handleLootSpot}
-              onFortifyShelter={handleFortifyShelter}
-              onLeaveStartingSpot={handleLeaveStartingSpot}
-            />
-          )}
           {activeTab === 'inventory' && <InventoryTab gameState={gameState} onUseItem={handleUseItem} />}
           {activeTab === 'shelter' && <ShelterTab gameState={gameState} onRepairBarricade={handleRepairBarricade} />}
           {activeTab === 'camp' && (
