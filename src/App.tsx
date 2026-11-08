@@ -16,6 +16,8 @@ import { DeathScreen } from './components/DeathScreen';
 import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
+import { AmbitionsModal } from './components/AmbitionsModal';
+import { SandboxAmbition } from './data/ambitions';
 
 type ScreenState = 'title' | 'creator' | 'game' | 'graveyard';
 
@@ -203,6 +205,7 @@ export function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('journal');
   const [graveyard, setGraveyard] = useState<CemeteryRecord[]>([]);
+  const [showAmbitionsModal, setShowAmbitionsModal] = useState<boolean>(false);
 
   // Load graveyard records on mount
   useEffect(() => {
@@ -492,6 +495,45 @@ export function App() {
     });
   };
 
+  const handleTriggerEvac = (ambition: SandboxAmbition) => {
+    if (!gameState) return;
+    setShowAmbitionsModal(false);
+
+    const newLog: LogEntry = {
+      id: 'evac_' + Date.now(),
+      day: gameState.day,
+      text: ambition.evacStory,
+      type: 'milestone',
+      timestamp: 'Evac'
+    };
+
+    const victoryRecord: CemeteryRecord = {
+      id: 'grave_victory_' + Date.now(),
+      name: gameState.player.name,
+      age: gameState.player.age,
+      profession: gameState.player.profession,
+      daysSurvived: gameState.day,
+      deathCause: 'Escaped the quarantine: ' + ambition.title,
+      date: new Date().toLocaleDateString(),
+      ribbon: ambition.rewardRibbon,
+      stats: gameState.stats
+    };
+
+    const updatedGrave = [victoryRecord, ...graveyard].slice(0, 50);
+    setGraveyard(updatedGrave);
+    localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updatedGrave));
+
+    setGameState({
+      ...gameState,
+      logs: [...gameState.logs, newLog].slice(-150),
+      dilemmaResult: {
+        title: ambition.title + ' — Evacuation Success',
+        text: ambition.evacStory,
+        isFatal: false
+      }
+    });
+  };
+
   const handleExileSurvivor = (memberId: string) => {
     if (!gameState) return;
     setGameState(prev => {
@@ -719,7 +761,7 @@ export function App() {
 
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
-          {activeTab === 'journal' && <JournalFeed logs={gameState.logs} />}
+          {activeTab === 'journal' && <JournalFeed logs={gameState.logs} onOpenAmbitions={() => setShowAmbitionsModal(true)} />}
           {activeTab === 'inventory' && <InventoryTab gameState={gameState} onUseItem={handleUseItem} />}
           {activeTab === 'shelter' && <ShelterTab gameState={gameState} onRepairBarricade={handleRepairBarricade} />}
           {activeTab === 'camp' && (
@@ -754,6 +796,14 @@ export function App() {
         )}
 
         {/* Dilemma Outcome Result Modal */}
+        {showAmbitionsModal && (
+          <AmbitionsModal
+            gameState={gameState}
+            onClose={() => setShowAmbitionsModal(false)}
+            onTriggerEvac={handleTriggerEvac}
+          />
+        )}
+
         {gameState.dilemmaResult && (
           <DilemmaResultModal
             result={gameState.dilemmaResult}

@@ -3,9 +3,10 @@ import { LogEntry } from '../types/game';
 
 interface Props {
   logs: LogEntry[];
+  onOpenAmbitions?: () => void;
 }
 
-export const JournalFeed: React.FC<Props> = ({ logs }) => {
+export const JournalFeed: React.FC<Props> = ({ logs, onOpenAmbitions }) => {
   const endRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to newest entries at the bottom
@@ -36,7 +37,23 @@ export const JournalFeed: React.FC<Props> = ({ logs }) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 max-w-md mx-auto w-full font-sans select-text">
+    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 max-w-md mx-auto w-full font-sans select-text">
+      {/* Top Feed Header with Optional Ambitions Button */}
+      <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
+        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+          Survivor Chronicle
+        </span>
+        {onOpenAmbitions && (
+          <button
+            type="button"
+            onClick={onOpenAmbitions}
+            className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-amber-300 border border-white/10 flex items-center gap-1.5 transition-all active:scale-95"
+            title="View optional sandbox escape goals"
+          >
+            <span>🎯 Ambitions</span>
+          </button>
+        )}
+      </div>
       {groupedLogs.map((group) => (
         <div key={group.day} className="space-y-1.5">
           {/* Day Header - BitLife Age style in bold blue */}
