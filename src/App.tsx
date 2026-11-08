@@ -18,6 +18,7 @@ import { AmbitionsModal } from './components/AmbitionsModal';
 import { SettingsScreen } from './components/SettingsScreen';
 import { SandboxAmbition } from './data/ambitions';
 import { getContextualBackstory } from './data/backstories';
+import { getNextBackstoryDilemma } from './data/backstoryQuests';
 
 type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings';
 
@@ -595,6 +596,12 @@ export function App() {
       let logText = '';
       let logType: LogEntry['type'] = 'general';
 
+      // Check if searching vehicles triggers the vehicle trail chapter!
+      const vehicleDilemma = getNextBackstoryDilemma(prev, prev.day, 'vehicle');
+      if (vehicleDilemma && activityId === 'search_vehicles') {
+        return { ...prev, activeDilemma: vehicleDilemma };
+      }
+
       if (activityId === 'search_vehicles') {
         const isHazard = Math.random() < 0.25;
         if (isHazard) {
@@ -615,6 +622,10 @@ export function App() {
           logType = 'loot';
         }
       } else if (activityId === 'rooftop_recon') {
+        const reconDilemma = getNextBackstoryDilemma(prev, prev.day, 'recon');
+        if (reconDilemma) {
+          return { ...prev, activeDilemma: reconDilemma };
+        }
         sanity = Math.min(100, sanity + 15);
         logText = 'I spent an hour on the rooftop scanning the avenues with binoculars. Mapped the street layout (+15 Sanity).';
       } else if (activityId === 'workout') {
@@ -625,6 +636,10 @@ export function App() {
         sanity = Math.min(100, sanity + 20);
         logText = 'I sat quietly by candlelight and let my pulse slow down. Found peace in the quiet dark (+20 Sanity).';
       } else if (activityId === 'radio_tune') {
+        const radioDilemma = getNextBackstoryDilemma(prev, prev.day, 'radio');
+        if (radioDilemma) {
+          return { ...prev, activeDilemma: radioDilemma };
+        }
         sanity = Math.min(100, sanity + 10);
         logText = 'I spun the emergency radio dial through static, listening for human voices or weather alerts (+10 Sanity).';
       } else if (activityId === 'craft_spiked_bat') {
@@ -699,6 +714,16 @@ export function App() {
             ...prev.stats,
             scavengeRuns: prev.stats.scavengeRuns + 1
           }
+        };
+      }
+
+      // Check if this scavenge landmark triggers the backstory chapter/climax!
+      const landmarkDilemma = getNextBackstoryDilemma(prev, prev.day, 'scavenge', locationId);
+      if (landmarkDilemma) {
+        return {
+          ...prev,
+          activeDilemma: landmarkDilemma,
+          stats: { ...prev.stats, scavengeRuns: prev.stats.scavengeRuns + 1 }
         };
       }
 

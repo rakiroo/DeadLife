@@ -132,35 +132,45 @@ function generateCompanionFromBackstory(
   };
 }
 
-export function getNextBackstoryDilemma(state: GameState, currentDay: number): EventDilemma | null {
+export function getNextBackstoryDilemma(
+  state: GameState,
+  currentDay: number,
+  source: 'day_advance' | 'radio' | 'vehicle' | 'recon' | 'scavenge' = 'day_advance',
+  locationId?: string
+): EventDilemma | null {
   const bs = state.player.backstory;
   if (!bs || bs.status === 'resolved') return null;
 
   const chapter = bs.chapter || 1;
   const lastDay = bs.lastChapterDay || 0;
 
-  // Never trigger two chapters on the exact same day
-  if (currentDay <= lastDay) return null;
-
-  // Chapter 1: Day 1+
-  // Chapter 2: Day 3+
-  // Chapter 3: Day 6+
-  // Chapter 4: Day 10+
-  // Chapter 5: Day 15+ (Climax with Diverse / Tragic / Heroic Outcomes!)
-  if (chapter === 1 && currentDay >= 1) {
+  // 1. Activity Lore Triggers: Player actions in the world directly trigger chapters that make sense!
+  if (source === 'radio' && chapter === 1) {
     return generateChapterDilemma(state, bs, 1, currentDay);
   }
-  if (chapter === 2 && currentDay >= 2) {
+  if (source === 'vehicle' && chapter === 2) {
     return generateChapterDilemma(state, bs, 2, currentDay);
   }
-  if (chapter === 3 && currentDay >= 3) {
-    return generateChapterDilemma(state, bs, 3, currentDay);
+  if (source === 'recon' && (chapter === 3 || chapter === 4)) {
+    return generateChapterDilemma(state, bs, chapter, currentDay);
   }
-  if (chapter === 4 && currentDay >= 4) {
-    return generateChapterDilemma(state, bs, 4, currentDay);
-  }
-  if (chapter === 5 && currentDay >= 5) {
+  if (source === 'scavenge' && locationId === bs.targetLocationId && chapter >= 4) {
     return generateChapterDilemma(state, bs, 5, currentDay);
+  }
+
+  // 2. Day Progression: Organic, non-forced chance when time passes
+  if (source === 'day_advance') {
+    // Don't trigger two chapters on the exact same day
+    if (currentDay <= lastDay) return null;
+
+    const daysSinceLast = currentDay - lastDay;
+    const shouldTrigger = (chapter === 1 && currentDay >= 2 && Math.random() < 0.50) ||
+                          (chapter > 1 && daysSinceLast >= 2 && Math.random() < 0.55) ||
+                          (daysSinceLast >= 4); // Guarantees story progresses after a few days of survival
+
+    if (shouldTrigger && chapter <= 5) {
+      return generateChapterDilemma(state, bs, chapter, currentDay);
+    }
   }
 
   return null;
