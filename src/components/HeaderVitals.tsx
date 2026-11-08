@@ -81,9 +81,6 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
               <h1 className="text-base font-bold text-zinc-100 tracking-tight group-hover:text-rose-400 transition-colors truncate">
                 {player.name}
               </h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 group-hover:border-zinc-700 group-hover:text-zinc-200 shrink-0">
-                Stats & Perks ➔
-              </span>
             </div>
 
             <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-0.5 font-sans">
