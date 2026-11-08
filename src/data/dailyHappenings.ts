@@ -254,7 +254,15 @@ export function generateDailyHappenings(state: GameState, currentDay: number, we
     result.push(chosenWeather[Math.floor(Math.random() * chosenWeather.length)]);
   }
 
-  // 3. Location / companion / routine line
+  // 3. Personal Backstory reflection thoughts
+  if (state.player.backstory && state.player.backstory.journalThoughts && Math.random() < 0.35) {
+    const thoughts = state.player.backstory.journalThoughts.filter(t => !recentTexts.includes(t) && !result.includes(t));
+    if (thoughts.length > 0) {
+      result.push(thoughts[Math.floor(Math.random() * thoughts.length)]);
+    }
+  }
+
+  // 4. Location / companion / routine line
   const locationPool = getLocationHappenings(state);
   const companionPool = getCompanionHappenings(state);
   const miscPool = [...locationPool, ...companionPool];

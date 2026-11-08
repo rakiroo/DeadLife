@@ -81,6 +81,20 @@ export interface Career {
   };
 }
 
+export interface SurvivorBackstory {
+  id: string;
+  theme: 'family' | 'pet' | 'rival' | 'love' | 'guilt';
+  title: string;
+  targetName: string;
+  relation: string;
+  hookText: string;
+  searchGoal: string;
+  targetLocationId: string;
+  clueFound?: boolean;
+  status: 'searching' | 'clue_found' | 'resolved';
+  journalThoughts: string[];
+}
+
 export interface Survivor {
   name: string;
   gender?: 'male' | 'female';
@@ -102,6 +116,7 @@ export interface Survivor {
   statusEffects: StatusEffect[];
   isDead: boolean;
   deathCause?: string;
+  backstory?: SurvivorBackstory;
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';

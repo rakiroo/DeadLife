@@ -119,6 +119,17 @@ export const SettingsScreen: React.FC<Props> = ({
               </div>
             </div>
 
+            {player.backstory && (
+              <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 space-y-0.5 text-left font-sans">
+                <div className="font-semibold text-amber-400 text-[11px] flex items-center justify-between">
+                  <span>🎯 {player.backstory.title}</span>
+                  <span className="font-mono text-[9px] text-zinc-500 uppercase">{player.backstory.status === 'clue_found' ? 'Clue Found' : 'Searching'}</span>
+                </div>
+                <div className="text-[10px] text-zinc-300">{player.backstory.relation}: {player.backstory.targetName}</div>
+                <div className="text-[10px] text-zinc-400 italic">{player.backstory.searchGoal}</div>
+              </div>
+            )}
+
             {stats && (
               <div className="grid grid-cols-3 gap-1 text-center text-[10px] font-mono">
                 <div className="p-1.5 rounded-xl bg-black/20">

@@ -17,6 +17,7 @@ import { GraveyardScreen } from './components/GraveyardScreen';
 import { AmbitionsModal } from './components/AmbitionsModal';
 import { SettingsScreen } from './components/SettingsScreen';
 import { SandboxAmbition } from './data/ambitions';
+import { getRandomBackstory } from './data/backstories';
 
 type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings';
 
@@ -25,6 +26,8 @@ const GRAVEYARD_KEY = 'deadlife_graveyard';
 
 export function createNewGameWithSurvivor(survivor: Survivor, career: Career): GameState {
   const spawnStory = getRandomSpawnStory(career.id);
+  const backstory = survivor.backstory || getRandomBackstory();
+  survivor.backstory = backstory;
 
   // Gather all starting loot from workplace
   const startingLoot: InventoryItem[] = [];
@@ -77,7 +80,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
     title: spawnStory.title || 'Day 0: The Outbreak Begins',
     category: 'discovery',
     dangerLevel: 'low',
-    description: spawnStory.fullStory,
+    description: spawnStory.fullStory + '\n\n🎯 Personal Stake: ' + backstory.hookText + ' (' + backstory.searchGoal + ')',
     choices: [
       {
         id: 'loot_all_workplace',
@@ -141,7 +144,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const initialLog: LogEntry = {
     id: 'log_init_' + Date.now(),
     day: 0,
-    text: spawnStory.intro,
+    text: spawnStory.intro + ' My personal stake: ' + backstory.hookText,
     type: 'milestone',
     timestamp: 'Morning'
   };
@@ -783,6 +786,13 @@ export function App() {
           hpDelta = -mitigatedDamage;
           logText = `I fell from the lumber yard fence while evading infected (-${mitigatedDamage}% HP).`;
         }
+      }
+
+      // Personal Backstory Clue Discovery
+      if (prev.player.backstory && prev.player.backstory.targetLocationId === locationId && prev.player.backstory.status === 'searching') {
+        prev.player.backstory.status = 'clue_found';
+        prev.player.sanity = Math.min(100, prev.player.sanity + 15);
+        logText += ` [Clue Discovered: I found evidence of ${prev.player.backstory.targetName}! ${prev.player.backstory.searchGoal}]`;
       }
 
       // Merge new items into inventory
