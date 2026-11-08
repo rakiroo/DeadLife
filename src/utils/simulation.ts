@@ -271,24 +271,172 @@ export function advanceOneDay(state: GameState): GameState {
     });
   });
 
-  // Camp survivor duty & daily trust progression
-  const updatedMembers = state.campMembers.map(member => {
+  // 7. Base Sanctuary & Camp Survivor Simulation
+  let campMorale = state.shelter.morale ?? 75;
+  const rationPolicy = state.shelter.rationPolicy ?? 'standard';
+  
+  // Greenhouse food generation
+  if (state.shelter.greenhouseLevel && currentDay % 3 === 0) {
+    const yieldAmount = state.shelter.greenhouseLevel + 1;
+    const foodItem = inventory.find(i => i.id === 'greenhouse_veg' || (i.category === 'food' && i.id.includes('canned')));
+    if (foodItem) {
+      foodItem.quantity += yieldAmount;
+    } else {
+      inventory.push({
+        id: 'greenhouse_veg',
+        name: 'Fresh Harvest Vegetables',
+        category: 'food',
+        quantity: yieldAmount,
+        description: 'Crisp carrots, greens, and beans grown in the rooftop greenhouse.'
+      });
+    }
+    newLogs.push({
+      id: 'gh_' + Date.now() + '_' + Math.random(),
+      day: currentDay,
+      text: '🌱 Rooftop Greenhouse: Harvested +' + yieldAmount + ' fresh vegetable rations for the pantry.',
+      type: 'loot',
+      timestamp: 'Morning'
+    });
+  }
+
+  // Camp survivor duties & consumption
+  const updatedMembers: typeof state.campMembers = [];
+  for (const member of state.campMembers) {
+    let memberHealth = member.health;
     let trust = member.trust;
     let daysTogether = (member.daysTogether ?? 0) + 1;
 
-    // Depleted food/water strains trust
-    if (daysWithoutFood > 0 || daysWithoutWater > 0) {
-      trust = Math.max(0, trust - (daysWithoutFood * 4 + daysWithoutWater * 4));
+    // Food consumption based on ration policy
+    const memberFood = inventory.find(i => i.category === 'food' && i.quantity > 0);
+    if (rationPolicy === 'full') {
+      if (memberFood && memberFood.quantity >= 2) {
+        memberFood.quantity -= 2;
+        trust = Math.min(100, trust + 2);
+        memberHealth = Math.min(100, memberHealth + 5);
+      } else if (memberFood) {
+        memberFood.quantity -= 1;
+      }
+    } else if (rationPolicy === 'half') {
+      if (currentDay % 2 === 0 && memberFood) {
+        memberFood.quantity -= 1;
+      }
+      trust = Math.max(10, trust - 1);
     } else {
-      trust = Math.min(100, trust + 1);
+      if (memberFood) {
+        memberFood.quantity -= 1;
+      } else {
+        trust = Math.max(0, trust - 4);
+      }
+    }
+    inventory = inventory.filter(i => i.quantity > 0);
+
+    // Duty logic:
+    if (member.role === 'scavenger') {
+      const stealth = member.stealthSkill ?? 5;
+      const successChance = 0.65 + (stealth * 0.03);
+      if (Math.random() < successChance) {
+        const lootPool = [
+          { id: 'canned_scout_' + Date.now(), name: 'Canned Meat & Beans', category: 'food' as const, quantity: 2, description: 'Sealed provisions retrieved by scout.' },
+          { id: 'water_scout_' + Date.now(), name: 'Bottled Spring Water', category: 'water' as const, quantity: 2, description: 'Fresh drinking water scavenged by scout.' },
+          { id: 'wood_scout_' + Date.now(), name: 'Lumber Planks (2x4)', category: 'resource' as const, quantity: 1, description: 'Timber retrieved for barricade defense.' },
+          { id: 'meds_scout_' + Date.now(), name: 'Sterile Field Dressing', category: 'medical' as const, quantity: 1, description: 'Trauma bandages found in a cabinet.' },
+        ];
+        const haul = lootPool[Math.floor(Math.random() * lootPool.length)];
+        const existing = inventory.find(i => i.name === haul.name || (haul.category === 'food' && i.id.includes('canned')));
+        if (existing) {
+          existing.quantity += haul.quantity;
+        } else {
+          inventory.push(haul);
+        }
+        newLogs.push({
+          id: 'scout_' + Date.now() + '_' + Math.random(),
+          day: currentDay,
+          text: '🎒 Scout ' + member.name + ' returned safely before sunset with ' + haul.name + ' (x' + haul.quantity + ')!',
+          type: 'loot',
+          timestamp: 'Afternoon'
+        });
+      } else {
+        memberHealth = Math.max(20, memberHealth - 8);
+        newLogs.push({
+          id: 'scout_ambush_' + Date.now() + '_' + Math.random(),
+          day: currentDay,
+          text: '⚠️ Scout ' + member.name + ' encountered lurkers while scouting avenues and retreated back with cuts (-8% HP).',
+          type: 'hazard',
+          timestamp: 'Dusk'
+        });
+      }
+    } else if (member.role === 'medic') {
+      const wounded = updatedMembers.find(m => m.health < 80);
+      if (wounded) {
+        wounded.health = Math.min(100, wounded.health + 15);
+        newLogs.push({
+          id: 'medic_' + Date.now() + '_' + Math.random(),
+          day: currentDay,
+          text: '🩺 Medic ' + member.name + ' treated ' + wounded.name + "'s injuries with sterile dressings (+15% HP).",
+          type: 'medical',
+          timestamp: 'Morning'
+        });
+      } else if (health < 85) {
+        health = Math.min(100, health + 15);
+        newLogs.push({
+          id: 'medic_player_' + Date.now() + '_' + Math.random(),
+          day: currentDay,
+          text: '🩺 Medic ' + member.name + ' dressed your wounds (+15% HP).',
+          type: 'medical',
+          timestamp: 'Morning'
+        });
+      }
+    } else if (member.role === 'craftsman') {
+      if (barricadeIntegrity < 100) {
+        barricadeIntegrity = Math.min(100, barricadeIntegrity + 6);
+        newLogs.push({
+          id: 'craft_' + Date.now() + '_' + Math.random(),
+          day: currentDay,
+          text: '🔨 Builder ' + member.name + ' reinforced weak points along the perimeter barricades (+6% integrity).',
+          type: 'general',
+          timestamp: 'Afternoon'
+        });
+      }
+    } else if (member.role === 'guard') {
+      if (Math.random() < 0.25) {
+        newLogs.push({
+          id: 'guard_' + Date.now() + '_' + Math.random(),
+          day: currentDay,
+          text: '🛡️ Guard ' + member.name + ' spotted and quietly neutralized a lone prowler near the outer fence.',
+          type: 'combat',
+          timestamp: 'Night'
+        });
+      }
     }
 
-    return {
+    updatedMembers.push({
       ...member,
+      health: memberHealth,
       trust,
       daysTogether
-    };
-  });
+    });
+  }
+
+  // Roommate bonding check
+  if (state.shelter.rooms && state.shelter.rooms.length > 0 && Math.random() < 0.25) {
+    for (const r of state.shelter.rooms) {
+      if (r.assignedMemberIds && r.assignedMemberIds.length >= 2) {
+        const m1 = updatedMembers.find(m => m.id === r.assignedMemberIds[0]);
+        const m2 = updatedMembers.find(m => m.id === r.assignedMemberIds[1]);
+        if (m1 && m2) {
+          newLogs.push({
+            id: 'bond_' + Date.now() + '_' + Math.random(),
+            day: currentDay,
+            text: '💬 Roommates ' + m1.name + ' and ' + m2.name + ' spent the evening sharing candlelight stories in ' + r.name + ' (+Camp Morale).',
+            type: 'camp',
+            timestamp: 'Evening'
+          });
+          campMorale = Math.min(100, campMorale + 3);
+          break;
+        }
+      }
+    }
+  }
 
   // Pick a dilemma if alive and none active
   let nextDilemma = state.activeDilemma;

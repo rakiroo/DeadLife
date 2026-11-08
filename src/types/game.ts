@@ -145,6 +145,31 @@ export interface CampMember {
   role: CampRole;
   isBittenSuspect?: boolean;
   statusEffects: StatusEffect[];
+  roomId?: string;
+  quirk?: string;
+  flaw?: string;
+  morale?: number;
+  opinionOfLeader?: number;
+  spouseId?: string;
+  partnerId?: string;
+}
+
+export interface CampRoom {
+  id: string;
+  name: string;
+  type: 'cots' | 'bunk' | 'cabin' | 'infirmary';
+  capacity: number;
+  comfort: number;
+  assignedMemberIds: string[];
+}
+
+export interface CampFacility {
+  id: string;
+  name: string;
+  description: string;
+  level: number;
+  maxLevel: number;
+  effectDescription: string;
 }
 
 export interface BaseShelter {
@@ -160,6 +185,14 @@ export interface BaseShelter {
   barricadeIntegrity: number;
   generatorOperational: boolean;
   fuelGallons: number;
+  maxSurvivors?: number;
+  morale?: number; // 0 - 100
+  rationPolicy?: 'full' | 'standard' | 'half';
+  securityProtocol?: 'open' | 'quarantine' | 'lockdown';
+  rooms?: CampRoom[];
+  facilities?: CampFacility[];
+  greenhouseLevel?: number;
+  infirmaryLevel?: number;
 }
 
 export type ItemCategory = 'food' | 'water' | 'medical' | 'weapon' | 'tool' | 'resource';

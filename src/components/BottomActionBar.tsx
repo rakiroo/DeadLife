@@ -1,8 +1,8 @@
 import React from 'react';
-import { FastForward, Clock, Package, Zap, BookOpen } from 'lucide-react';
+import { FastForward, Clock, Package, Zap, BookOpen, Home } from 'lucide-react';
 import { GameState } from '../types/game';
 
-export type ActiveTab = 'journal' | 'inventory' | 'activities';
+export type ActiveTab = 'journal' | 'base' | 'inventory' | 'activities';
 
 interface Props {
   activeTab: ActiveTab;
@@ -22,7 +22,7 @@ export const BottomActionBar: React.FC<Props> = ({
   gameState
 }) => {
   const suppliesCount = gameState.inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const hasCampMembers = gameState.campMembers.length > 0;
+  const residentCount = gameState.campMembers.length + (gameState.shelter.isEstablished ? 1 : 0);
 
   return (
     <div className="shrink-0 sticky bottom-0 z-40 bg-zinc-950/80 backdrop-blur-2xl border-t border-white/5 px-3 pt-2 pb-5 max-w-md mx-auto w-full select-none shadow-2xl font-sans">
@@ -61,7 +61,7 @@ export const BottomActionBar: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Navigation Tabs (Clean 3-Tab Structure) */}
+      {/* Navigation Tabs (Clean 4-Tab Structure: Journal | Base | Supplies | Activities) */}
       <nav className="flex items-center justify-between gap-1 pt-0.5 text-[11px] font-medium">
         {/* Journal Tab */}
         <button
@@ -77,7 +77,28 @@ export const BottomActionBar: React.FC<Props> = ({
           <span className="text-[10px]">Journal</span>
         </button>
 
-        {/* Supplies Tab (Contains Stockpile & Camp) */}
+        {/* Base Tab (Camp Sanctuary, Housing, Community & Decrees) */}
+        <button
+          type="button"
+          onClick={() => onTabChange('base')}
+          className={`flex-1 py-1.5 px-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all relative active:scale-95 ${
+            activeTab === 'base'
+              ? 'bg-white/10 border border-white/10 text-white font-semibold shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <div className="relative">
+            <Home className={`w-4 h-4 ${activeTab === 'base' ? 'text-emerald-400' : 'text-zinc-500'}`} />
+            {residentCount > 0 && (
+              <span className="absolute -top-1.5 -right-2.5 px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-emerald-600 text-white min-w-4 text-center shadow-sm">
+                {residentCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px]">Base</span>
+        </button>
+
+        {/* Supplies Tab (Clean Stockpile, Provisions & Gear) */}
         <button
           type="button"
           onClick={() => onTabChange('inventory')}
@@ -95,7 +116,7 @@ export const BottomActionBar: React.FC<Props> = ({
               </span>
             )}
           </div>
-          <span className="text-[10px]">{hasCampMembers ? 'Supplies & Camp' : 'Supplies'}</span>
+          <span className="text-[10px]">Supplies</span>
         </button>
 
         {/* Activities Hub */}
@@ -115,3 +136,4 @@ export const BottomActionBar: React.FC<Props> = ({
     </div>
   );
 };
+

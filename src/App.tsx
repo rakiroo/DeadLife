@@ -8,6 +8,7 @@ import { getRandomSpawnStory } from './data/spawnStories';
 import { DilemmaModal } from './components/DilemmaModal';
 import { DilemmaResultModal } from './components/DilemmaResultModal';
 import { BottomActionBar, ActiveTab } from './components/BottomActionBar';
+import { BaseTab } from './components/BaseTab';
 import { InventoryTab } from './components/InventoryTab';
 import { ActivitiesTab } from './components/ActivitiesTab';
 import { DeathScreen } from './components/DeathScreen';
@@ -502,6 +503,267 @@ export function App() {
     });
   };
 
+  // Base Sanctuary Handlers:
+  const handleEstablishBase = (name: string, type: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const initialRooms = [
+        {
+          id: 'room_cots_1',
+          name: 'Makeshift Cots & Lean-To',
+          type: 'cots' as const,
+          capacity: 2,
+          comfort: 20,
+          assignedMemberIds: prev.campMembers.slice(0, 1).map(m => m.id)
+        },
+        {
+          id: 'room_bunk_1',
+          name: 'Main Fortified Bunkhouse',
+          type: 'bunk' as const,
+          capacity: 2,
+          comfort: 45,
+          assignedMemberIds: prev.campMembers.slice(1, 3).map(m => m.id)
+        }
+      ];
+
+      const newLog: LogEntry = {
+        id: 'base_est_' + Date.now(),
+        day: prev.day,
+        text: 'I claimed and fortified ' + (name || 'Sanctuary Haven') + ' as our official sanctuary base! We reinforced the doors and set up living quarters.',
+        type: 'milestone',
+        timestamp: 'Base Claim'
+      };
+
+      return {
+        ...prev,
+        isCampEstablished: true,
+        shelter: {
+          ...prev.shelter,
+          isEstablished: true,
+          name: name || 'Sanctuary Haven',
+          type: type || 'Fortified Haven',
+          defenseRating: Math.max(35, prev.shelter.defenseRating),
+          barricadeIntegrity: Math.max(45, prev.shelter.barricadeIntegrity),
+          maxSurvivors: 4,
+          morale: 80,
+          rationPolicy: 'standard',
+          securityProtocol: 'open',
+          rooms: initialRooms
+        },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  const handleRenameBase = (name: string) => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      shelter: {
+        ...prev.shelter,
+        name
+      }
+    } : null);
+  };
+
+  const handleBuildRoom = (roomType: 'cots' | 'bunk' | 'cabin') => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedInv = [...prev.inventory];
+      const woodNeeded = roomType === 'cabin' ? 4 : roomType === 'bunk' ? 3 : 1;
+      const nailsNeeded = roomType === 'cabin' ? 15 : roomType === 'bunk' ? 10 : 0;
+
+      let woodToDeduct = woodNeeded;
+      for (const item of updatedInv) {
+        if ((item.id.includes('wood') || item.id.includes('plank')) && item.quantity > 0 && woodToDeduct > 0) {
+          const deduct = Math.min(woodToDeduct, item.quantity);
+          item.quantity -= deduct;
+          woodToDeduct -= deduct;
+        }
+      }
+
+      let nailsToDeduct = nailsNeeded;
+      for (const item of updatedInv) {
+        if (item.id.includes('nail') && item.quantity > 0 && nailsToDeduct > 0) {
+          const deduct = Math.min(nailsToDeduct, item.quantity);
+          item.quantity -= deduct;
+          nailsToDeduct -= deduct;
+        }
+      }
+      updatedInv = updatedInv.filter(i => i.quantity > 0);
+
+      const capacityToAdd = roomType === 'cots' ? 1 : 2;
+      const roomName = roomType === 'cabin' ? ('Private Cabin ' + Date.now().toString().slice(-3)) : roomType === 'bunk' ? ('Bunkhouse Wing ' + Date.now().toString().slice(-3)) : ('Lean-To ' + Date.now().toString().slice(-3));
+      const newRoom = {
+        id: 'room_' + roomType + '_' + Date.now(),
+        name: roomName,
+        type: roomType,
+        capacity: capacityToAdd,
+        comfort: roomType === 'cabin' ? 70 : roomType === 'bunk' ? 45 : 20,
+        assignedMemberIds: []
+      };
+
+      const existingRooms = prev.shelter.rooms && prev.shelter.rooms.length > 0 ? prev.shelter.rooms : [
+        { id: 'room_cots_1', name: 'Makeshift Cots & Lean-To', type: 'cots' as const, capacity: 2, comfort: 20, assignedMemberIds: [] },
+        { id: 'room_bunk_1', name: 'Main Fortified Bunkhouse', type: 'bunk' as const, capacity: 2, comfort: 45, assignedMemberIds: [] }
+      ];
+
+      const currentCapacity = prev.shelter.maxSurvivors || 4;
+      const newCapacity = currentCapacity + capacityToAdd;
+
+      const newLog: LogEntry = {
+        id: 'build_room_' + Date.now(),
+        day: prev.day,
+        text: 'Constructed ' + roomName + '! Expanded settlement capacity to ' + newCapacity + ' beds (+' + capacityToAdd + ' beds).',
+        type: 'milestone',
+        timestamp: 'Construction'
+      };
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        shelter: {
+          ...prev.shelter,
+          maxSurvivors: newCapacity,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 5),
+          rooms: [...existingRooms, newRoom]
+        },
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
+  const handleAssignRoom = (memberId: string, roomId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const rooms = prev.shelter.rooms ? [...prev.shelter.rooms] : [
+        { id: 'room_cots_1', name: 'Makeshift Cots & Lean-To', type: 'cots' as const, capacity: 2, comfort: 20, assignedMemberIds: [] },
+        { id: 'room_bunk_1', name: 'Main Fortified Bunkhouse', type: 'bunk' as const, capacity: 2, comfort: 45, assignedMemberIds: [] }
+      ];
+
+      const updatedRooms = rooms.map(r => {
+        const filtered = (r.assignedMemberIds || []).filter(id => id !== memberId);
+        if (r.id === roomId) {
+          filtered.push(memberId);
+        }
+        return {
+          ...r,
+          assignedMemberIds: filtered
+        };
+      });
+
+      return {
+        ...prev,
+        shelter: {
+          ...prev.shelter,
+          rooms: updatedRooms
+        }
+      };
+    });
+  };
+
+  const handleUpgradeFacility = (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'defense') => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedInv = [...prev.inventory];
+      let logText = '';
+      let updatedShelter = { ...prev.shelter };
+
+      if (facilityId === 'water_collector') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 2);
+        if (woodItem) woodItem.quantity -= 2;
+        updatedShelter.waterCollectorLevel = (updatedShelter.waterCollectorLevel || 1) + 1;
+        updatedShelter.maxRainwater = (updatedShelter.maxRainwater || 10) + 5;
+        logText = 'Expanded rooftop rainwater cistern to Level ' + updatedShelter.waterCollectorLevel + ' (+5L capacity).';
+      } else if (facilityId === 'greenhouse') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 3);
+        const waterItem = updatedInv.find(i => i.category === 'water' && i.quantity >= 2);
+        if (woodItem) woodItem.quantity -= 3;
+        if (waterItem) waterItem.quantity -= 2;
+        updatedShelter.greenhouseLevel = (updatedShelter.greenhouseLevel || 0) + 1;
+        logText = 'Built rooftop raised greenhouse garden beds (Tier ' + updatedShelter.greenhouseLevel + ')! Fresh vegetables will harvest every 3 days.';
+      } else if (facilityId === 'infirmary') {
+        const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity >= 2);
+        const medItem = updatedInv.find(i => i.category === 'medical' && i.quantity >= 2);
+        if (woodItem) woodItem.quantity -= 2;
+        if (medItem) medItem.quantity -= 2;
+        updatedShelter.infirmaryLevel = (updatedShelter.infirmaryLevel || 0) + 1;
+        logText = 'Established camp infirmary and triage beds (Tier ' + updatedShelter.infirmaryLevel + ') for sterile medical recovery.';
+      }
+
+      updatedInv = updatedInv.filter(i => i.quantity > 0);
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        shelter: updatedShelter,
+        logs: [...prev.logs, {
+          id: 'facility_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'milestone' as const,
+          timestamp: 'Project'
+        }].slice(-150)
+      };
+    });
+  };
+
+  const handlePraiseSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const updated = prev.campMembers.map(m =>
+        m.id === memberId ? { ...m, trust: Math.min(100, m.trust + 10) } : m
+      );
+
+      return {
+        ...prev,
+        campMembers: updated,
+        shelter: {
+          ...prev.shelter,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 3)
+        },
+        logs: [...prev.logs, {
+          id: 'praise_' + Date.now(),
+          day: prev.day,
+          text: 'I commended ' + member.name + ' in front of the camp for their dedicated work (+Morale & Loyalty).',
+          type: 'camp' as const,
+          timestamp: 'Leadership'
+        }].slice(-150)
+      };
+    });
+  };
+
+  const handleSetRationPolicy = (policy: 'full' | 'standard' | 'half') => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      shelter: {
+        ...prev.shelter,
+        rationPolicy: policy,
+        morale: policy === 'full' ? Math.min(100, (prev.shelter.morale ?? 75) + 10) : policy === 'half' ? Math.max(10, (prev.shelter.morale ?? 75) - 10) : prev.shelter.morale
+      }
+    } : null);
+  };
+
+  const handleSetSecurityProtocol = (protocol: 'open' | 'quarantine' | 'lockdown') => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      shelter: {
+        ...prev.shelter,
+        securityProtocol: protocol
+      }
+    } : null);
+  };
+
   const handleForfeitRun = () => {
     if (!gameState) return;
     const newRecord: CemeteryRecord = {
@@ -930,14 +1192,28 @@ export function App() {
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
           {activeTab === 'journal' && <JournalFeed logs={gameState.logs} onOpenAmbitions={() => setShowAmbitionsModal(true)} />}
+          {activeTab === 'base' && (
+            <BaseTab
+              gameState={gameState}
+              onEstablishBase={handleEstablishBase}
+              onRenameBase={handleRenameBase}
+              onRoleChange={handleRoleChange}
+              onTalkSurvivor={handleTalkSurvivor}
+              onPraiseSurvivor={handlePraiseSurvivor}
+              onGiftSurvivor={handleGiftSurvivor}
+              onExileSurvivor={handleExileSurvivor}
+              onRepairBarricade={handleRepairBarricade}
+              onBuildRoom={handleBuildRoom}
+              onAssignRoom={handleAssignRoom}
+              onUpgradeFacility={handleUpgradeFacility}
+              onSetRationPolicy={handleSetRationPolicy}
+              onSetSecurityProtocol={handleSetSecurityProtocol}
+            />
+          )}
           {activeTab === 'inventory' && (
             <InventoryTab
               gameState={gameState}
               onUseItem={handleUseItem}
-              onRoleChange={handleRoleChange}
-              onTalkSurvivor={handleTalkSurvivor}
-              onGiftSurvivor={handleGiftSurvivor}
-              onExileSurvivor={handleExileSurvivor}
             />
           )}
           {activeTab === 'activities' && (

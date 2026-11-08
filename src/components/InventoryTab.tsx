@@ -1,28 +1,21 @@
 import React, { useState } from 'react';
-import { InventoryItem, GameState, CampRole } from '../types/game';
+import { InventoryItem, GameState } from '../types/game';
 import { 
   Utensils, Droplets, HeartPulse, Wrench, Shield, 
-  Search, Bed, MessageSquare, UserMinus, Package, Users
+  Package, Sparkles, AlertCircle
 } from 'lucide-react';
 
 interface Props {
   gameState: GameState;
   onUseItem: (item: InventoryItem) => void;
-  onRoleChange?: (memberId: string, newRole: CampRole) => void;
-  onTalkSurvivor?: (memberId: string) => void;
-  onGiftSurvivor?: (memberId: string) => void;
-  onExileSurvivor?: (memberId: string) => void;
 }
 
 export const InventoryTab: React.FC<Props> = ({ 
   gameState, 
-  onUseItem,
-  onRoleChange,
-  onTalkSurvivor,
-  onGiftSurvivor,
-  onExileSurvivor
+  onUseItem
 }) => {
-  const [filter, setFilter] = useState<'all' | 'food' | 'water' | 'medical'>('all');
+  const [consumableFilter, setConsumableFilter] = useState<'all' | 'food' | 'water' | 'medical'>('all');
+  const [stockpileFilter, setStockpileFilter] = useState<'all' | 'weapon' | 'tool' | 'resource'>('all');
   const [recentAction, setRecentAction] = useState<string | null>(null);
 
   const { inventory, campMembers } = gameState;
@@ -38,19 +31,15 @@ export const InventoryTab: React.FC<Props> = ({
   const daysOfFood = Math.floor(totalFood / totalConsumers);
   const daysOfWater = Math.floor(totalWater / totalConsumers);
 
-  const triggerCampAction = (text: string, callback?: () => void) => {
-    if (callback) callback();
-    setRecentAction(text);
+  const handleUseItemWithFeedback = (item: InventoryItem) => {
+    onUseItem(item);
+    let actionDesc = 'Used ' + item.name + '.';
+    if (item.category === 'food') actionDesc = 'Consumed ' + item.name + ' (+Hunger).';
+    if (item.category === 'water') actionDesc = 'Drank ' + item.name + ' (+Hydration).';
+    if (item.category === 'medical') actionDesc = 'Applied ' + item.name + ' (+Medical).';
+    setRecentAction(actionDesc);
     setTimeout(() => setRecentAction(null), 3000);
   };
-
-  const ROLES: { id: CampRole; label: string; icon: React.ReactNode }[] = [
-    { id: 'guard', label: 'Guard', icon: <Shield className="w-3 h-3" /> },
-    { id: 'scavenger', label: 'Scout', icon: <Search className="w-3 h-3" /> },
-    { id: 'medic', label: 'Medic', icon: <HeartPulse className="w-3 h-3" /> },
-    { id: 'craftsman', label: 'Build', icon: <Wrench className="w-3 h-3" /> },
-    { id: 'sickbay', label: 'Quarantine', icon: <Bed className="w-3 h-3" /> },
-  ];
 
   const getCategoryIcon = (cat: InventoryItem['category']) => {
     switch (cat) {
@@ -60,18 +49,27 @@ export const InventoryTab: React.FC<Props> = ({
         return <Droplets className="w-3.5 h-3.5 text-cyan-400" />;
       case 'medical':
         return <HeartPulse className="w-3.5 h-3.5 text-rose-400" />;
+      case 'weapon':
+        return <Shield className="w-3.5 h-3.5 text-indigo-400" />;
+      case 'tool':
+        return <Wrench className="w-3.5 h-3.5 text-amber-300" />;
       default:
         return <Package className="w-3.5 h-3.5 text-zinc-400" />;
     }
   };
 
-  // Only list consumable items (Food, Water, Medical) in the quick provisions drawer!
-  // Raw materials and weapons are tracked in the totals above and used in Activities/Crafting.
+  // Consumables (Food, Water, Medical)
   const consumableItems = inventory.filter(i => i.category === 'food' || i.category === 'water' || i.category === 'medical');
-
   const filteredConsumables = consumableItems.filter(item => {
-    if (filter === 'all') return true;
-    return item.category === filter;
+    if (consumableFilter === 'all') return true;
+    return item.category === consumableFilter;
+  });
+
+  // Gear & Materials (Weapons, Tools, Resources)
+  const nonConsumableItems = inventory.filter(i => i.category === 'weapon' || i.category === 'tool' || i.category === 'resource');
+  const filteredStockpile = nonConsumableItems.filter(item => {
+    if (stockpileFilter === 'all') return true;
+    return item.category === stockpileFilter;
   });
 
   return (
@@ -79,7 +77,7 @@ export const InventoryTab: React.FC<Props> = ({
       {/* Title */}
       <div>
         <h2 className="text-base font-bold text-white tracking-tight">Supplies & Stockpile</h2>
-        <p className="text-xs text-zinc-400">Total survival provisions and camp sustenance.</p>
+        <p className="text-xs text-zinc-400">Total survival provisions, gathered gear, and stored equipment.</p>
       </div>
 
       {recentAction && (
@@ -88,7 +86,7 @@ export const InventoryTab: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 1. RESOURCE TOTALS DASHBOARD (CLEAN & COMPLETE) */}
+      {/* 1. RESOURCE TOTALS DASHBOARD */}
       <div className="grid grid-cols-3 gap-2">
         {/* Food Total */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
@@ -152,7 +150,7 @@ export const InventoryTab: React.FC<Props> = ({
         {/* Daily Group Burn */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
-            <span className="flex items-center gap-1 font-medium"><Users className="w-3.5 h-3.5 text-emerald-400" /> Burn</span>
+            <span className="flex items-center gap-1 font-medium"><Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Burn</span>
           </div>
           <div className="font-mono text-xs font-bold text-zinc-300">
             -{totalConsumers} <span className="text-[9px] font-normal text-zinc-500">/day</span>
@@ -160,144 +158,35 @@ export const InventoryTab: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. CAMP SURVIVORS SECTION (LIVES DIRECTLY IN SUPPLIES) */}
-      {campMembers.length > 0 && (
-        <div className="space-y-2 pt-1">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" /> Camp Members ({campMembers.length})
-            </span>
-            <span className="text-[10px] font-mono text-zinc-500">
-              Consumes -{campMembers.length} food/water daily
-            </span>
-          </div>
-
-          <div className="space-y-2.5">
-            {campMembers.map((member) => (
-              <div
-                key={member.id}
-                className="p-3 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5 shadow-sm"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h3 className="text-xs font-bold text-white truncate">{member.name}</h3>
-                      {member.relation && (
-                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-white/10 text-amber-300 border border-white/10 shrink-0">
-                          {member.relation}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 truncate">{member.profession} • Age {member.age}</p>
-                    {(member.combatSkill !== undefined) && (
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 mt-1 flex-wrap">
-                        <span className="text-zinc-500">Skills:</span>
-                        <span className="text-rose-400 font-semibold">Cbt {member.combatSkill}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-cyan-400 font-semibold">Med {member.medicalSkill}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-amber-400 font-semibold">Crf {member.craftingSkill}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-indigo-400 font-semibold">Stl {member.stealthSkill}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-emerald-400 font-semibold">Fit {member.fitnessSkill}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right font-mono text-[11px]">
-                    <span className="text-emerald-400 font-bold">HP {member.health}%</span>
-                    <span className="text-zinc-600 mx-1">•</span>
-                    <span className="text-cyan-400 font-bold">Trust {member.trust}%</span>
-                  </div>
-                </div>
-
-                {/* Role selection & actions */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
-                  <div className="flex flex-wrap gap-1">
-                    {ROLES.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => onRoleChange && onRoleChange(member.id, r.id)}
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-medium flex items-center gap-1 transition-all ${
-                          member.role === r.id
-                            ? 'bg-white text-zinc-950 font-bold shadow-sm'
-                            : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                      >
-                        {r.icon}
-                        <span>{r.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => triggerCampAction('Checked in with ' + member.name + ' (+Trust & Sanity).', () => onTalkSurvivor && onTalkSurvivor(member.id))}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300"
-                      title="Talk & Check In"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={totalFood <= 0}
-                      onClick={() => triggerCampAction('Shared food rations with ' + member.name + ' (+Trust & Health).', () => onGiftSurvivor && onGiftSurvivor(member.id))}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-amber-300 disabled:opacity-30"
-                      title="Share Food"
-                    >
-                      <Utensils className="w-3.5 h-3.5" />
-                    </button>
-
-                    {member.trust < 40 && (
-                      <button
-                        type="button"
-                        onClick={() => triggerCampAction('Exiled ' + member.name + ' from the camp.', () => onExileSurvivor && onExileSurvivor(member.id))}
-                        className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
-                        title="Exile from Camp"
-                      >
-                        <UserMinus className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 3. CONSUMABLE PROVISIONS (EAT / DRINK / HEAL ONLY) */}
+      {/* 2. CONSUMABLE PROVISIONS (EAT / DRINK / HEAL) */}
       <div className="space-y-2 pt-1">
         <div className="flex items-center justify-between px-1">
-          <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-400 font-bold flex items-center gap-1.5">
-            <Package className="w-3.5 h-3.5" /> Consumable Rations & Meds
+          <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-amber-400" /> Consumable Rations & Medicine
           </span>
           <span className="text-[10px] font-mono text-zinc-500">
-            {consumableItems.length} items ready to use
+            {consumableItems.length} items ready
           </span>
         </div>
 
-        {/* Filter pills */}
+        {/* Consumable filter pills */}
         <div className="flex gap-1 overflow-x-auto py-1 no-scrollbar text-[11px] font-medium">
           <button
             type="button"
-            onClick={() => setFilter('all')}
+            onClick={() => setConsumableFilter('all')}
             className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
-              filter === 'all'
+              consumableFilter === 'all'
                 ? 'bg-white text-zinc-950 font-bold shadow-sm'
                 : 'bg-white/5 text-zinc-400 hover:text-white'
             }`}
           >
-            All Usables ({consumableItems.length})
+            All Provisions ({consumableItems.length})
           </button>
           <button
             type="button"
-            onClick={() => setFilter('food')}
+            onClick={() => setConsumableFilter('food')}
             className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
-              filter === 'food'
+              consumableFilter === 'food'
                 ? 'bg-amber-400 text-zinc-950 font-bold shadow-sm'
                 : 'bg-white/5 text-zinc-400 hover:text-amber-300'
             }`}
@@ -306,9 +195,9 @@ export const InventoryTab: React.FC<Props> = ({
           </button>
           <button
             type="button"
-            onClick={() => setFilter('water')}
+            onClick={() => setConsumableFilter('water')}
             className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
-              filter === 'water'
+              consumableFilter === 'water'
                 ? 'bg-cyan-400 text-zinc-950 font-bold shadow-sm'
                 : 'bg-white/5 text-zinc-400 hover:text-cyan-300'
             }`}
@@ -317,9 +206,9 @@ export const InventoryTab: React.FC<Props> = ({
           </button>
           <button
             type="button"
-            onClick={() => setFilter('medical')}
+            onClick={() => setConsumableFilter('medical')}
             className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
-              filter === 'medical'
+              consumableFilter === 'medical'
                 ? 'bg-rose-400 text-zinc-950 font-bold shadow-sm'
                 : 'bg-white/5 text-zinc-400 hover:text-rose-300'
             }`}
@@ -328,14 +217,120 @@ export const InventoryTab: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Consumable Items List */}
         {filteredConsumables.length === 0 ? (
-          <div className="p-6 text-center text-zinc-500 bg-white/[0.02] rounded-2xl border border-white/5 text-xs">
-            No consumable food, water, or medicine available. Scavenge landmarks or search street vehicles in Activities!
+          <div className="p-5 text-center text-zinc-500 bg-white/[0.02] rounded-2xl border border-white/5 text-xs flex flex-col items-center gap-1.5">
+            <AlertCircle className="w-5 h-5 text-zinc-600" />
+            <span>No consumable food, water, or medicine in stockpile. Scavenge landmarks or search street vehicles in Activities!</span>
           </div>
         ) : (
           <div className="space-y-2">
             {filteredConsumables.map((item) => (
+              <div
+                key={item.id}
+                className="p-3 bg-white/[0.04] border border-white/5 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-white/10 transition-colors"
+              >
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-black/40 border border-white/5 shrink-0 mt-0.5">
+                    {getCategoryIcon(item.category)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white truncate">{item.name}</span>
+                      <span className="text-[10px] font-mono font-bold text-zinc-300 bg-white/10 px-1.5 py-0.2 rounded-full shrink-0">
+                        x{item.quantity}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUseItemWithFeedback(item)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-sm ${
+                    item.category === 'food'
+                      ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold'
+                      : item.category === 'water'
+                      ? 'bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold'
+                      : 'bg-rose-500 hover:bg-rose-400 text-white font-bold'
+                  }`}
+                >
+                  {item.category === 'food' ? 'Eat' : item.category === 'water' ? 'Drink' : 'Use'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3. STOCKPILE & ARSENAL (WEAPONS, TOOLS & CRAFTING MATERIALS) */}
+      <div className="space-y-2 pt-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold flex items-center gap-1.5">
+            <Wrench className="w-3.5 h-3.5 text-zinc-300" /> Equipment & Materials Locker
+          </span>
+          <span className="text-[10px] font-mono text-zinc-500">
+            {nonConsumableItems.length} stored items
+          </span>
+        </div>
+
+        {/* Stockpile filter pills */}
+        <div className="flex gap-1 overflow-x-auto py-1 no-scrollbar text-[11px] font-medium">
+          <button
+            type="button"
+            onClick={() => setStockpileFilter('all')}
+            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
+              stockpileFilter === 'all'
+                ? 'bg-white text-zinc-950 font-bold shadow-sm'
+                : 'bg-white/5 text-zinc-400 hover:text-white'
+            }`}
+          >
+            All Equipment ({nonConsumableItems.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockpileFilter('weapon')}
+            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
+              stockpileFilter === 'weapon'
+                ? 'bg-indigo-400 text-zinc-950 font-bold shadow-sm'
+                : 'bg-white/5 text-zinc-400 hover:text-indigo-300'
+            }`}
+          >
+            Weapons & Ammo ({inventory.filter(i => i.category === 'weapon').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockpileFilter('tool')}
+            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
+              stockpileFilter === 'tool'
+                ? 'bg-amber-400 text-zinc-950 font-bold shadow-sm'
+                : 'bg-white/5 text-zinc-400 hover:text-amber-300'
+            }`}
+          >
+            Tools ({inventory.filter(i => i.category === 'tool').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockpileFilter('resource')}
+            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
+              stockpileFilter === 'resource'
+                ? 'bg-emerald-400 text-zinc-950 font-bold shadow-sm'
+                : 'bg-white/5 text-zinc-400 hover:text-emerald-300'
+            }`}
+          >
+            Materials & Ammo ({inventory.filter(i => i.category === 'resource').length})
+          </button>
+        </div>
+
+        {filteredStockpile.length === 0 ? (
+          <div className="p-4 text-center text-zinc-500 bg-white/[0.02] rounded-2xl border border-white/5 text-xs">
+            No equipment or materials match this category.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredStockpile.map((item) => (
               <div
                 key={item.id}
                 className="p-3 bg-white/[0.04] border border-white/5 rounded-2xl flex items-center justify-between gap-3 shadow-sm"
@@ -357,19 +352,9 @@ export const InventoryTab: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => onUseItem(item)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-sm ${
-                    item.category === 'food'
-                      ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold'
-                      : item.category === 'water'
-                      ? 'bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold'
-                      : 'bg-rose-500 hover:bg-rose-400 text-white font-bold'
-                  }`}
-                >
-                  {item.category === 'food' ? 'Eat' : item.category === 'water' ? 'Drink' : 'Use'}
-                </button>
+                <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider bg-white/5 px-2 py-1 rounded-lg shrink-0">
+                  {item.category}
+                </div>
               </div>
             ))}
           </div>
@@ -378,3 +363,4 @@ export const InventoryTab: React.FC<Props> = ({
     </div>
   );
 };
+
