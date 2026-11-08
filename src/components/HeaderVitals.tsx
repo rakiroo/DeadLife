@@ -99,6 +99,25 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu }) => {
           )}
         </div>
 
+        {/* Active Character Traits Badges in Navbar */}
+        {player.traits.length > 0 && (
+          <div className="flex gap-1 overflow-x-auto py-0.5 no-scrollbar">
+            {player.traits.map(t => (
+              <span
+                key={t.id}
+                className={'px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ' + (
+                  t.type === 'positive'
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                )}
+                title={t.description}
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Vitals Grid (Health, Hydration, Food, Virus) */}
         <div className="grid grid-cols-4 gap-2 text-xs">
           {/* Health */}

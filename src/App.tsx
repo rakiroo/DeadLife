@@ -38,6 +38,36 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
     }
   }
 
+  // Starter items for medical conditions & habits
+  const traitIds = survivor.traits ? survivor.traits.map(t => t.id) : [];
+  if (traitIds.includes('diabetic')) {
+    startingLoot.push({
+      id: 'insulin_pen_starter',
+      name: 'Refrigerated Insulin Pen',
+      category: 'medical',
+      quantity: 2,
+      description: 'Injectable insulin to manage type 1 diabetes.'
+    });
+  }
+  if (traitIds.includes('asthmatic')) {
+    startingLoot.push({
+      id: 'albuterol_inhaler_starter',
+      name: 'Albuterol Rescue Inhaler',
+      category: 'medical',
+      quantity: 2,
+      description: 'Rescue bronchodilator inhaler for acute asthma spasms.'
+    });
+  }
+  if (traitIds.includes('smoker')) {
+    startingLoot.push({
+      id: 'cigarettes_starter',
+      name: 'Pack of Cigarettes',
+      category: 'food',
+      quantity: 2,
+      description: 'Filter cigarettes. Smoking staves off nicotine withdrawal.'
+    });
+  }
+
   const itemsSummary = startingLoot.map(i => i.name + ' (x' + i.quantity + ')').join(', ');
 
   // Interactive Day 0 Opening Dilemma
@@ -325,6 +355,19 @@ export function App() {
         statusEffects = statusEffects.filter(e => e.id !== 'bleeding');
         itemLogText = `Applied sterile pressure dressing. Bleeding arrested.`;
         itemLogType = 'medical';
+      } else if (item.id.includes('insulin')) {
+        health = Math.min(100, health + 10);
+        itemLogText = 'Injected insulin dose. Blood glucose and vitals stabilized (+10 HP).';
+        itemLogType = 'medical';
+      } else if (item.id.includes('inhaler') || item.id.includes('albuterol')) {
+        health = Math.min(100, health + 5);
+        prev.player.sanity = Math.min(100, prev.player.sanity + 15);
+        itemLogText = 'Used albuterol rescue inhaler. Cleared bronchial airways (+15 Sanity).';
+        itemLogType = 'medical';
+      } else if (item.id.includes('cigarette') || item.id.includes('tobacco')) {
+        prev.player.sanity = Math.min(100, prev.player.sanity + 20);
+        itemLogText = 'Smoked a cigarette. Nerves calmed and withdrawal subsided (+20 Sanity).';
+        itemLogType = 'general';
       } else if (item.id.includes('antibiotic') || item.id.includes('alcohol')) {
         health = Math.min(100, health + 10);
         statusEffects = statusEffects.filter(e => e.id !== 'bacterial_infection');
@@ -367,12 +410,12 @@ export function App() {
         inventory: updatedInv,
         shelter: {
           ...prev.shelter,
-          barricadeIntegrity: Math.min(100, prev.shelter.barricadeIntegrity + 25)
+          barricadeIntegrity: Math.min(100, prev.shelter.barricadeIntegrity + (prev.player.traits?.some(t => t.id === 'handy') ? 35 : 25))
         },
         logs: [...prev.logs, {
           id: `log_repair_${Date.now()}`,
           day: prev.day,
-          text: 'Reinforced entry points and nailed structural cross-braces (+25% barricade integrity).',
+          text: (prev.player.traits?.some(t => t.id === 'handy') ? 'Master craftsman fortification: Nailed structural cross-braces (+35% barricade integrity).' : 'Reinforced entry points and nailed structural cross-braces (+25% barricade integrity).'),
           type: 'milestone' as const,
           timestamp: 'Action'
         }].slice(-150)
@@ -493,19 +536,39 @@ export function App() {
       }
 
       const profession = prev.player.profession.toLowerCase();
-      let successRate = 0.62 + (prev.player.stealthSkill * 0.04);
+      const traits = prev.player.traits ? prev.player.traits.map(t => t.id) : [];
+      const hasTrait = (id: string) => traits.includes(id);
+
+      let successRate = 0.60 + (prev.player.stealthSkill * 0.04);
       if (profession.includes('ranger') || profession.includes('locksmith') || profession.includes('security')) {
-        successRate += 0.15; // Stealth career bonus
+        successRate += 0.12;
       }
 
-      const isSuccess = Math.random() < successRate;
+      // Trait stealth & detection modifiers
+      if (hasTrait('light_footed')) successRate += 0.12; // 50% less footstep noise
+      if (hasTrait('eagle_eyed')) successRate += 0.08;   // Spots lurkers far away
+      if (hasTrait('tinnitus')) successRate -= 0.10;     // Ear ringing penalty
+      if (hasTrait('nearsighted')) successRate -= 0.08;  // Poor distance eyesight
+      if (hasTrait('feeble')) successRate -= 0.05;       // Slower movement
+
+      const isSuccess = Math.random() < Math.max(0.15, Math.min(0.95, successRate));
       let newItems: InventoryItem[] = [];
       let logText = '';
       let hpDelta = 0;
 
       const baseDamage = locationId === 'police_precinct' ? 24 : locationId === 'pharmacy' ? 18 : 12;
-      const damageReduction = Math.min(14, Math.floor(prev.player.fitnessSkill * 1.2) + Math.floor(prev.player.combatSkill * 0.6));
-      const mitigatedDamage = Math.max(4, baseDamage - damageReduction);
+      let damageReduction = Math.min(14, Math.floor(prev.player.fitnessSkill * 1.2) + Math.floor(prev.player.combatSkill * 0.6));
+
+      // Trait combat & escape modifiers
+      if (hasTrait('martial_artist')) damageReduction += 8; // Counters grapples
+      if (hasTrait('sprinter')) damageReduction += 6;       // Outruns swarms
+      if (hasTrait('feeble')) damageReduction = Math.max(0, damageReduction - 6);
+      if (hasTrait('knee_injury')) damageReduction = Math.max(0, damageReduction - 5);
+
+      let mitigatedDamage = Math.max(3, baseDamage - damageReduction);
+      if (hasTrait('thick_skinned')) {
+        mitigatedDamage = Math.max(2, Math.floor(mitigatedDamage * 0.75));
+      }
 
       if (locationId === 'pharmacy') {
         const medBonus = (profession.includes('paramedic') || profession.includes('doctor') || profession.includes('surgeon') || profession.includes('veterinarian')) ? 3 : 0;
@@ -515,6 +578,15 @@ export function App() {
             { id: 'antibiotics_scavenged', name: 'Amoxicillin Antibiotics', category: 'medical', quantity: 4 + medBonus, description: 'Capsules for bacterial infections.' }
           ];
           logText = `Scavenged Mercy Memorial Pharmacy: Retrieved antibiotics and trauma bandages safely.${medBonus > 0 ? ' (Medical career bonus: found extra antibiotics!)' : ''}`;
+          if (hasTrait('diabetic')) {
+            newItems.push({ id: 'insulin_scav_' + Date.now(), name: 'Insulin Vial', category: 'medical', quantity: 1, description: 'Medical insulin.' });
+          }
+          if (hasTrait('asthmatic')) {
+            newItems.push({ id: 'inhaler_scav_' + Date.now(), name: 'Albuterol Inhaler', category: 'medical', quantity: 1, description: 'Rescue inhaler.' });
+          }
+          if (hasTrait('scavenger_eye')) {
+            newItems.push({ id: 'trauma_kit_scav', name: 'Trauma Kit Dressing', category: 'medical', quantity: 1, description: 'Bonus medical kit found with Scavenger Eye.' });
+          }
         } else {
           hpDelta = -mitigatedDamage;
           logText = `Ambushed at the pharmacy backdoor! Your fitness & combat skills reduced the damage (-${mitigatedDamage}% HP).`;
