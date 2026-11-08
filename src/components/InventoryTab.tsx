@@ -191,8 +191,8 @@ export const InventoryTab: React.FC<Props> = ({
                 </div>
 
                 {/* Role selection & actions */}
-                <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-white/5">
-                  <div className="flex gap-1 overflow-x-auto py-0.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
+                  <div className="flex flex-wrap gap-1">
                     {ROLES.map((r) => (
                       <button
                         key={r.id}

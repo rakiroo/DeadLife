@@ -91,6 +91,8 @@ export interface SurvivorBackstory {
   searchGoal: string;
   targetLocationId: string;
   clueFound?: boolean;
+  chapter?: number;
+  lastChapterDay?: number;
   status: 'searching' | 'clue_found' | 'resolved';
   journalThoughts: string[];
 }

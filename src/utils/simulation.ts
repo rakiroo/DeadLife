@@ -2,6 +2,7 @@ import { GameState, LogEntry, WeatherType, StatusEffect } from '../types/game';
 import { getRandomSurvivalEvent } from '../data/events';
 import { generateDailyHappenings } from '../data/dailyHappenings';
 import { getRandomMicroDilemma } from '../data/microDilemmas';
+import { getNextBackstoryDilemma } from '../data/backstoryQuests';
 
 const WEATHERS: WeatherType[] = ['clear', 'heavy_rain', 'dense_fog', 'freezing_cold', 'thunderstorm'];
 
