@@ -15,9 +15,10 @@ import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
 import { AmbitionsModal } from './components/AmbitionsModal';
+import { SettingsScreen } from './components/SettingsScreen';
 import { SandboxAmbition } from './data/ambitions';
 
-type ScreenState = 'title' | 'creator' | 'game' | 'graveyard';
+type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings';
 
 const SAVE_KEY = 'deadlife_save';
 const GRAVEYARD_KEY = 'deadlife_graveyard';
@@ -407,7 +408,7 @@ export function App() {
         inventory: updatedInv,
         shelter: {
           ...prev.shelter,
-          barricadeIntegrity: Math.min(100, prev.shelter.barricadeIntegrity + (prev.player.traits?.some(t => t.id === 'handy') ? 35 : 25))
+          barricadeIntegrity: Math.min(100, prev.shelter.barricadeIntegrity + (18 + Math.floor(prev.player.craftingSkill * 1.5) + (prev.player.traits?.some(t => t.id === 'handy') ? 10 : 0)))
         },
         logs: [...prev.logs, {
           id: `log_repair_${Date.now()}`,
@@ -487,6 +488,27 @@ export function App() {
         logs: [...prev.logs, newLog].slice(-150)
       };
     });
+  };
+
+  const handleForfeitRun = () => {
+    if (!gameState) return;
+    const newRecord: CemeteryRecord = {
+      id: 'grave_forfeit_' + Date.now(),
+      name: gameState.player.name,
+      age: gameState.player.age,
+      profession: gameState.player.profession,
+      daysSurvived: gameState.day,
+      deathCause: 'forfeited the will to survive in the ruins',
+      date: new Date().toLocaleDateString(),
+      ribbon: 'Fallen Survivor',
+      stats: gameState.stats
+    };
+    const updated = [newRecord, ...graveyard].slice(0, 50);
+    setGraveyard(updated);
+    localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updated));
+    localStorage.removeItem(SAVE_KEY);
+    setGameState(null);
+    setScreen('title');
   };
 
   const handleTriggerEvac = (ambition: SandboxAmbition) => {
@@ -691,7 +713,7 @@ export function App() {
       let hpDelta = 0;
 
       const baseDamage = locationId === 'police_precinct' ? 24 : locationId === 'pharmacy' ? 18 : 12;
-      let damageReduction = Math.min(14, Math.floor(prev.player.fitnessSkill * 1.2) + Math.floor(prev.player.combatSkill * 0.6));
+      let damageReduction = Math.min(18, Math.floor(prev.player.combatSkill * 1.4) + Math.floor(prev.player.fitnessSkill * 1.0));
 
       // Trait combat & escape modifiers
       if (hasTrait('martial_artist')) damageReduction += 8; // Counters grapples
@@ -849,7 +871,7 @@ export function App() {
     <div className="h-screen max-h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden font-sans select-none">
       <div className="w-full max-w-md mx-auto flex flex-col h-full max-h-screen bg-zinc-950 border-x border-zinc-900 shadow-2xl relative overflow-hidden">
         {/* Top Sticky Vitals */}
-        <HeaderVitals state={gameState} onOpenMenu={() => setScreen('title')} compact={activeTab !== 'journal'} />
+        <HeaderVitals state={gameState} onOpenSettings={() => setScreen('settings')} compact={activeTab !== 'journal'} />
 
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
