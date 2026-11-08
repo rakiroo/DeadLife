@@ -1,4 +1,4 @@
-import { GameState, LogEntry, WeatherType, StatusEffect, CampMember } from '../types/game';
+import { GameState, LogEntry, WeatherType, StatusEffect, CampMember, Survivor } from '../types/game';
 import { getRandomSurvivalEvent } from '../data/events';
 import { generateDailyHappenings } from '../data/dailyHappenings';
 import { getRandomMicroDilemma } from '../data/microDilemmas';
@@ -6,6 +6,50 @@ import { getNextBackstoryDilemma } from '../data/backstoryQuests';
 
 const WEATHERS: WeatherType[] = ['clear', 'heavy_rain', 'dense_fog', 'freezing_cold', 'thunderstorm'];
 
+
+// Helper to check and generate legacy succession prompt if player has adult offspring or trusted companions
+export function createSuccessionPromptIfEligible(
+  player: Survivor,
+  campMembers: CampMember[],
+  cause: string
+): GameState['legacySuccessionPrompt'] {
+  const adultChildren = (player.children || []).filter((c: any) => c.age >= 18).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    relation: 'Adult Child',
+    profession: 'Dynasty Heir',
+    age: c.age,
+    isOffspring: true,
+    skills: c.skills || { combat: 6, medical: 6, crafting: 6, stealth: 6, fitness: 6 }
+  }));
+
+  const companionCandidates = campMembers.filter(m => !m.isChild && m.trust >= 50).map(m => ({
+    id: m.id,
+    name: m.name,
+    relation: m.relation || 'Trusted Ally',
+    profession: m.profession,
+    age: m.age,
+    isOffspring: false,
+    skills: {
+      combat: m.combatSkill || 5,
+      medical: m.medicalSkill || 5,
+      crafting: m.craftingSkill || 5,
+      stealth: m.stealthSkill || 5,
+      fitness: m.fitnessSkill || 5
+    }
+  }));
+
+  const candidates = [...adultChildren, ...companionCandidates];
+  if (candidates.length > 0) {
+    return {
+      cause,
+      deceasedName: player.name,
+      deceasedAge: player.age,
+      candidates
+    };
+  }
+  return null;
+}
 
 export function advanceOneDay(state: GameState): GameState {
   if (state.player.isDead) return state;
@@ -631,10 +675,38 @@ export function advanceOneMonth(state: GameState): GameState {
   }
 
   // 2. Autonomous Romances, Marriages & Co-habitation
+  // Prioritize roommates assigned to share the same room/cabin!
+  let s1: CampMember | undefined;
+  let s2: CampMember | undefined;
+  let sharedRoomName: string | undefined;
+
+  if (shelter.rooms && shelter.rooms.length > 0) {
+    for (const room of shelter.rooms) {
+      if (room.assignedMemberIds && room.assignedMemberIds.length >= 2) {
+        const roomSingles = campMembers.filter(m => 
+          room.assignedMemberIds.includes(m.id) && 
+          !m.isChild && 
+          (!m.datingStage || m.datingStage === 'single' || m.datingStage === 'crush' || m.datingStage === 'dating')
+        );
+        if (roomSingles.length >= 2) {
+          s1 = roomSingles[0];
+          s2 = roomSingles[1];
+          sharedRoomName = room.name;
+          break;
+        }
+      }
+    }
+  }
+
   const singleAdults = campMembers.filter(m => !m.isChild && (!m.datingStage || m.datingStage === 'single' || m.datingStage === 'crush'));
-  if (singleAdults.length >= 2 && Math.random() < 0.45) {
-    const s1 = singleAdults[0];
-    const s2 = singleAdults[1];
+  if (!s1 || !s2) {
+    if (singleAdults.length >= 2) {
+      s1 = singleAdults[0];
+      s2 = singleAdults[1];
+    }
+  }
+
+  if (s1 && s2 && Math.random() < 0.55) {
     if (!s1.datingStage || s1.datingStage === 'single') {
       s1.datingStage = 'dating';
       s2.datingStage = 'dating';
@@ -853,10 +925,31 @@ export function advanceOneYear(state: GameState): GameState {
       if (newChildAge >= 18) newStage = 'adult';
       else if (newChildAge >= 13) newStage = 'teen';
       else if (newChildAge >= 4) newStage = 'child';
+
+      const skills = { ...(c.skills || { combat: 5, medical: 5, crafting: 5, stealth: 5, fitness: 5 }) };
+      if (hasSchool && newStage !== 'adult') {
+        skills.combat = Math.min(10, skills.combat + 1);
+        skills.medical = Math.min(10, skills.medical + 1);
+        skills.crafting = Math.min(10, skills.crafting + 1);
+        skills.stealth = Math.min(10, skills.stealth + 1);
+        skills.fitness = Math.min(10, skills.fitness + 1);
+      }
+
+      if (newChildAge === 18 && c.stage !== 'adult') {
+        newLogs.push({
+          id: 'grad_player_' + c.id + '_' + Date.now(),
+          day: currentDay,
+          text: '�<ߓ Dynasty Coming of Age: Your child ' + c.name + ' has turned 18! Born in the sanctuary, they have grown into a capable adult survivor, ready to defend our haven or succeed your legacy.',
+          type: 'milestone',
+          timestamp: 'Graduation'
+        });
+      }
+
       return {
         ...c,
         age: newChildAge,
-        stage: newStage
+        stage: newStage,
+        skills
       };
     });
   }

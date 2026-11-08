@@ -259,7 +259,7 @@ export function App() {
 
   // When player dies, record to cemetery and clear active save
   useEffect(() => {
-    if (gameState && gameState.player.isDead) {
+    if (gameState && gameState.player.isDead && !gameState.legacySuccessionPrompt) {
       const ribbon = gameState.day >= 100 
         ? 'Century Survivor' 
         : gameState.stats.zombiesEliminated >= 15 
@@ -1041,6 +1041,29 @@ export function App() {
         timestamp: 'Succession'
       };
 
+      // Record fallen leader into cemetery
+      const ribbon = prev.day >= 100 
+        ? 'Century Survivor' 
+        : prev.stats.zombiesEliminated >= 15 
+        ? 'Slayer of the Dead' 
+        : 'Haven Founder';
+
+      const newRecord: CemeteryRecord = {
+        id: 'grave_' + Date.now(),
+        name: prev.player.name,
+        age: prev.player.age,
+        profession: prev.player.profession,
+        daysSurvived: prev.day,
+        deathCause: prev.player.deathCause || (prompt.cause === 'Old Age' ? 'peacefully passed away of old age at ' + prev.player.age : 'fallen in the line of duty'),
+        date: new Date().toLocaleDateString(),
+        ribbon,
+        stats: prev.stats
+      };
+
+      const updatedGrave = [newRecord, ...graveyard].slice(0, 50);
+      setGraveyard(updatedGrave);
+      localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updatedGrave));
+
       return {
         ...prev,
         player: successorSurvivor,
@@ -1586,7 +1609,7 @@ export function App() {
         )}
 
         {/* BitLife-style Death Screen */}
-        {gameState.player.isDead && (
+        {gameState.player.isDead && !gameState.legacySuccessionPrompt && (
           <DeathScreen
             gameState={gameState}
             onRestart={() => setScreen('creator')}

@@ -1066,11 +1066,14 @@ export const BaseTab: React.FC<Props> = ({
               {rooms.map(room => {
                 const assigned = campMembers.filter(m => room.assignedMemberIds && room.assignedMemberIds.includes(m.id));
                 const isAssignedHere = room.assignedMemberIds && room.assignedMemberIds.includes(roomAssignModalMember.id);
+                const isFull = assigned.length >= room.capacity && !isAssignedHere;
                 return (
                   <button
                     key={room.id}
                     type="button"
+                    disabled={isFull}
                     onClick={() => {
+                      if (isFull) return;
                       onAssignRoom(roomAssignModalMember.id, room.id);
                       triggerFeedback(`Assigned ${roomAssignModalMember.name} to ${room.name}.`);
                       setRoomAssignModalMember(null);
@@ -1078,11 +1081,16 @@ export const BaseTab: React.FC<Props> = ({
                     className={`w-full p-2.5 rounded-2xl text-left border transition-all flex items-center justify-between ${
                       isAssignedHere
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-white'
+                        : isFull
+                        ? 'bg-white/[0.02] border-white/5 text-zinc-500 opacity-60 cursor-not-allowed'
                         : 'bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10'
                     }`}
                   >
                     <div>
-                      <div className="text-xs font-bold">{room.name}</div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>{room.name}</span>
+                        {isFull && <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">Full</span>}
+                      </div>
                       <div className="text-[10px] text-zinc-400">
                         {assigned.length}/{room.capacity} Beds filled {assigned.length > 0 && `(${assigned.map(a => a.name).join(', ')})`}
                       </div>

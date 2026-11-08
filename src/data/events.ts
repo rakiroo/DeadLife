@@ -652,6 +652,24 @@ export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): 
         text: 'Lower your weapon, share clean water, and invite them to join your camp',
         consequenceSummary: 'Calms them down. They agree to join as a reliable companion.',
         execute: (s: GameState) => {
+          const totalBeds = s.shelter.rooms && s.shelter.rooms.length > 0
+            ? s.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
+            : (s.shelter.maxSurvivors || 4);
+          const totalResidents = s.campMembers.length + 1;
+          const isAtCapacity = totalResidents >= totalBeds;
+
+          if (isAtCapacity) {
+            return {
+              state: {
+                ...s,
+                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 5) }
+              },
+              log: 'I met ' + candidate.name + ' while looting ' + spotName + ', but our haven has no empty beds left (' + totalResidents + '/' + totalBeds + '). I gave them some clean water and directions to safety.',
+              outcomeTitle: 'No Vacant Beds at Haven',
+              outcomeText: 'You offered shelter to ' + candidate.name + ', but your colony is at full capacity (' + totalResidents + '/' + totalBeds + ' beds filled). Build more housing in the Base tab to take in more survivors. You shared water with them instead.'
+            };
+          }
+
           const newMember: CampMember = {
             id: candidate.id,
             name: candidate.name,
@@ -743,6 +761,24 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
         consequenceSummary: 'Gain a dependable survivor ally with guard skills.',
         execute: (s: GameState) => {
           if (!hasCandidate) {
+            const totalBeds = s.shelter.rooms && s.shelter.rooms.length > 0
+              ? s.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
+              : (s.shelter.maxSurvivors || 4);
+            const totalResidents = s.campMembers.length + 1;
+            const isAtCapacity = totalResidents >= totalBeds;
+
+            if (isAtCapacity) {
+              return {
+                state: {
+                  ...s,
+                  player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) }
+                },
+                log: 'I met ' + candidateName + ' at the Church Outpost, but our sanctuary had no vacant beds (' + totalResidents + '/' + totalBeds + '). We shared stories by the fire instead (+10 Sanity).',
+                outcomeTitle: 'Colony at Full Capacity',
+                outcomeText: 'You discussed defense tactics with ' + candidateName + ', but your haven has no empty beds left (' + totalResidents + '/' + totalBeds + ' beds). Build additional housing in the Base tab to recruit more allies. (+10 Sanity)'
+              };
+            }
+
             const member: CampMember = {
               id: candidateId,
               name: candidateName,
