@@ -3,6 +3,113 @@ import { getRandomSurvivalEvent } from '../data/events';
 
 const WEATHERS: WeatherType[] = ['clear', 'heavy_rain', 'dense_fog', 'freezing_cold', 'thunderstorm'];
 
+
+function generateDailyHappenings(state: GameState, currentDay: number, weather: WeatherType): string[] {
+  const happenings: string[] = [];
+
+  // 1. Atmosphere / Weather happening
+  const weatherHappenings: Record<WeatherType, string[]> = {
+    heavy_rain: [
+      'Cold rain drummed heavily against the cracked windowpanes all morning.',
+      'A steady downpour flooded the gutters outside, washing soot into the street.',
+      'I watched sheets of gray rain pour over the ruined rooftops.',
+      'The storm drenched the streets, driving roaming infected under building awnings.'
+    ],
+    thunderstorm: [
+      'A deafening roll of thunder shook the floorboards. Rain lashed the walls.',
+      'Lightning flickered across the ruined skyline, casting long, jittery shadows.',
+      'The storm rattled the loose roof metal violently throughout the dark hours.'
+    ],
+    dense_fog: [
+      'Dense morning mist blanketed the street, hiding everything beyond thirty paces.',
+      'Wet shuffling footsteps echoed out in the fog, but I kept quiet and stayed low.',
+      'Thick, damp fog rolled through the alleyways, muffling distant sounds.'
+    ],
+    freezing_cold: [
+      'Frost coated the inside of the glass. My breath plumed white in the cold air.',
+      'A bitter northern wind whistled through the building seams all afternoon.',
+      'I pulled my coat tight to conserve body heat as the temperature plummeted.'
+    ],
+    heatwave: [
+      'The sweltering midday sun baked the asphalt outside, making the air thick and stifling.',
+      'A scorching breeze blew dry dust and ashes down the deserted avenue.'
+    ],
+    clear: [
+      'The morning sun cut through the dusty air, bringing a rare moment of quiet warmth.',
+      'A clear blue sky stretched over the silent, abandoned city grid.',
+      'The afternoon was calm. Not a single car engine has rumbled for weeks.',
+      'Pale sunlight filtered through the cracked blinds, illuminating dust motes in the quiet room.'
+    ]
+  };
+
+  const weatherPool = weatherHappenings[weather] || weatherHappenings.clear;
+  happenings.push(weatherPool[Math.floor(Math.random() * weatherPool.length)]);
+
+  // 2. Location & Survival happenings
+  const locationPool: string[] = [];
+
+  if (!state.startingLocation.hasLeftStartingSpot) {
+    const locName = state.startingLocation.name;
+    locationPool.push(
+      'I checked the barricaded entrance of ' + locName + '. The deadbolts held firm through the night.',
+      'I swept away broken glass and reinforced the window frames inside ' + locName + '.',
+      'I peered through the blinds of ' + locName + ' and watched a stray dog pick through a tipped trash bin.',
+      'The emergency backup light at ' + locName + ' clicked softly as its battery finally gave out.',
+      'I found an old employee mug in ' + locName + ' and used it to drink boiled water.',
+      'I checked every corner and storage closet of ' + locName + ' to ensure no infected had breached.'
+    );
+  } else if (state.shelter.isEstablished) {
+    const baseName = state.shelter.name;
+    locationPool.push(
+      'I inspected the perimeter defenses around ' + baseName + ' and re-nailed a loose plank.',
+      'I climbed up to the rooftop of ' + baseName + ' to scan the surrounding avenues with binoculars.',
+      'I inspected our rainwater collection barrels behind ' + baseName + ' to make sure the mesh filter was clean.',
+      'I spent an hour checking the door deadbolts and window bracing at ' + baseName + '.',
+      'Distant smoke rose from a warehouse three miles away, but ' + baseName + ' remained quiet.'
+    );
+  } else {
+    locationPool.push(
+      'I searched the glove compartment of a rusted-out station wagon parked along the curb.',
+      'I ducked into the shadows of an alleyway while a cluster of infected drifted past.',
+      'I checked the padlocks on a row of commercial roll-up shutters down the boulevard.',
+      'An abandoned billboard creaked loudly overhead as the wind picked up.',
+      'I navigated around a chain-reaction car pileup blocking the central intersection.'
+    );
+  }
+
+  // Companion interactions or solo survival routines
+  if (state.campMembers.length > 0) {
+    const companion = state.campMembers[Math.floor(Math.random() * state.campMembers.length)];
+    locationPool.push(
+      'I took turns standing guard with ' + companion.name + ' during the quiet hours before dawn.',
+      companion.name + ' and I shared a hot meal and talked about the jobs we had before the outbreak.',
+      companion.name + ' helped reinforce the window barricades, checking every fastener.',
+      'I heard ' + companion.name + ' softly humming an old tune while tending to camp supplies.'
+    );
+  } else {
+    locationPool.push(
+      'I used an oiled whetstone to sharpen the edge of my melee weapon.',
+      'I found an unread paperback novel behind a fallen shelf and read a few chapters by candlelight.',
+      'I wrapped heavy electrical tape around the worn soles of my boots to keep them intact.',
+      'A distant helicopter droned high above the cloud cover, heading northwest before fading into silence.',
+      'I found an intact box of strike-anywhere wooden matches tucked into a jacket pocket.',
+      'A flock of black crows gathered along the overhead powerlines, watching the quiet street below.',
+      'I sat quietly for an hour, cleaning grit and moisture out of my pack.',
+      'I heard a sudden shatter of glass from two blocks away, followed by tense silence.',
+      'A stray calico cat slipped through a broken basement grate and vanished into the dark.',
+      'I checked the battery life on my flashlight; still enough power left for emergencies.',
+      'I watched the sunset paint the ruined skyline in deep copper and purple.',
+      'A sudden burst of pigeons startled me as they flew out from a shattered window.',
+      'I carved another notch into the doorframe to keep track of the days.',
+      'I found a faded postcard of the city from before the world collapsed.',
+      'I took a moment to wash the soot and sweat from my face with clean water.'
+    );
+  }
+
+  happenings.push(locationPool[Math.floor(Math.random() * locationPool.length)]);
+  return happenings;
+}
+
 export function advanceOneDay(state: GameState): GameState {
   if (state.player.isDead) return state;
 
@@ -132,13 +239,16 @@ export function advanceOneDay(state: GameState): GameState {
     }
   }
 
-  // Daily summary journal log
-  newLogs.push({
-    id: `log_day_${currentDay}_${Date.now()}`,
-    day: currentDay,
-    text: `Day ${currentDay} survived. Weather: ${newWeather.replace('_', ' ')}. Vitals: HP ${Math.max(0, health)}% | Water: ${daysWithoutWater === 0 ? 'Adequate' : 'CRITICAL'} | Food: ${daysWithoutFood === 0 ? 'Adequate' : 'Depleted'}.`,
-    type: 'milestone',
-    timestamp: 'Nightfall'
+  // Random daily survival happenings (BitLife style)
+  const dailyHappenings = generateDailyHappenings(state, currentDay, newWeather);
+  dailyHappenings.forEach((text, idx) => {
+    newLogs.push({
+      id: 'happening_' + currentDay + '_' + idx + '_' + Date.now() + '_' + Math.random(),
+      day: currentDay,
+      text,
+      type: 'general',
+      timestamp: idx === 0 ? 'Morning' : 'Afternoon'
+    });
   });
 
   // Camp survivor duty & daily trust progression
@@ -223,10 +333,7 @@ export function advanceOneWeek(state: GameState): GameState {
 
   // Add high level weekly recap
   if (!currentState.player.isDead) {
-    weeklyNarrative.push(
-      `🗓️ WEEKLY SURVIVAL LOG (Days ${weekStartDay} - ${weekEndDay}): Seven days have slipped by in fortified isolation. ` +
-      `Your hands are blistered from routine chores and barricade checks. Society shows no signs of recovering.`
-    );
+    weeklyNarrative.push("Seven days slipped by in fortified isolation. Hands calloused from routine chores and barricade checks, I watched the empty horizon.");
 
     // Pick 1 major event for the conclusion of the week
     currentState.activeDilemma = getRandomSurvivalEvent(currentState);
