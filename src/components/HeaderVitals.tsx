@@ -5,6 +5,7 @@ import {
   LogOut, Play
 } from 'lucide-react';
 import { GameState, WeatherType } from '../types/game';
+import { SettingsModal } from './SettingsModal';
 
 interface Props {
   state: GameState;
@@ -218,62 +219,16 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenMenu, compact = fal
 </>
         )}
 
-        {/* Pause & Settings Modal (Only opens when explicitly clicking settings icon) */}
+        {/* Comprehensive Settings & Pause Modal */}
         {showPauseModal && (
-          <div 
-            onClick={() => setShowPauseModal(false)}
-            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-          >
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-xs p-4 space-y-3 shadow-2xl font-sans text-center my-auto"
-            >
-              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center mx-auto text-zinc-200">
-                <Settings className="w-4 h-4 text-zinc-300" />
-              </div>
-
-              <div className="space-y-0.5">
-                <h2 className="text-sm font-bold text-white tracking-tight">Game Paused</h2>
-                <p className="text-[11px] text-zinc-400">{player.name} • {player.profession}</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-white/[0.04] border border-white/5 text-xs text-zinc-300 text-left space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Day:</span>
-                  <span className="font-mono font-bold text-white">{state.day}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Vitals:</span>
-                  <span className="font-mono text-zinc-300">HP {player.health}% • Food {player.hunger}% • H2O {player.thirst}%</span>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowPauseModal(false)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
-                >
-                  <Play className="w-3.5 h-3.5 fill-white" />
-                  <span>Resume Survival</span>
-                </button>
-
-                {onOpenMenu && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPauseModal(false);
-                      onOpenMenu();
-                    }}
-                    className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white border border-white/5 font-semibold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                  >
-                    <LogOut className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Save & Return to Main Menu</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          <SettingsModal
+            gameState={state}
+            onClose={() => setShowPauseModal(false)}
+            onReturnToTitle={() => {
+              setShowPauseModal(false);
+              if (onOpenMenu) onOpenMenu();
+            }}
+          />
         )}
       </div>
     </header>

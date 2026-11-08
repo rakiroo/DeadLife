@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { InventoryItem, GameState, CampMember, CampRole } from '../types/game';
+import { InventoryItem, GameState, CampRole } from '../types/game';
 import { 
-  Utensils, Droplets, HeartPulse, Wrench, Shield, Cross, 
+  Utensils, Droplets, HeartPulse, Wrench, Shield, 
   Search, Bed, MessageSquare, UserMinus, Package, Users
 } from 'lucide-react';
 
@@ -14,8 +14,6 @@ interface Props {
   onExileSurvivor?: (memberId: string) => void;
 }
 
-type ItemFilter = 'all' | 'food' | 'water' | 'medical' | 'materials' | 'weapons';
-
 export const InventoryTab: React.FC<Props> = ({ 
   gameState, 
   onUseItem,
@@ -24,7 +22,7 @@ export const InventoryTab: React.FC<Props> = ({
   onGiftSurvivor,
   onExileSurvivor
 }) => {
-  const [filter, setFilter] = useState<ItemFilter>('all');
+  const [filter, setFilter] = useState<'all' | 'food' | 'water' | 'medical'>('all');
   const [recentAction, setRecentAction] = useState<string | null>(null);
 
   const { inventory, campMembers } = gameState;
@@ -62,25 +60,18 @@ export const InventoryTab: React.FC<Props> = ({
         return <Droplets className="w-3.5 h-3.5 text-cyan-400" />;
       case 'medical':
         return <HeartPulse className="w-3.5 h-3.5 text-rose-400" />;
-      case 'weapon':
-        return <Shield className="w-3.5 h-3.5 text-indigo-400" />;
       default:
-        return <Wrench className="w-3.5 h-3.5 text-zinc-400" />;
+        return <Package className="w-3.5 h-3.5 text-zinc-400" />;
     }
   };
 
-  const isUsable = (item: InventoryItem) => {
-    return item.category === 'food' || item.category === 'water' || item.category === 'medical';
-  };
+  // Only list consumable items (Food, Water, Medical) in the quick provisions drawer!
+  // Raw materials and weapons are tracked in the totals above and used in Activities/Crafting.
+  const consumableItems = inventory.filter(i => i.category === 'food' || i.category === 'water' || i.category === 'medical');
 
-  const filteredItems = inventory.filter(item => {
+  const filteredConsumables = consumableItems.filter(item => {
     if (filter === 'all') return true;
-    if (filter === 'food') return item.category === 'food';
-    if (filter === 'water') return item.category === 'water';
-    if (filter === 'medical') return item.category === 'medical';
-    if (filter === 'materials') return item.category === 'resource' || item.category === 'tool';
-    if (filter === 'weapons') return item.category === 'weapon';
-    return true;
+    return item.category === filter;
   });
 
   return (
@@ -88,7 +79,7 @@ export const InventoryTab: React.FC<Props> = ({
       {/* Title */}
       <div>
         <h2 className="text-base font-bold text-white tracking-tight">Supplies & Stockpile</h2>
-        <p className="text-xs text-zinc-400">Inventory levels and survivor camp sustenance.</p>
+        <p className="text-xs text-zinc-400">Total survival provisions and camp sustenance.</p>
       </div>
 
       {recentAction && (
@@ -97,9 +88,9 @@ export const InventoryTab: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 1. RESOURCE TOTALS DASHBOARD (TINY & CLEAR AT THE TOP) */}
+      {/* 1. RESOURCE TOTALS DASHBOARD (CLEAN & COMPLETE) */}
       <div className="grid grid-cols-3 gap-2">
-        {/* Food */}
+        {/* Food Total */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
             <span className="flex items-center gap-1 font-medium"><Utensils className="w-3.5 h-3.5 text-amber-400" /> Food</span>
@@ -112,7 +103,7 @@ export const InventoryTab: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Water */}
+        {/* Water Total */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
             <span className="flex items-center gap-1 font-medium"><Droplets className="w-3.5 h-3.5 text-cyan-400" /> Water</span>
@@ -125,7 +116,7 @@ export const InventoryTab: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Medical */}
+        {/* Medical Total */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
             <span className="flex items-center gap-1 font-medium"><HeartPulse className="w-3.5 h-3.5 text-rose-400" /> Meds</span>
@@ -138,30 +129,30 @@ export const InventoryTab: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Materials */}
+        {/* Materials Total */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
-            <span className="flex items-center gap-1 font-medium"><Wrench className="w-3.5 h-3.5 text-zinc-300" /> Parts</span>
+            <span className="flex items-center gap-1 font-medium"><Wrench className="w-3.5 h-3.5 text-zinc-300" /> Materials</span>
           </div>
           <div className="font-mono text-sm font-bold text-zinc-200">
-            {totalMaterials} <span className="text-[10px] font-normal text-zinc-500">mats</span>
+            {totalMaterials} <span className="text-[10px] font-normal text-zinc-500">parts</span>
           </div>
         </div>
 
-        {/* Weapons */}
+        {/* Weapons Total */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
-            <span className="flex items-center gap-1 font-medium"><Shield className="w-3.5 h-3.5 text-indigo-400" /> Gear</span>
+            <span className="flex items-center gap-1 font-medium"><Shield className="w-3.5 h-3.5 text-indigo-400" /> Arms</span>
           </div>
           <div className="font-mono text-sm font-bold text-indigo-300">
-            {totalWeapons} <span className="text-[10px] font-normal text-zinc-500">arms</span>
+            {totalWeapons} <span className="text-[10px] font-normal text-zinc-500">gear</span>
           </div>
         </div>
 
-        {/* Camp Burn */}
+        {/* Daily Group Burn */}
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2.5 space-y-1">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
-            <span className="flex items-center gap-1 font-medium"><Users className="w-3.5 h-3.5 text-emerald-400" /> Group</span>
+            <span className="flex items-center gap-1 font-medium"><Users className="w-3.5 h-3.5 text-emerald-400" /> Burn</span>
           </div>
           <div className="font-mono text-xs font-bold text-zinc-300">
             -{totalConsumers} <span className="text-[9px] font-normal text-zinc-500">/day</span>
@@ -169,7 +160,7 @@ export const InventoryTab: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. CAMP SURVIVORS SECTION (WHEN CAMP HAS MEMBERS) */}
+      {/* 2. CAMP SURVIVORS SECTION (LIVES DIRECTLY IN SUPPLIES) */}
       {campMembers.length > 0 && (
         <div className="space-y-2 pt-1">
           <div className="flex items-center justify-between px-1">
@@ -257,11 +248,14 @@ export const InventoryTab: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 3. ITEM INVENTORY (WITH QUICK CATEGORY FILTER) */}
+      {/* 3. CONSUMABLE PROVISIONS (EAT / DRINK / HEAL ONLY) */}
       <div className="space-y-2 pt-1">
         <div className="flex items-center justify-between px-1">
           <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-400 font-bold flex items-center gap-1.5">
-            <Package className="w-3.5 h-3.5" /> Backpack Items ({inventory.reduce((a, b) => a + b.quantity, 0)})
+            <Package className="w-3.5 h-3.5" /> Consumable Rations & Meds
+          </span>
+          <span className="text-[10px] font-mono text-zinc-500">
+            {consumableItems.length} items ready to use
           </span>
         </div>
 
@@ -276,7 +270,7 @@ export const InventoryTab: React.FC<Props> = ({
                 : 'bg-white/5 text-zinc-400 hover:text-white'
             }`}
           >
-            All
+            All Usables ({consumableItems.length})
           </button>
           <button
             type="button"
@@ -311,38 +305,16 @@ export const InventoryTab: React.FC<Props> = ({
           >
             Meds ({totalMeds})
           </button>
-          <button
-            type="button"
-            onClick={() => setFilter('materials')}
-            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
-              filter === 'materials'
-                ? 'bg-zinc-200 text-zinc-950 font-bold shadow-sm'
-                : 'bg-white/5 text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            Materials ({totalMaterials})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter('weapons')}
-            className={`px-3 py-1 rounded-full whitespace-nowrap transition-all ${
-              filter === 'weapons'
-                ? 'bg-indigo-400 text-zinc-950 font-bold shadow-sm'
-                : 'bg-white/5 text-zinc-400 hover:text-indigo-300'
-            }`}
-          >
-            Weapons ({totalWeapons})
-          </button>
         </div>
 
-        {/* Item Cards List */}
-        {filteredItems.length === 0 ? (
+        {/* Consumable Items List */}
+        {filteredConsumables.length === 0 ? (
           <div className="p-6 text-center text-zinc-500 bg-white/[0.02] rounded-2xl border border-white/5 text-xs">
-            No items in this category.
+            No consumable food, water, or medicine available. Scavenge landmarks or search street vehicles in Activities!
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredItems.map((item) => (
+            {filteredConsumables.map((item) => (
               <div
                 key={item.id}
                 className="p-3 bg-white/[0.04] border border-white/5 rounded-2xl flex items-center justify-between gap-3 shadow-sm"
@@ -364,21 +336,19 @@ export const InventoryTab: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {isUsable(item) && (
-                  <button
-                    type="button"
-                    onClick={() => onUseItem(item)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-sm ${
-                      item.category === 'food'
-                        ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold'
-                        : item.category === 'water'
-                        ? 'bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold'
-                        : 'bg-rose-500 hover:bg-rose-400 text-white font-bold'
-                    }`}
-                  >
-                    {item.category === 'food' ? 'Eat' : item.category === 'water' ? 'Drink' : 'Use'}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => onUseItem(item)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 active:scale-95 transition-all shadow-sm ${
+                    item.category === 'food'
+                      ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold'
+                      : item.category === 'water'
+                      ? 'bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold'
+                      : 'bg-rose-500 hover:bg-rose-400 text-white font-bold'
+                  }`}
+                >
+                  {item.category === 'food' ? 'Eat' : item.category === 'water' ? 'Drink' : 'Use'}
+                </button>
               </div>
             ))}
           </div>
