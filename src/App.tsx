@@ -316,25 +316,17 @@ export function App() {
       const member = prev.campMembers.find(m => m.id === memberId);
       if (!member) return prev;
 
-      const newTrust = Math.min(100, member.trust + 5);
-      const newAffection = Math.min(100, (member.affection ?? 20) + 10);
-      let stage = member.relationshipStage ?? 'stranger';
-      if (newTrust >= 75 && newAffection >= 65 && stage !== 'romance') {
-        stage = 'close_friend';
-      } else if (newTrust >= 50 && stage !== 'romance') {
-        stage = 'friend';
-      }
-
+      const newTrust = Math.min(100, member.trust + 8);
       const updated = prev.campMembers.map(m =>
-        m.id === memberId ? { ...m, trust: newTrust, affection: newAffection, relationshipStage: stage } : m
+        m.id === memberId ? { ...m, trust: newTrust } : m
       );
 
       const newLog: LogEntry = {
         id: `log_talk_${Date.now()}`,
         day: prev.day,
-        text: `You spent time talking with ${member.name}. Bond strengthened (+Trust & Affection).`,
+        text: `You checked in and talked with ${member.name}. Camp morale improved (+Trust).`,
         type: 'camp',
-        timestamp: 'Camp Bond'
+        timestamp: 'Camp Care'
       };
 
       return {
@@ -371,34 +363,6 @@ export function App() {
         ...prev,
         inventory: updatedInv,
         campMembers: updatedMembers,
-        logs: [...prev.logs, newLog].slice(-150)
-      };
-    });
-  };
-
-  const handleRomanceSurvivor = (memberId: string) => {
-    if (!gameState) return;
-    setGameState(prev => {
-      if (!prev) return null;
-      const member = prev.campMembers.find(m => m.id === memberId);
-      if (!member) return prev;
-
-      const updated = prev.campMembers.map(m =>
-        m.id === memberId ? { ...m, relationshipStage: 'romance' as const, relation: 'Partner ❤️', trust: 100, affection: 100 } : m
-      );
-
-      const newLog: LogEntry = {
-        id: `log_romance_${Date.now()}`,
-        day: prev.day,
-        text: `❤️ You and ${member.name} confessed your feelings and became romantic partners! (Nightly comfort bonus active)`,
-        type: 'camp',
-        timestamp: 'Romance'
-      };
-
-      return {
-        ...prev,
-        campMembers: updated,
-        player: { ...prev.player, sanity: 100 },
         logs: [...prev.logs, newLog].slice(-150)
       };
     });
@@ -741,7 +705,6 @@ export function App() {
               onRoleChange={handleRoleChange}
               onTalkSurvivor={handleTalkSurvivor}
               onGiftSurvivor={handleGiftSurvivor}
-              onRomanceSurvivor={handleRomanceSurvivor}
               onExileSurvivor={handleExileSurvivor}
             />
           )}

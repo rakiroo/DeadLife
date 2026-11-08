@@ -141,40 +141,22 @@ export function advanceOneDay(state: GameState): GameState {
     timestamp: 'Nightfall'
   });
 
-  // Camp survivor relationship & duty progression
+  // Camp survivor duty & daily trust progression
   const updatedMembers = state.campMembers.map(member => {
     let trust = member.trust;
-    let affection = member.affection ?? 20;
     let daysTogether = (member.daysTogether ?? 0) + 1;
-    let stage = member.relationshipStage ?? 'stranger';
 
-    // Depleted food/water strains relationships
+    // Depleted food/water strains trust
     if (daysWithoutFood > 0 || daysWithoutWater > 0) {
       trust = Math.max(0, trust - (daysWithoutFood * 4 + daysWithoutWater * 4));
-      affection = Math.max(0, affection - 3);
     } else {
       trust = Math.min(100, trust + 1);
-    }
-
-    // Romance partner grants nightly sanity comfort
-    if (stage === 'romance') {
-      sanity = Math.min(100, sanity + 5);
-    } else if (trust <= 20) {
-      stage = 'enemy';
-    } else if (trust <= 40) {
-      stage = 'tense';
-    } else if (trust >= 75 && affection >= 65) {
-      stage = 'close_friend';
-    } else if (trust >= 50) {
-      stage = 'friend';
     }
 
     return {
       ...member,
       trust,
-      affection,
-      daysTogether,
-      relationshipStage: stage
+      daysTogether
     };
   });
 

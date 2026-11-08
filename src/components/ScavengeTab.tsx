@@ -51,7 +51,7 @@ export const ScavengeTab: React.FC<Props> = ({ gameState, onLaunchExpedition }) 
       distance: '1.6 miles away',
       danger: 'Other Survivors',
       dangerColor: 'text-cyan-400 font-bold',
-      loot: 'Meet Companions, Barter Rations, Romance',
+      loot: 'Meet Companions, Barter Rations, Rare Supplies',
       icon: <Users className="w-5 h-5 text-cyan-400" />
     }
   ];

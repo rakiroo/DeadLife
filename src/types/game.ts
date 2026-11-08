@@ -106,17 +106,13 @@ export interface Survivor {
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';
 
-export type RelationshipStage = 'stranger' | 'friend' | 'close_friend' | 'romance' | 'tense' | 'enemy';
-
 export interface CampMember {
   id: string;
   name: string;
   gender?: 'male' | 'female';
   age: number;
   relation: string;
-  relationshipStage?: RelationshipStage;
   bio?: string;
-  affection?: number; // 0 - 100 (romance progress)
   daysTogether?: number;
   profession: string;
   health: number;

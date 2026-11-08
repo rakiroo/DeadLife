@@ -523,11 +523,9 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
               age: 23,
               profession: 'Botanist & Gardner',
               relation: 'Friend 😊',
-              relationshipStage: 'friend',
               bio: 'Soft-spoken greenhouse botanist. Knows how to cultivate vegetables and medicinal herbs.',
               health: 85,
               trust: 65,
-              affection: 35,
               daysTogether: 1,
               role: 'craftsman',
               statusEffects: []
@@ -575,408 +573,142 @@ export function getRandomSurvivalEvent(state: GameState): EventDilemma | null {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
-// Looting Encounter: Meet a survivor while looting a spot if you have no camp
+// Looting Encounter: Meet a survivor while looting a spot
 export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): EventDilemma | null {
-  if (state.campMembers.length >= 2) return null;
+  if (state.campMembers.length >= 3) return null;
   const loc = getCurrentLocationName(state);
-  const isFemale = state.player.gender === 'female';
 
-  // FEMALE PLAYER: Meets handsome male romance candidates (Liam Walker or Lucas Reed)
-  if (isFemale) {
-    const hasLiam = state.campMembers.some(m => m.id === 'survivor_liam');
-    const hasLucas = state.campMembers.some(m => m.id === 'survivor_lucas');
-
-    if (!hasLiam) {
-      return {
-        id: 'loot_liam_' + Date.now(),
-        title: 'A Survivor in the Shadows!',
-        category: 'discovery',
-        dangerLevel: 'low',
-        description: 'While searching ' + spotName + ' inside ' + loc + ', your flashlight catches a rugged young man in a worn canvas coat holding a hunting knife. He lowers the blade, breathing heavily: "Easy there. I am not looking for trouble... just searching for food and water."',
-        choices: [
-          {
-            id: 'friendly_liam',
-            text: 'Lower your weapon, offer clean water, and tell him you are friendly',
-            consequenceSummary: 'Calms him down immediately. He joins as a strong guardian.',
-            execute: (s: GameState) => {
-              const liam: CampMember = {
-                id: 'survivor_liam',
-                name: 'Liam Walker',
-                gender: 'male',
-                age: 26,
-                profession: 'Ex-Army Mechanic',
-                relation: 'Friend 😊',
-                relationshipStage: 'friend',
-                bio: 'Rugged, protective, and skilled with firearms and melee combat.',
-                health: 90,
-                trust: 60,
-                affection: 35,
-                daysTogether: 1,
-                role: 'guard',
-                statusEffects: []
-              };
-              return {
-                state: {
-                  ...s,
-                  campMembers: [...s.campMembers, liam],
-                  isCampEstablished: true,
-                  stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-                },
-                log: 'While searching ' + spotName + ', you found Liam Walker in the shadows. You shared water and he joined your camp as a guardian and friend!',
-                outcomeTitle: 'Liam Joined Your Camp',
-                outcomeText: 'Liam sheathed his knife and shook your hand with a firm, protective grip. "Glad to meet someone alive out here. I will watch your back." The Camp tab is unlocked!'
-              };
-            }
-          },
-          {
-            id: 'romantic_liam',
-            text: 'Smile warmly: "I was looking for supplies, but finding a handsome survivor is way better. You are safe with me."',
-            consequenceSummary: 'Charming romantic flirt! Sparks immediate chemistry (Romance track ❤️).',
-            execute: (s: GameState) => {
-              const liam: CampMember = {
-                id: 'survivor_liam',
-                name: 'Liam Walker',
-                gender: 'male',
-                age: 26,
-                profession: 'Ex-Army Mechanic',
-                relation: 'Companion (Spark ❤️)',
-                relationshipStage: 'friend',
-                bio: 'Rugged veteran. Charmed by your confidence and humor.',
-                health: 90,
-                trust: 65,
-                affection: 55,
-                daysTogether: 1,
-                role: 'guard',
-                statusEffects: []
-              };
-              return {
-                state: {
-                  ...s,
-                  campMembers: [...s.campMembers, liam],
-                  isCampEstablished: true,
-                  player: { ...s.player, sanity: Math.min(100, s.player.sanity + 15) },
-                  stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-                },
-                log: '❤️ You found Liam Walker hiding near ' + spotName + '. Your flirty charm made him smile, sparking an instant romantic bond! He joined your camp.',
-                outcomeTitle: 'A Spark in the Ruins ❤️',
-                outcomeText: 'Liam paused, gave a low chuckle, and scratched his jaw with a crooked grin. "Did not expect that in a zombie apocalypse. Guess I got lucky today." An undeniable romantic bond has formed!'
-              };
-            }
-          },
-          {
-            id: 'rob_liam',
-            text: 'Demand he drop his knife and leave at gunpoint',
-            consequenceSummary: 'Drives him away, turning him into a dangerous enemy.',
-            execute: (s: GameState) => {
-              return {
-                state: {
-                  ...s,
-                  player: { ...s.player, sanity: Math.max(10, s.player.sanity - 10) }
-                },
-                log: 'You drove Liam Walker away from ' + spotName + ' at gunpoint. He backed out with cold, vengeful eyes.',
-                outcomeTitle: 'Survivor Driven Away — Enemy Made',
-                outcomeText: 'Liam cursed you under his breath and vanished into the fog. You made a formidable enemy out in the city.'
-              };
-            }
-          }
-        ]
-      };
+  const candidates = [
+    {
+      id: 'survivor_liam',
+      name: 'Liam Walker',
+      gender: 'male' as const,
+      age: 26,
+      profession: 'Ex-Army Mechanic',
+      bio: 'Disciplined and tough. Experienced in barricade defense and weapon maintenance.',
+      role: 'guard' as const,
+      health: 90,
+      trust: 60
+    },
+    {
+      id: 'survivor_elena',
+      name: 'Elena Frost',
+      gender: 'female' as const,
+      age: 27,
+      profession: 'Field Paramedic',
+      bio: 'Calm under fire. Skilled in trauma dressing, wound treatment, and sterilization.',
+      role: 'medic' as const,
+      health: 85,
+      trust: 65
+    },
+    {
+      id: 'survivor_lucas',
+      name: 'Lucas Reed',
+      gender: 'male' as const,
+      age: 24,
+      profession: 'Carpenter & Roofer',
+      bio: 'Practical builder with high physical stamina and fortification knowledge.',
+      role: 'craftsman' as const,
+      health: 88,
+      trust: 60
+    },
+    {
+      id: 'survivor_maya',
+      name: 'Maya Lin',
+      gender: 'female' as const,
+      age: 25,
+      profession: 'Locksmith & Scout',
+      bio: 'Quiet and observant scavenger capable of bypassing door deadbolts silently.',
+      role: 'scavenger' as const,
+      health: 92,
+      trust: 65
     }
+  ];
 
-    if (!hasLucas) {
-      return {
-        id: 'loot_lucas_' + Date.now(),
-        title: 'An Electrician with a Toolbag!',
-        category: 'discovery',
-        dangerLevel: 'low',
-        description: 'While inspecting ' + spotName + ', a witty young man in work boots with an electrician bag turns around with a grin: "Looking for batteries too? Let us not kill each other over copper wire."',
-        choices: [
-          {
-            id: 'team_up_lucas',
-            text: 'Laugh and offer to team up: "Two heads are better than one."',
-            consequenceSummary: 'Recruits a smart builder and electrician companion.',
-            execute: (s: GameState) => {
-              const lucas: CampMember = {
-                id: 'survivor_lucas',
-                name: 'Lucas Reed',
-                gender: 'male',
-                age: 25,
-                profession: 'Electrician & Builder',
-                relation: 'Friend 😊',
-                relationshipStage: 'friend',
-                bio: 'Clever, resourceful, and great with power grids and tools.',
-                health: 85,
-                trust: 60,
-                affection: 30,
-                daysTogether: 1,
-                role: 'craftsman',
-                statusEffects: []
-              };
-              return {
-                state: {
-                  ...s,
-                  campMembers: [...s.campMembers, lucas],
-                  isCampEstablished: true,
-                  stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-                },
-                log: 'You teamed up with Lucas Reed at ' + spotName + '. He joined your camp as a builder and friend!',
-                outcomeTitle: 'Lucas Joined Your Camp',
-                outcomeText: 'Lucas smiled and packed his wire cutters. "Sounds like a plan. Let us get back to your base." The Camp tab is unlocked!'
-              };
-            }
-          },
-          {
-            id: 'flirt_lucas',
-            text: 'Grin: "Cute smile and you know how to wire things? You are definitely coming with me."',
-            consequenceSummary: 'Sparks immediate playful romantic chemistry (Romance track ❤️).',
-            execute: (s: GameState) => {
-              const lucas: CampMember = {
-                id: 'survivor_lucas',
-                name: 'Lucas Reed',
-                gender: 'male',
-                age: 25,
-                profession: 'Electrician & Builder',
-                relation: 'Companion (Flirty ❤️)',
-                relationshipStage: 'friend',
-                bio: 'Smart builder. Smitten with your wit and charm.',
-                health: 85,
-                trust: 65,
-                affection: 55,
-                daysTogether: 1,
-                role: 'craftsman',
-                statusEffects: []
-              };
-              return {
-                state: {
-                  ...s,
-                  campMembers: [...s.campMembers, lucas],
-                  isCampEstablished: true,
-                  player: { ...s.player, sanity: Math.min(100, s.player.sanity + 15) },
-                  stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-                },
-                log: '❤️ You flirted with Lucas Reed while searching ' + spotName + '. He winked and joined your camp! (Romance track started)',
-                outcomeTitle: 'Sparks Over Copper Wire ❤️',
-                outcomeText: 'Lucas chuckled, winked, and bowed theatrically. "Lead the way, boss. I am all yours." An instant romantic connection has formed!'
-              };
-            }
-          }
-        ]
-      };
-    }
+  const candidate = candidates.find(c => !state.campMembers.some(m => m.id === c.id));
+  if (!candidate) return null;
 
-    return null;
-  }
-
-  // MALE PLAYER: Meets beautiful female romance candidates (Elena Frost or Maya Lin)
-  const hasElena = state.campMembers.some(m => m.id === 'survivor_elena');
-  const hasMaya = state.campMembers.some(m => m.id === 'survivor_maya');
-
-  if (!hasElena) {
-    return {
-      id: 'loot_elena_' + Date.now(),
-      title: 'Someone is Hiding Here!',
-      category: 'discovery',
-      dangerLevel: 'low',
-      description: 'While searching ' + spotName + ' inside ' + loc + ', your flashlight illuminates a figure curled behind a cabinet. A young woman in a denim jacket gasps: "Please do not hurt me! I thought this place was empty!"',
-      choices: [
-        {
-          id: 'friendly_elena',
-          text: 'Lower your weapon, offer a friendly hand, and tell her she is safe',
-          consequenceSummary: 'Calms her down immediately. She joins as a loyal companion.',
-          execute: (s: GameState) => {
-            const elena: CampMember = {
-              id: 'survivor_elena',
-              name: 'Elena Frost',
-              gender: 'female',
-              age: 25,
-              profession: 'Clinic Nurse',
-              relation: 'Friend 😊',
-              relationshipStage: 'friend',
-              bio: 'Former nurse. Gentle, observant, and skilled with medical bandages.',
-              health: 80,
-              trust: 60,
-              affection: 35,
-              daysTogether: 1,
-              role: 'medic',
-              statusEffects: []
-            };
-            return {
-              state: {
-                ...s,
-                campMembers: [...s.campMembers, elena],
-                isCampEstablished: true,
-                stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-              },
-              log: 'While searching ' + spotName + ', you found Elena Frost hiding in the dark. You calmed her down and she joined your camp as a friend and medic!',
-              outcomeTitle: 'New Companion: Elena Joined',
-              outcomeText: 'Elena lowered her hands and let out a trembling breath of relief. She joined your camp as a medic. The Camp tab is now unlocked!'
-            };
-          }
-        },
-        {
-          id: 'romantic_elena',
-          text: 'Smile warmly: "I was looking for supplies, but finding you is way better. You are safe now."',
-          consequenceSummary: 'Breaks the tension with charm. Unlocks an immediate romantic spark!',
-          execute: (s: GameState) => {
-            const elena: CampMember = {
-              id: 'survivor_elena',
-              name: 'Elena Frost',
-              gender: 'female',
-              age: 25,
-              profession: 'Clinic Nurse',
-              relation: 'Companion (Spark ❤️)',
-              relationshipStage: 'friend',
-              bio: 'Former nurse. Felt an instant spark of comfort and chemistry with you.',
-              health: 85,
-              trust: 65,
-              affection: 55,
-              daysTogether: 1,
-              role: 'medic',
-              statusEffects: []
-            };
-            return {
-              state: {
-                ...s,
-                campMembers: [...s.campMembers, elena],
-                isCampEstablished: true,
-                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 15) },
-                stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-              },
-              log: '❤️ You found Elena Frost hiding behind ' + spotName + '. Your warm charm made her blush, sparking an immediate bond! She joined your camp.',
-              outcomeTitle: 'A Spark in the Ruins ❤️',
-              outcomeText: 'Elena blushed softly through the dust on her cheeks and took your hand. An instant romantic spark formed between you two!'
-            };
-          }
-        },
-        {
-          id: 'rob_elena',
-          text: 'Order her to drop her supplies and leave: "Leave your things and walk out."',
-          consequenceSummary: 'Takes her medical supplies, but turns her into an enemy.',
-          execute: (s: GameState) => {
-            const stolen = [
-              { id: 'gauze_stolen', name: 'Roll of Sterile Gauze', category: 'medical' as const, quantity: 2, description: 'Medical bandage.' },
-              { id: 'water_stolen', name: 'Fresh Bottled Water', category: 'water' as const, quantity: 1, description: 'Clean water.' }
-            ];
-            let inv = [...s.inventory];
-            for (const item of stolen) {
-              const ex = inv.find(i => i.id === item.id);
-              if (ex) inv = inv.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
-              else inv.push(item);
-            }
-            return {
-              state: {
-                ...s,
-                inventory: inv,
-                player: { ...s.player, sanity: Math.max(10, s.player.sanity - 10) }
-              },
-              log: 'You threatened the survivor hiding in ' + spotName + ' and took her supplies. She fled into the streets with eyes full of hatred.',
-              outcomeTitle: 'Supplies Stolen — Enemy Made',
-              outcomeText: 'She dropped her medical gauze and water on the floor, cursed you, and vanished into the ruins. You made a bitter enemy in the city.'
-            };
-          }
+  return {
+    id: 'loot_encounter_' + candidate.id + '_' + Date.now(),
+    title: 'A Survivor in the Shadows!',
+    category: 'discovery',
+    dangerLevel: 'low',
+    description: 'While searching ' + spotName + ' inside ' + loc + ', your flashlight catches a lone survivor crouching in the dark holding a makeshift blade. They freeze, then slowly lower the weapon seeing you: "Hold on... I am not here to fight. Just searching for food and clean water." It is ' + candidate.name + ' (' + candidate.profession + ').',
+    choices: [
+      {
+        id: 'recruit_' + candidate.id,
+        text: 'Lower your weapon, share clean water, and invite them to join your camp',
+        consequenceSummary: 'Calms them down. They agree to join as a reliable companion.',
+        execute: (s: GameState) => {
+          const newMember: CampMember = {
+            id: candidate.id,
+            name: candidate.name,
+            gender: candidate.gender,
+            age: candidate.age,
+            profession: candidate.profession,
+            relation: 'Companion',
+            bio: candidate.bio,
+            health: candidate.health,
+            trust: candidate.trust,
+            daysTogether: 1,
+            role: candidate.role,
+            statusEffects: []
+          };
+          return {
+            state: {
+              ...s,
+              campMembers: [...s.campMembers, newMember],
+              isCampEstablished: true,
+              stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
+            },
+            log: 'While searching ' + spotName + ', you met ' + candidate.name + '. You shared supplies and they joined your camp as an ally!',
+            outcomeTitle: candidate.name + ' Joined Your Camp',
+            outcomeText: candidate.name + ' sheathed their weapon and shook your hand. "Appreciate you not pulling the trigger. I will pull my weight." The Camp tab is unlocked!'
+          };
         }
-      ]
-    };
-  }
-
-  if (!hasMaya) {
-    return {
-      id: 'loot_maya_' + Date.now(),
-      title: 'Lockpicker Caught in the Act!',
-      category: 'discovery',
-      dangerLevel: 'low',
-      description: 'While searching ' + spotName + ', you stumble on a feisty young woman with a prybar trying to pop the lock on a supply chest. She jumps back: "Back off! I found this chest first!"',
-      choices: [
-        {
-          id: 'split_maya',
-          text: 'Laugh and offer to split whatever is inside: "Let us crack it together and split the haul."',
-          consequenceSummary: 'Respects her claim and turns her into a loyal scavenger companion.',
-          execute: (s: GameState) => {
-            const maya: CampMember = {
-              id: 'survivor_maya',
-              name: 'Maya Lin',
-              gender: 'female',
-              age: 24,
-              profession: 'Locksmith & Scavenger',
-              relation: 'Friend 😊',
-              relationshipStage: 'friend',
-              bio: 'Quick with a pickset, clever, and sharp-tongued. Excellent scavenger.',
-              health: 90,
-              trust: 60,
-              affection: 30,
-              daysTogether: 1,
-              role: 'scavenger',
-              statusEffects: []
-            };
-            return {
-              state: {
-                ...s,
-                campMembers: [...s.campMembers, maya],
-                isCampEstablished: true,
-                stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-              },
-              log: 'You teamed up with Maya Lin at ' + spotName + ' and split the supplies. She joined your camp as a scavenger!',
-              outcomeTitle: 'Maya Joined Your Camp',
-              outcomeText: 'Maya grinned, popped the lock with a satisfying click, and tossed you your share. She joined your camp! The Camp tab is unlocked.'
-            };
+      },
+      {
+        id: 'trade_' + candidate.id,
+        text: 'Keep a safe distance, trade spare food rations for scavenged components',
+        consequenceSummary: 'Trades surplus food for useful mechanical parts and tools.',
+        execute: (s: GameState) => {
+          const tradeItems = [
+            { id: 'duct_tape_scav', name: 'Roll of Heavy Duct Tape', category: 'tool' as const, quantity: 1, description: 'Reinforced adhesive repair tape.' },
+            { id: 'nails_scav', name: 'Box of Framing Nails', category: 'resource' as const, quantity: 15, description: 'Galvanized nails for fortifications.' }
+          ];
+          let inv = [...s.inventory];
+          for (const item of tradeItems) {
+            const ex = inv.find(i => i.id === item.id);
+            if (ex) inv = inv.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
+            else inv.push(item);
           }
-        },
-        {
-          id: 'flirt_maya',
-          text: 'Grin playfully: "You are pretty good with that prybar. Want to team up with someone who appreciates talent?"',
-          consequenceSummary: 'Playful banter that sparks mutual chemistry (Romance track ❤️).',
-          execute: (s: GameState) => {
-            const maya: CampMember = {
-              id: 'survivor_maya',
-              name: 'Maya Lin',
-              gender: 'female',
-              age: 24,
-              profession: 'Locksmith & Scavenger',
-              relation: 'Companion (Flirty ❤️)',
-              relationshipStage: 'friend',
-              bio: 'Spunky scavenger. Loves your banter and quick wit.',
-              health: 90,
-              trust: 60,
-              affection: 50,
-              daysTogether: 1,
-              role: 'scavenger',
-              statusEffects: []
-            };
-            return {
-              state: {
-                ...s,
-                campMembers: [...s.campMembers, maya],
-                isCampEstablished: true,
-                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 15) },
-                stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-              },
-              log: '❤️ You flirted with Maya Lin while searching ' + spotName + '. She smirked and teamed up with you! (Romance track started)',
-              outcomeTitle: 'Sparks Over a Prybar ❤️',
-              outcomeText: 'Maya lowered the prybar, winked, and twirled a lockpick between her fingers. "Alright, let us see how good you are at keeping me alive." The Camp tab is unlocked!'
-            };
-          }
-        },
-        {
-          id: 'threaten_maya',
-          text: 'Raise your weapon: "Step away from that chest right now."',
-          consequenceSummary: 'Drives her away, turning her into a bitter rival.',
-          execute: (s: GameState) => {
-            return {
-              state: {
-                ...s,
-                player: { ...s.player, sanity: Math.max(10, s.player.sanity - 5) }
-              },
-              log: 'You chased Maya Lin away from ' + spotName + ' at gunpoint. She bolted out the back door, cursing your name.',
-              outcomeTitle: 'Scavenger Driven Away',
-              outcomeText: 'She cursed you out and vanished down the fire escape. You claimed the spot, but earned her wrath.'
-            };
-          }
+          return {
+            state: {
+              ...s,
+              inventory: inv,
+              player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) }
+            },
+            log: 'You traded calmly with ' + candidate.name + ' at ' + spotName + '. Exchanged surplus supplies peacefully (+10 Sanity).',
+            outcomeTitle: 'Peaceful Trade Concluded',
+            outcomeText: 'You exchanged items without hostility. ' + candidate.name + ' nodded respectfully and moved down the hall.'
+          };
         }
-      ]
-    };
-  }
-
-  return null;
+      },
+      {
+        id: 'dismiss_' + candidate.id,
+        text: 'Keep your weapon aimed: "Keep moving. This building is occupied."',
+        consequenceSummary: 'Avoids all risk. They back away quietly into the ruins.',
+        execute: (s: GameState) => {
+          return {
+            state: { ...s },
+            log: 'You ordered ' + candidate.name + ' to leave ' + spotName + '. They backed away with their hands raised.',
+            outcomeTitle: 'Survivor Backed Off',
+            outcomeText: 'Taking no chances, you held your ground until they retreated into the alley. Your perimeter remains secure.'
+          };
+        }
+      }
+    ]
+  };
 }
 
 // Survivor Outpost Meeting Dilemma (St. Michael Church Sanctuary)
@@ -991,12 +723,12 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
     title: 'St. Michael Church Sanctuary',
     category: 'encounter',
     dangerLevel: 'low',
-    description: 'You step through the reinforced oak doors of St. Michael Church. Warm candlelight flickers across stained glass. A group of seven survivors have built barricades around the altar. A friendly survivor named ' + candidateName + ' waves you over to the fellowship fire.',
+    description: 'You step through the reinforced oak doors of St. Michael Church. Warm candlelight flickers across stained glass. A group of survivors have built barricades around the altar. ' + candidateName + ' waves you over to the fellowship fire.',
     choices: [
       {
-        id: 'bond_by_church_fire',
-        text: 'Sit by the fire with ' + candidateName + ', share a meal, and talk about life before the dead walked',
-        consequenceSummary: 'Deep emotional connection. They offer to join your personal shelter!',
+        id: 'recruit_church_ally',
+        text: 'Discuss your camp defense plans with ' + candidateName + ' and invite them to team up',
+        consequenceSummary: 'Gain a dependable survivor ally with guard skills.',
         execute: (s: GameState) => {
           if (!hasCandidate) {
             const member: CampMember = {
@@ -1005,12 +737,10 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
               gender: isFemale ? 'male' : 'female',
               age: isFemale ? 26 : 23,
               profession: isFemale ? 'Ex-Army Hunter' : 'Athletic Student & Builder',
-              relation: 'Companion (Spark ❤️)',
-              relationshipStage: 'friend',
-              bio: isFemale ? 'Rugged veteran. Brave, protective, and deeply loyal.' : 'Former collegiate runner. Energetic, brave, and deeply loyal.',
+              relation: 'Camp Member',
+              bio: isFemale ? 'Rugged veteran. Brave, protective, and disciplined.' : 'Former collegiate runner. Energetic, alert, and dependable.',
               health: 95,
               trust: 70,
-              affection: 55,
               daysTogether: 1,
               role: 'guard',
               statusEffects: []
@@ -1020,12 +750,12 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
                 ...s,
                 campMembers: [...s.campMembers, member],
                 isCampEstablished: true,
-                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 25) },
+                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) },
                 stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
               },
-              log: '❤️ You visited the Church Outpost and bonded by the fire with ' + candidateName + '. They packed their backpack and decided to join your camp!',
-              outcomeTitle: candidateName + ' Joined Your Journey ❤️',
-              outcomeText: 'Sitting by the fire, you and ' + candidateName + ' laughed and shared your memories. Feeling an undeniable spark, ' + candidateName + ' decided to leave the crowded church and join your camp as a guardian and companion! (+25 Sanity)'
+              log: 'You met ' + candidateName + ' at the Church Outpost. They agreed to team up and joined your camp as a guard!',
+              outcomeTitle: candidateName + ' Joined Your Camp',
+              outcomeText: 'By the sanctuary fire, you and ' + candidateName + ' discussed defense tactics. Convinced your group has a real survival plan, ' + candidateName + ' agreed to join your camp. (+20 Sanity)'
             };
           } else {
             return {
@@ -1035,7 +765,7 @@ export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
               },
               log: 'You spent an evening resting by the fire at the Church Outpost, lifting your morale (+20 Sanity).',
               outcomeTitle: 'Peaceful Evening by the Fire',
-              outcomeText: 'Warm food, gentle acoustic guitar chords, and friendly conversation restored your spirit.'
+              outcomeText: 'Warm food and friendly conversation restored your spirit (+20 Sanity).'
             };
           }
         }
