@@ -1,7 +1,6 @@
 import { GameState, WeatherType } from '../types/game';
 
 // Stage 1: The Outbreak & Collapse (Days 0 - 7)
-// Immediate chaos, burning streets, power cutting out, emergency broadcasts
 const STAGE_COLLAPSE_HAPPENINGS = [
   'A car alarm was still blaring three blocks over before its battery finally died.',
   'I saw thick black smoke rising from the interstate where an abandoned fuel tanker burned.',
@@ -30,7 +29,6 @@ const STAGE_COLLAPSE_HAPPENINGS = [
 ];
 
 // Stage 2: The Silent City (Days 8 - 30)
-// Complete silence, utilities dead, nature creeping in, empty avenues, decay
 const STAGE_SILENCE_HAPPENINGS = [
   'The tap water ran completely dry today. Not a single drop left in the municipal pipes.',
   'Dandelion weeds are already pushing up through the cracks in the abandoned asphalt.',
@@ -60,7 +58,6 @@ const STAGE_SILENCE_HAPPENINGS = [
 ];
 
 // Stage 3: Overgrowth, Scarcity & Cold (Days 31 - 60)
-// Feral dog packs, vultures, winter cold snaps, desperate scavengers, tracking prints
 const STAGE_SCARCITY_HAPPENINGS = [
   'A pack of three feral dogs trotted down the middle of the boulevard, sniffing for scraps.',
   'Frost coated the inside of the walls overnight; winter is settling into the dead city.',
@@ -86,7 +83,6 @@ const STAGE_SCARCITY_HAPPENINGS = [
 ];
 
 // Stage 4: The Wasteland & Survivors (Days 61+)
-// Hardened survivors, distant military flares, organized factions, long-term survival
 const STAGE_WASTELAND_HAPPENINGS = [
   'Distant green military flares lit up the low cloud cover far to the north at midnight.',
   'A convoy of two reinforced trucks sped down the bypass road, headlights completely blacked out.',
@@ -104,6 +100,44 @@ const STAGE_WASTELAND_HAPPENINGS = [
   'I checked the vegetable planters on the roof; green tomato shoots are beginning to poke through the soil.',
   'A lone hawk nested atop the rusted crane overlooking the downtown shipping basin.',
   'I sat by the stove recording my observations in my journal, proud to have survived this long.'
+];
+
+// MASSIVE DEDICATED ZOMBIE & HORDE HAPPENINGS POOL
+const ZOMBIE_DAILY_HAPPENINGS = [
+  'A crawler with shattered legs dragged its torso across the gravel alley, snapping its jaws at empty air.',
+  'I watched a bloated infected stumble off a second-story fire escape and land with a sickening wet crunch.',
+  'A cluster of seven infected stood completely motionless in the center of the intersection, heads hanging down in the rain.',
+  'Dry, rhythmic scratching echoed from inside an overturned postal delivery van as I walked past.',
+  'A decaying zombie in a torn security uniform was caught on a spiked iron fence, thrashing weakly.',
+  'I found bloody palm prints on an exterior door where someone was dragged backward down a basement stairwell.',
+  'A sudden guttural groan right outside my shutter made me freeze in place with my melee weapon raised.',
+  'I peered through the blinds and saw a horde of over thirty infected slowly drifting down Main Street like a dark river.',
+  'A zombie tangled in orange construction netting thrashed and snarled violently as I slipped around the corner.',
+  'The sound of wet chewing from behind a commercial dumpster forced me to take a detour through the back alley.',
+  'A corpse slumped over a steering wheel began hammering its forehead against the windshield when it sensed my footsteps.',
+  'I found the body of a survivor clutching an empty revolver, surrounded by three neutralized walkers.',
+  'A pack of walkers followed the loud clatter of a falling sheet metal sign, stumbling blindly over each other in the dark.',
+  'The putrid, sickly-sweet stench of a decomposing horde drifting through the storm drains made my eyes burn.',
+  'A zombie pinned beneath a fallen billboard hissed aggressively through broken teeth as I sprinted past.',
+  'I had to duck behind an abandoned bus while a wandering cluster of five infected shuffled within arm\'s reach.',
+  'A walker with dried black blood caked down its jaw stared directly toward my window before losing interest.',
+  'I found deep fingernail gouges clawed into the solid oak frame of an entrance door.',
+  'A freshly turned infected in hospital scrubs stumbled blindly into a light pole, snarling in frantic confusion.',
+  'I heard the heavy, rhythmic thuds of an infected slamming its torso against a locked steel fire door down the hall.',
+  'A zombie with a rusty rebar rod impaled through its ribs shuffled endlessly in circles inside an empty parking lot.',
+  'The distant, mournful moans of dozens of infected carried across the rooftops like a dark chorus.',
+  'I found the picked-clean ribcage of an animal in the courtyard; the bite marks were unmistakably human.',
+  'An infected trapped inside a revolving glass door circled endlessly, smearing dark blood with every step.',
+  'I had to hold my breath for two full minutes while a pair of blind, decaying walkers shuffled right past my doorway.',
+  'A zombie with missing eyes tilted its head toward the creak of my boot, sniffing the air before resuming its pacing.',
+  'I found a handwritten note pinned to a corpse: "Forgive me, he was already turning when we found him."',
+  'A lone zombie with a severed lower jaw made wet clicking sounds in the dark, unable to scream.',
+  'I watched an infected get swept away down the flooded storm drainage canal, fighting the current in vain.',
+  'A walker was wedged waist-deep in a collapsed storm drain, its clawed fingers reaching up through the iron grate.',
+  'The infected have begun gathering around the church bell tower whenever the wind swings the heavy iron clapper.',
+  'I spotted a pale, emaciated crawler pulling itself through tall weeds toward an open manhole cover.',
+  'A zombie wearing a faded postal satchel still had three undelivered envelopes clutched tightly in its rotting hand.',
+  'I found a pile of four headless walkers stacked neatly outside a shop—the calling card of an experienced survivor.'
 ];
 
 // Weather Happenings (Sensory Atmosphere)
@@ -192,33 +226,43 @@ function getCompanionHappenings(state: GameState): string[] {
   ];
 }
 
-// Master generator that picks non-repeating lines tailored to World Stage and Weather
+// Master generator that guarantees rich, non-repeating lines with heavy zombie atmosphere
 export function generateDailyHappenings(state: GameState, currentDay: number, weather: WeatherType): string[] {
   const result: string[] = [];
+  const recentTexts = state.logs.slice(-30).map(l => l.text);
 
-  // Pick stage pool based on days survived
+  // 1. Stage-specific atmospheric line
   let stagePool = STAGE_COLLAPSE_HAPPENINGS;
   if (currentDay > 60) stagePool = STAGE_WASTELAND_HAPPENINGS;
   else if (currentDay > 30) stagePool = STAGE_SCARCITY_HAPPENINGS;
   else if (currentDay > 7) stagePool = STAGE_SILENCE_HAPPENINGS;
 
-  // Filter out lines already logged recently in state.logs to prevent repetition
-  const recentTexts = state.logs.slice(-25).map(l => l.text);
   const freshStagePool = stagePool.filter(t => !recentTexts.includes(t));
   const chosenStagePool = freshStagePool.length > 0 ? freshStagePool : stagePool;
-
   result.push(chosenStagePool[Math.floor(Math.random() * chosenStagePool.length)]);
 
-  // Second line: pick from weather or location/companion routines
-  const weatherPool = WEATHER_HAPPENINGS[weather] || WEATHER_HAPPENINGS.clear;
+  // 2. High probability (60%) of a direct visceral Zombie happening
+  if (Math.random() < 0.65) {
+    const freshZombies = ZOMBIE_DAILY_HAPPENINGS.filter(t => !recentTexts.includes(t) && !result.includes(t));
+    const chosenZombie = freshZombies.length > 0 ? freshZombies : ZOMBIE_DAILY_HAPPENINGS;
+    result.push(chosenZombie[Math.floor(Math.random() * chosenZombie.length)]);
+  } else {
+    // Or weather / sensory line
+    const weatherPool = WEATHER_HAPPENINGS[weather] || WEATHER_HAPPENINGS.clear;
+    const freshWeather = weatherPool.filter(t => !recentTexts.includes(t) && !result.includes(t));
+    const chosenWeather = freshWeather.length > 0 ? freshWeather : weatherPool;
+    result.push(chosenWeather[Math.floor(Math.random() * chosenWeather.length)]);
+  }
+
+  // 3. Location / companion / routine line
   const locationPool = getLocationHappenings(state);
   const companionPool = getCompanionHappenings(state);
+  const miscPool = [...locationPool, ...companionPool];
 
-  const secondaryPool = [...weatherPool, ...locationPool, ...companionPool];
-  const freshSecondary = secondaryPool.filter(t => !recentTexts.includes(t) && !result.includes(t));
-  const chosenSecondary = freshSecondary.length > 0 ? freshSecondary : secondaryPool;
-
-  result.push(chosenSecondary[Math.floor(Math.random() * chosenSecondary.length)]);
+  const freshMisc = miscPool.filter(t => !recentTexts.includes(t) && !result.includes(t));
+  if (freshMisc.length > 0 && Math.random() < 0.5) {
+    result.push(freshMisc[Math.floor(Math.random() * freshMisc.length)]);
+  }
 
   return result;
 }
