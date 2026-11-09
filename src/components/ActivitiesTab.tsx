@@ -390,7 +390,7 @@ export const ActivitiesTab: React.FC<Props> = ({
     );
   }
 
-  // MAIN ACTIVITIES HUB (Grouped categories just like BitLife)
+  // MAIN ACTIVITIES HUB (Grouped survival categories)
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none">
       <div>

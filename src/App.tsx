@@ -2969,7 +2969,7 @@ export function App() {
           />
         )}
 
-        {/* BitLife-style Death Screen */}
+        {/* Memorial Hall Death Screen */}
         {gameState.player.isDead && !gameState.legacySuccessionPrompt && (
           <DeathScreen
             gameState={gameState}

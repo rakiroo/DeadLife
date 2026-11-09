@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameState, CampMember, CampRole, CampRoom, SurvivorChild } from '../types/game';
+import { GameState, CampMember, CampRole, CampRoom, SurvivorChild, SurvivorBackstory } from '../types/game';
 import { 
   Home, Users, Shield, HeartPulse, Hammer, Search, Bed, MessageSquare, 
   Utensils, UserMinus, Sparkles, Droplets, Edit3, Award, DoorOpen, Scroll, Check,
@@ -102,6 +102,7 @@ export const BaseTab: React.FC<Props> = ({
   const { shelter, campMembers, inventory, player } = gameState;
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
   const [selectedMember, setSelectedMember] = useState<CampMember | null>(null);
+  const [selectedKinForMemoir, setSelectedKinForMemoir] = useState<SurvivorBackstory | null>(null);
   const [roomAssignModalMember, setRoomAssignModalMember] = useState<{ id: string; name: string; isPlayer?: boolean } | null>(null);
   const [assignToRoom, setAssignToRoom] = useState<CampRoom | null>(null);
   const [hookupModalMember, setHookupModalMember] = useState<CampMember | null>(null);
@@ -999,29 +1000,68 @@ export const BaseTab: React.FC<Props> = ({
               )}
 
               
-              {/* Loved Ones in the Ruins (Parents, Siblings, Pet) */}
-              {hasMissingKin && player.backstory && (
+{/* Loved Ones & Family Kin in the Ruins */}
+              {player.backstory && player.backstory.outcome !== 'reunited' && (
                 <div className="space-y-1.5 pt-2 border-t border-white/5">
-                  <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block px-1">
-                    Loved Ones in the Ruins
-                  </span>
-                  <div className="p-3 bg-black/40 border border-amber-500/20 rounded-2xl space-y-1 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white">
-                        {player.backstory.theme === 'pet' ? '🐕 ' : '👥 '}
-                        {player.backstory.targetName}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        {player.backstory.relation} • Missing
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-300 leading-snug">
-                      {player.backstory.hookText}
-                    </p>
-                    <div className="text-[10px] font-mono text-amber-400/90 pt-0.5">
-                      Search Goal: {player.backstory.searchGoal}
-                    </div>
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block">
+                      Loved Ones & Family Kin
+                    </span>
+                    <span className="text-[9px] font-mono text-zinc-500">Tap to inspect memoir</span>
                   </div>
+                  {(() => {
+                    const isDeceased = player.backstory.status === 'resolved' && (player.backstory.outcome === 'deceased' || player.backstory.outcome === 'mercy' || Boolean((player as any).isSpousePresumedDead));
+                    const kinGender = player.backstory.targetGender || (
+                      player.backstory.relation.includes('Mother') || player.backstory.relation.includes('Sister') || player.backstory.relation.includes('Wife') || player.backstory.relation.includes('Daughter') ? 'female' : 'male'
+                    );
+
+                    return (
+                      <div 
+                        onClick={() => setSelectedKinForMemoir(player.backstory!)}
+                        className={`p-3 rounded-2xl border transition-all cursor-pointer group active:scale-[0.98] ${
+                          isDeceased
+                            ? 'bg-rose-950/20 border-rose-500/20 hover:border-rose-500/40'
+                            : 'bg-black/40 border-amber-500/20 hover:border-amber-500/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white text-xs group-hover:text-amber-300 transition-colors">
+                              {player.backstory.theme === 'pet' ? '🐕 ' : '👥 '}
+                              {player.backstory.targetName}
+                            </span>
+                            <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold border ${
+                              kinGender === 'female' 
+                                ? 'bg-pink-500/15 text-pink-300 border-pink-500/30' 
+                                : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                            }`}>
+                              {kinGender === 'female' ? '♀' : '♂'}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold border ${
+                            isDeceased
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          }`}>
+                            {player.backstory.relation} • {isDeceased ? '🪦 Deceased' : '🔍 Missing'}
+                          </span>
+                        </div>
+                        {isDeceased ? (
+                          <p className="text-[11px] text-rose-300/90 leading-snug pt-1">
+                            {player.backstory.targetCauseOfDeath || player.backstory.outcomeSummary || 'Fallen in the ruins.'}
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-zinc-300 leading-snug pt-1">
+                            {player.backstory.hookText}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between pt-1 text-[10px] font-mono">
+                          <span className="text-zinc-500">Age {player.backstory.targetAge || 24}</span>
+                          <span className="text-amber-400 group-hover:underline">View Flashback & Skills →</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

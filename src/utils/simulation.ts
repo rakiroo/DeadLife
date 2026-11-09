@@ -409,7 +409,7 @@ export function advanceOneDay(state: GameState): GameState {
     }
   }
 
-  // Random daily survival happenings (BitLife style)
+  // Random daily survival happenings
   const dailyHappenings = generateDailyHappenings(state, currentDay, newWeather);
   dailyHappenings.forEach((text, idx) => {
     newLogs.push({

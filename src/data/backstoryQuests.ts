@@ -19,7 +19,7 @@ function generateCompanionFromBackstory(
   const isFamily = bs.theme === 'family' || bs.theme === 'love';
   const isPet = bs.theme === 'pet';
 
-  // 1. Inherit player's last name for family members like in BitLife!
+  // 1. Inherit player's last name for family members
   let fullName = target;
   if (isFamily && lastName && !target.includes(' ')) {
     fullName = target + ' ' + lastName;
@@ -52,7 +52,7 @@ function generateCompanionFromBackstory(
     gender = 'female';
   }
 
-  // 4. Individualized stats (1-10) like BitLife / RPGs
+  // 4. Individualized stats (1-10) like classic tabletop RPGs
   let combatSkill = 4;
   let medicalSkill = 4;
   let craftingSkill = 4;

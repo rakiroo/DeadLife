@@ -1,6 +1,6 @@
 # DeadLife 🧟‍♂️
 
-An interactive, gritty zombie apocalypse survival simulator inspired by BitLife.
+An interactive, gritty zombie apocalypse survival life simulator.
 
 ## Features
 - **Dual-Pacing Loop**:
