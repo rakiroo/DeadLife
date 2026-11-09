@@ -1677,7 +1677,9 @@ export function App() {
 
       if (prompt.isPlayerChild) {
         const isAffair = prev.player.romanceStage === 'married' && prompt.motherName !== prev.player.spouseName;
-        const origin = prompt.origin || (isAffair ? 'affair' as const : prev.player.romanceStage === 'married' ? 'legitimate' as const : 'illegitimate' as const);
+        const isLegitimate = Boolean(prev.player.romanceStage === 'married' && prompt.motherName === prev.player.spouseName);
+        const origin = prompt.origin || (isLegitimate ? 'legitimate' as const : 'illegitimate' as const);
+        const originDetail = prompt.originDetail || (isAffair ? 'affair' as const : isLegitimate ? 'marital' as const : 'out_of_wedlock' as const);
 
         const newChild = {
           id: 'child_player_' + Date.now(),
@@ -1685,7 +1687,9 @@ export function App() {
           age: 0,
           gender: prompt.gender,
           stage: 'infant' as const,
+          isLegitimate,
           origin,
+          originDetail,
           motherName: prompt.motherName,
           fatherName: prompt.fatherName,
           skills: {
@@ -2279,6 +2283,44 @@ export function App() {
     });
   };
 
+  // Formally legitimize an illegitimate or adopted child
+  const handleLegitimizeChild = (childId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let childName = 'Child';
+      const updatedChildren = (prev.player.children || []).map(c => {
+        if (c.id === childId) {
+          childName = c.name;
+          return {
+            ...c,
+            isLegitimate: true,
+            origin: 'legitimate' as const,
+            legitimizedBy: prev.player.name,
+            legitimizedDay: prev.day
+          };
+        }
+        return c;
+      });
+
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          children: updatedChildren,
+          sanity: Math.min(100, prev.player.sanity + 10)
+        },
+        logs: [...prev.logs, {
+          id: 'legitimize_' + Date.now(),
+          day: prev.day,
+          text: '📜 Decree of Legitimation: Founder ' + prev.player.name + ' formally legitimized ' + childName + ' in the haven registry! They are now recognized as a full dynasty heir with complete inheritance rights.',
+          type: 'milestone' as const,
+          timestamp: 'Dynasty'
+        }].slice(-150)
+      };
+    });
+  };
+
   // Consecrate & Inscribe a custom Family Heirloom
   const handleInscribeRelic = (heirloom: FamilyHeirloom, consumedItemId?: string) => {
     if (!gameState) return;
@@ -2689,6 +2731,7 @@ export function App() {
               onBestowHeirloom={handleBestowHeirloom}
               onStokeWoodstove={handleStokeWoodstove}
               onSaveWill={handleSaveWill}
+              onLegitimizeChild={handleLegitimizeChild}
               onInscribeRelic={handleInscribeRelic}
               onRepairRelic={handleRepairRelic}
               onDeclareSpouseFallen={handleDeclareSpouseFallen}

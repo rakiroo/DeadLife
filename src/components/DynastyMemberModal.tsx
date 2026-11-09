@@ -1,6 +1,6 @@
 import React from 'react';
-import { Survivor, CampMember, SurvivorChild, GameState } from '../types/game';
-import { Crown, Heart, Shield, Swords, Hammer, Compass, HeartPulse, X, Check, Baby, User, Sparkles, Scroll, MapPin } from 'lucide-react';
+import { Survivor, CampMember, SurvivorChild } from '../types/game';
+import { Crown, Heart, Shield, Swords, Hammer, Compass, HeartPulse, X, Check, Baby, User, Sparkles, Scroll, MapPin, AlertCircle } from 'lucide-react';
 
 export interface DynastyMemberData {
   id: string;
@@ -18,7 +18,10 @@ export interface DynastyMemberData {
   searchGoal?: string;
   isDeceased?: boolean;
   deathCause?: string;
-  origin?: 'legitimate' | 'illegitimate' | 'affair' | 'adopted';
+  isLegitimate: boolean;
+  originDetail?: 'marital' | 'affair' | 'out_of_wedlock' | 'adopted';
+  legitimizedBy?: string;
+  legitimizedDay?: number;
   motherName?: string;
   fatherName?: string;
   stage?: 'infant' | 'child' | 'teen' | 'adult';
@@ -36,6 +39,7 @@ interface Props {
   member: DynastyMemberData;
   player: Survivor;
   onDesignateHeir?: (memberId: string, name: string) => void;
+  onLegitimizeChild?: (childId: string) => void;
   onClose: () => void;
 }
 
@@ -43,38 +47,9 @@ export const DynastyMemberModal: React.FC<Props> = ({
   member,
   player,
   onDesignateHeir,
+  onLegitimizeChild,
   onClose
 }) => {
-  const getOriginBadge = (origin?: DynastyMemberData['origin']) => {
-    switch (origin) {
-      case 'affair':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            🔥 Born of an Affair
-          </span>
-        );
-      case 'illegitimate':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            ⚡ Illegitimate
-          </span>
-        );
-      case 'adopted':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-            🤝 Adopted Orphan
-          </span>
-        );
-      case 'legitimate':
-      default:
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            💍 Legitimate
-          </span>
-        );
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans select-none">
       <div className="bg-zinc-900 border border-amber-500/40 rounded-3xl max-w-sm w-full p-5 space-y-3.5 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -117,23 +92,52 @@ export const DynastyMemberModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Origin Badge & Parent Details */}
+        {/* Clean Lineage Status (Only 💍 Legitimate or ⚡ Illegitimate) */}
         <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between text-xs">
-          <span className="text-[10px] text-zinc-400 font-mono">Lineage Origin:</span>
-          {getOriginBadge(member.origin)}
+          <span className="text-[10px] text-zinc-400 font-mono">Lineage Status:</span>
+          {member.isLegitimate ? (
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              💍 Legitimate
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              ⚡ Illegitimate
+            </span>
+          )}
         </div>
 
-        {/* Biological Parents if affair or different mother */}
-        {(member.motherName || member.fatherName) && (
-          <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-mono text-zinc-400 flex items-center justify-between">
-            <span>Biological Heritage:</span>
-            <span className="text-zinc-200">
-              {member.fatherName ? 'Father: ' + member.fatherName : ''}
-              {member.fatherName && member.motherName ? ' • ' : ''}
-              {member.motherName ? 'Mother: ' + member.motherName : ''}
-            </span>
-          </div>
-        )}
+        {/* Detailed Background Lore (Only shown here when clicked!) */}
+        <div className="space-y-1.5">
+          {member.legitimizedBy ? (
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-300 leading-snug">
+              📜 Officially Legitimized by founder {member.legitimizedBy} on Day {member.legitimizedDay || 0}. Eligible for all family inheritance.
+            </div>
+          ) : member.originDetail === 'affair' ? (
+            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[10px] font-mono text-purple-300 leading-snug">
+              🔥 Born of an affair with {member.motherName || 'a companion'}. Cannot inherit until officially legitimized.
+            </div>
+          ) : member.originDetail === 'adopted' ? (
+            <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-mono text-cyan-300 leading-snug">
+              🤝 Rescued and adopted as an orphan from the wasteland.
+            </div>
+          ) : member.originDetail === 'out_of_wedlock' ? (
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-300 leading-snug">
+              ⚡ Born out of wedlock from an uncommitted encounter.
+            </div>
+          ) : null}
+
+          {/* Biological Parents */}
+          {(member.motherName || member.fatherName) && (
+            <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-[10px] font-mono text-zinc-400 flex items-center justify-between">
+              <span>Biological Heritage:</span>
+              <span className="text-zinc-200">
+                {member.fatherName ? 'Father: ' + member.fatherName : ''}
+                {member.fatherName && member.motherName ? ' • ' : ''}
+                {member.motherName ? 'Mother: ' + member.motherName : ''}
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Vital Status Card */}
         {member.isMissing ? (
@@ -213,8 +217,8 @@ export const DynastyMemberModal: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Succession & Testament Rights */}
-        <div className="p-3 bg-gradient-to-r from-amber-950/20 to-black/40 border border-amber-500/20 rounded-2xl text-xs space-y-1.5">
+        {/* Succession & Testament Rights (Enforces Legitimacy Rule!) */}
+        <div className="p-3 bg-gradient-to-r from-amber-950/20 to-black/40 border border-amber-500/20 rounded-2xl text-xs space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-mono text-amber-400 font-bold flex items-center gap-1">
               <Scroll className="w-3.5 h-3.5" /> Dynasty Succession
@@ -223,29 +227,48 @@ export const DynastyMemberModal: React.FC<Props> = ({
               <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                 ★ Primary Heir in Will
               </span>
+            ) : member.isLegitimate ? (
+              <span className="text-[9px] font-mono text-emerald-400">Eligible Successor</span>
             ) : (
-              <span className="text-[9px] font-mono text-zinc-500">Eligible Successor</span>
+              <span className="text-[9px] font-mono text-zinc-500">Ineligible (Illegitimate)</span>
             )}
           </div>
-          {member.bequeathedRelicName && (
-            <p className="text-[10px] text-zinc-300">
-              Bequeathed Relic: <strong className="text-amber-200">{member.bequeathedRelicName}</strong>
-            </p>
+
+          {/* Action 1: Legitimize Child button */}
+          {!member.isLegitimate && !member.isLeader && !member.isDeceased && onLegitimizeChild && (
+            <button
+              type="button"
+              onClick={() => {
+                onLegitimizeChild(member.id);
+                onClose();
+              }}
+              className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+            >
+              <Scroll className="w-3.5 h-3.5" />
+              <span>Legitimize Child</span>
+            </button>
           )}
 
-          {/* Quick Action: Designate as Heir if not already */}
-          {!member.isLeader && !member.isDesignatedHeir && !member.isDeceased && onDesignateHeir && (
+          {/* Action 2: Designate as Heir if Legitimate */}
+          {member.isLegitimate && !member.isLeader && !member.isDesignatedHeir && !member.isDeceased && onDesignateHeir && (
             <button
               type="button"
               onClick={() => {
                 onDesignateHeir(member.id, member.name);
                 onClose();
               }}
-              className="w-full mt-1 py-1.5 px-3 rounded-xl text-[10px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition-all flex items-center justify-center gap-1 active:scale-95"
+              className="w-full py-1.5 px-3 rounded-xl text-[10px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition-all flex items-center justify-center gap-1 active:scale-95"
             >
               <Crown className="w-3 h-3 text-amber-400" />
               <span>Designate as Primary Heir in Will</span>
             </button>
+          )}
+
+          {/* Notice if cannot inherit */}
+          {!member.isLegitimate && !member.isLeader && !member.isDeceased && (
+            <p className="text-[10px] text-zinc-400 italic text-center leading-snug">
+              Only legitimate heirs can inherit the Founder's Will and assets. Legitimize this child first.
+            </p>
           )}
         </div>
 
@@ -260,4 +283,3 @@ export const DynastyMemberModal: React.FC<Props> = ({
     </div>
   );
 };
-

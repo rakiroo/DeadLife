@@ -51,6 +51,7 @@ interface Props {
   onStokeWoodstove?: () => void;
   onSaveWill?: (will: WillAndTestament) => void;
   onDeclareSpouseFallen?: () => void;
+  onLegitimizeChild?: (childId: string) => void;
   onInscribeRelic?: (heirloom: FamilyHeirloom, consumedItemId?: string) => void;
   onRepairRelic?: (heirloomId: string) => void;
 }
@@ -91,6 +92,7 @@ export const BaseTab: React.FC<Props> = ({
   onStokeWoodstove,
   onSaveWill,
   onDeclareSpouseFallen,
+  onLegitimizeChild,
   onInscribeRelic,
   onRepairRelic
 }) => {
@@ -2418,6 +2420,10 @@ export const BaseTab: React.FC<Props> = ({
         <DynastyTreeModal
           player={player}
           campMembers={campMembers}
+          onLegitimizeChild={(childId) => {
+            onLegitimizeChild && onLegitimizeChild(childId);
+            triggerFeedback("Child officially legitimized in the colony registry!");
+          }}
           onClose={() => setShowTreeModal(false)}
         />
       )}

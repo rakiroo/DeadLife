@@ -18,7 +18,7 @@ export const WillAndTestamentModal: React.FC<Props> = ({
   onSaveWill,
   onClose
 }) => {
-  const childrenHeirs = (player.children || []).map(c => ({
+  const childrenHeirs = (player.children || []).filter(c => c.isLegitimate !== false).map(c => ({
     id: c.id,
     name: c.name,
     relation: c.age >= 16 ? 'Adult Heir' : c.age >= 10 ? 'Adolescent Heir' : 'Child Heir',

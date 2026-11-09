@@ -6,12 +6,14 @@ import { DynastyMemberModal, DynastyMemberData } from './DynastyMemberModal';
 interface Props {
   player: Survivor;
   campMembers: CampMember[];
+  onLegitimizeChild?: (childId: string) => void;
   onClose: () => void;
 }
 
 export const DynastyTreeModal: React.FC<Props> = ({
   player,
   campMembers,
+  onLegitimizeChild,
   onClose
 }) => {
   const [inspectMember, setInspectMember] = useState<DynastyMemberData | null>(null);
@@ -28,36 +30,20 @@ export const DynastyTreeModal: React.FC<Props> = ({
   const genNumber = player.generation || 1;
   const playedList = player.playedCharacters || [player.name];
 
-  const getOriginBadge = (origin?: SurvivorChild['origin']) => {
-    switch (origin) {
-      case 'affair':
-        return (
-          <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            🔥 Born of an Affair
-          </span>
-        );
-      case 'illegitimate':
-        return (
-          <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            ⚡ Illegitimate
-          </span>
-        );
-      case 'adopted':
-        return (
-          <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-            🤝 Adopted Orphan
-          </span>
-        );
-      case 'legitimate':
-      default:
-        return (
-          <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            💍 Legitimate
-          </span>
-        );
+  const getOriginBadge = (isLegitimate?: boolean) => {
+    if (isLegitimate !== false) {
+      return (
+        <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+          💍 Legitimate
+        </span>
+      );
     }
+    return (
+      <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+        ⚡ Illegitimate
+      </span>
+    );
   };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans select-none">
       <div className="bg-zinc-900 border border-rose-500/30 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -92,11 +78,7 @@ export const DynastyTreeModal: React.FC<Props> = ({
           <span className="text-zinc-600">•</span>
           <span className="text-rose-300">💍 Legitimate</span>
           <span className="text-zinc-600">•</span>
-          <span className="text-purple-300">🔥 Born of an Affair</span>
-          <span className="text-zinc-600">•</span>
           <span className="text-amber-300">⚡ Illegitimate</span>
-          <span className="text-zinc-600">•</span>
-          <span className="text-cyan-300">🤝 Adopted Orphan</span>
         </div>
 
         {/* TREE VISUAL WITH CONNECTED LINES */}
@@ -122,7 +104,7 @@ export const DynastyTreeModal: React.FC<Props> = ({
                 profession: player.profession,
                 bio: player.bio,
                 health: player.health,
-                origin: 'legitimate',
+                isLegitimate: true,
                 skills: {
                   combat: player.combatSkill,
                   medical: player.medicalSkill,
@@ -164,7 +146,7 @@ export const DynastyTreeModal: React.FC<Props> = ({
                   health: spouse?.health ?? 90,
                   isMissing: isSpouseMissing,
                   searchGoal: player.backstory?.searchGoal,
-                  origin: 'legitimate',
+                  isLegitimate: true,
                   skills: spouse ? {
                     combat: spouse.combatSkill || 5,
                     medical: spouse.medicalSkill || 5,
@@ -199,7 +181,7 @@ export const DynastyTreeModal: React.FC<Props> = ({
                   health: dating?.health ?? 90,
                   isMissing: isPartnerMissing,
                   searchGoal: player.backstory?.searchGoal,
-                  origin: 'legitimate'
+                  isLegitimate: true
                 })}
                 className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/40 text-center relative z-10 cursor-pointer active:scale-95 transition-all"
               >
@@ -258,7 +240,10 @@ export const DynastyTreeModal: React.FC<Props> = ({
                           relation: child.age >= 16 ? 'Adult Heir' : child.stage,
                           profession: child.age >= 16 ? 'Dynasty Heir' : 'Colony Child',
                           health: 100,
-                          origin: child.origin || 'legitimate',
+                          isLegitimate: child.isLegitimate !== false,
+                          originDetail: child.originDetail || (child.isLegitimate !== false ? 'marital' : 'out_of_wedlock'),
+                          legitimizedBy: child.legitimizedBy,
+                          legitimizedDay: child.legitimizedDay,
                           motherName: child.motherName,
                           fatherName: child.fatherName,
                           stage: child.stage,
@@ -281,15 +266,10 @@ export const DynastyTreeModal: React.FC<Props> = ({
 
                         {/* Origin Badge */}
                         <div className="flex justify-center">
-                          {getOriginBadge(child.origin)}
+                          {getOriginBadge(child.isLegitimate !== false)}
                         </div>
 
-                        {/* Mother subtitle if affair */}
-                        {child.motherName && child.motherName !== spouseName && (
-                          <span className="text-[8px] font-mono text-zinc-500 block truncate">
-                            Mother: {child.motherName}
-                          </span>
-                        )}
+
                       </div>
                     </div>
                   );
