@@ -8,17 +8,20 @@ import {
 interface Props {
   gameState: GameState;
   onUseItem: (item: InventoryItem) => void;
+  onEquipWeapon?: (item: InventoryItem) => void;
 }
 
 export const InventoryTab: React.FC<Props> = ({ 
   gameState, 
-  onUseItem
+  onUseItem,
+  onEquipWeapon
 }) => {
   const [consumableFilter, setConsumableFilter] = useState<'all' | 'food' | 'water' | 'medical'>('all');
   const [stockpileFilter, setStockpileFilter] = useState<'all' | 'weapon' | 'tool' | 'resource'>('all');
   const [recentAction, setRecentAction] = useState<string | null>(null);
 
-  const { inventory, campMembers } = gameState;
+  const { inventory, campMembers, player } = gameState;
+  const equippedWeapon = player.equippedWeapon || inventory.find(i => i.id === player.equippedWeaponId);
   const totalConsumers = Math.max(1, campMembers.length + 1);
 
   // Compute resource totals
@@ -73,7 +76,7 @@ export const InventoryTab: React.FC<Props> = ({
   });
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none">
+    <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none pb-24">
       {/* Title */}
       <div>
         <h2 className="text-base font-bold text-white tracking-tight">Supplies & Stockpile</h2>

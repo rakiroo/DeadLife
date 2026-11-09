@@ -159,6 +159,8 @@ export interface Survivor {
   pregnantFatherId?: string;
   secretAffairs?: string[];
   will?: WillAndTestament;
+  equippedWeapon?: InventoryItem;
+  equippedWeaponId?: string;
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';

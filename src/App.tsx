@@ -467,6 +467,36 @@ export function App() {
     });
   };
 
+  // Equip or unequip weapon
+  const handleEquipWeapon = (item: InventoryItem) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const isCurrentlyEquipped = prev.player.equippedWeaponId === item.id;
+      const updatedPlayer = {
+        ...prev.player,
+        equippedWeapon: isCurrentlyEquipped ? undefined : item,
+        equippedWeaponId: isCurrentlyEquipped ? undefined : item.id
+      };
+
+      const logText = isCurrentlyEquipped
+        ? 'I unequipped ' + item.name + ' and stowed it back into the backpack.'
+        : '⚔️ Weapon Equipped: Equipped ' + item.name + ' as primary weapon! Ready for perimeter defense and expeditions.';
+
+      return {
+        ...prev,
+        player: updatedPlayer,
+        logs: [...prev.logs, {
+          id: 'equip_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'general' as const,
+          timestamp: 'Gear'
+        }].slice(-150)
+      };
+    });
+  };
+
   // Repair Barricades
   const handleRepairBarricade = () => {
     if (!gameState) return;
@@ -2044,7 +2074,8 @@ export function App() {
       const isSpouse = companion ? companion.id === prev.player.spouseId : false;
 
       let successRate = 0.60 + (prev.player.stealthSkill * 0.04);
-      if (companion) successRate += 0.12; // Base teamwork bonus
+      if (companion) successRate += 0.12;
+      if (prev.player.equippedWeaponId) successRate += 0.10; // Equipped weapon combat bonus // Base teamwork bonus
       if (compRole === 'guard') successRate += 0.15; // Guard covering fire
       if (compRole === 'scavenger') successRate += 0.10; // Scout route reconnaissance
       const isSuccess = Math.random() < Math.max(0.15, Math.min(0.95, successRate));
@@ -2061,7 +2092,8 @@ export function App() {
       if (hasTrait('feeble')) damageReduction = Math.max(0, damageReduction - 6);
       if (hasTrait('knee_injury')) damageReduction = Math.max(0, damageReduction - 5);
 
-      let mitigatedDamage = Math.max(3, baseDamage - damageReduction);
+      if (prev.player.equippedWeaponId) damageReduction += 4; // Weapon parry & strike
+      let mitigatedDamage = Math.max(2, baseDamage - damageReduction);
       if (hasTrait('thick_skinned')) {
         mitigatedDamage = Math.max(2, Math.floor(mitigatedDamage * 0.75));
       }
@@ -2282,6 +2314,7 @@ export function App() {
             <InventoryTab
               gameState={gameState}
               onUseItem={handleUseItem}
+              onEquipWeapon={handleEquipWeapon}
             />
           )}
           {activeTab === 'activities' && (
