@@ -175,6 +175,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const spawnStory = getRandomSpawnStory(career.id);
   const backstory = survivor.backstory || getContextualBackstory(survivor, career);
   survivor.backstory = backstory;
+  survivor.playedCharacters = [survivor.name];
   if (backstory.theme === 'love') {
     if (backstory.relation.includes('Spouse') || backstory.relation.includes('Wife') || backstory.relation.includes('Husband')) {
       survivor.romanceStage = 'married';
@@ -1675,12 +1676,18 @@ export function App() {
       let updatedCamp = [...prev.campMembers];
 
       if (prompt.isPlayerChild) {
+        const isAffair = prev.player.romanceStage === 'married' && prompt.motherName !== prev.player.spouseName;
+        const origin = prompt.origin || (isAffair ? 'affair' as const : prev.player.romanceStage === 'married' ? 'marital' as const : 'out_of_wedlock' as const);
+
         const newChild = {
           id: 'child_player_' + Date.now(),
           name: fullName,
           age: 0,
           gender: prompt.gender,
           stage: 'infant' as const,
+          origin,
+          motherName: prompt.motherName,
+          fatherName: prompt.fatherName,
           skills: {
             combat: Math.floor(prev.player.combatSkill * 0.5) + 2,
             medical: Math.floor(prev.player.medicalSkill * 0.5) + 2,
@@ -1897,7 +1904,8 @@ export function App() {
         isDead: false,
         romanceStage: 'single',
         generation: newGeneration,
-        children: []
+        children: [],
+        playedCharacters: Array.from(new Set([...(prev.player.playedCharacters || []), prev.player.name, candidate.name]))
       };
 
       const newLog: LogEntry = {

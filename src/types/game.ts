@@ -130,6 +130,10 @@ export interface SurvivorChild {
   spouseName?: string;
   isDeceased?: boolean;
   deathCause?: string;
+  origin?: 'marital' | 'out_of_wedlock' | 'affair' | 'adopted';
+  motherName?: string;
+  fatherName?: string;
+  isPlayedLeader?: boolean;
 }
 
 export interface Survivor {
@@ -173,6 +177,7 @@ export interface Survivor {
   will?: WillAndTestament;
   equippedWeapon?: InventoryItem;
   equippedWeaponId?: string;
+  playedCharacters?: string[];
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';
@@ -375,6 +380,7 @@ export interface BabyNamingPrompt {
   suggestedLastName: string;
   isPlayerChild: boolean;
   parentMemberId?: string;
+  origin?: 'marital' | 'out_of_wedlock' | 'affair' | 'adopted';
 }
 
 export type DistrictType = 'harbor' | 'downtown' | 'rural_valley' | 'industrial' | 'university' | 'quarantine_zone';
