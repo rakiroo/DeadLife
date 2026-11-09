@@ -1795,7 +1795,14 @@ export function App() {
         bonusValue: 1,
         description: 'Generational heirloom inscribed by founder ' + prev.player.name + '.',
         passedFrom: prev.player.name,
-        generation: prev.player.generation || 1
+        originalMaker: prev.player.name,
+        originStory: 'Dedicated by founder ' + prev.player.name + ' as a sacred generational relic.',
+        engravedMotto: 'Bloodline unbroken.',
+        generation: prev.player.generation || 1,
+        durability: 100,
+        condition: 'Pristine',
+        forgedDay: prev.day,
+        lineageHistory: ['Gen ' + (prev.player.generation || 1) + ': ' + prev.player.name]
       };
 
       const existing = prev.player.heirlooms ? [...prev.player.heirlooms] : [];
@@ -2264,6 +2271,75 @@ export function App() {
     });
   };
 
+  // Consecrate & Inscribe a custom Family Heirloom
+  const handleInscribeRelic = (heirloom: FamilyHeirloom, consumedItemId?: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedInv = [...prev.inventory];
+      if (consumedItemId) {
+        const item = updatedInv.find(i => i.id === consumedItemId);
+        if (item) {
+          if (item.quantity > 1) {
+            item.quantity -= 1;
+          } else {
+            updatedInv = updatedInv.filter(i => i.id !== consumedItemId);
+          }
+        }
+      }
+
+      const existingHeirlooms = prev.player.heirlooms ? [...prev.player.heirlooms] : [];
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        player: {
+          ...prev.player,
+          heirlooms: [...existingHeirlooms, heirloom],
+          sanity: Math.min(100, prev.player.sanity + 15)
+        },
+        logs: [...prev.logs, {
+          id: 'heirloom_' + Date.now(),
+          day: prev.day,
+          text: '✨ Relic Consecrated: Dedicated "' + heirloom.name + '" (+1 ' + heirloom.bonusSkill.toUpperCase() + '). Motto: "' + (heirloom.engravedMotto || 'Never surrender') + '". It will be passed down through our dynasty.',
+          type: 'milestone' as const,
+          timestamp: 'Dynasty'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Repair / Polish an existing heirloom
+  const handleRepairRelic = (heirloomId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let relicName = 'Relic';
+      const updatedHeirlooms = (prev.player.heirlooms || []).map(h => {
+        if (h.id === heirloomId) {
+          relicName = h.name;
+          return { ...h, durability: 100, condition: 'Pristine' as const };
+        }
+        return h;
+      });
+
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          heirlooms: updatedHeirlooms
+        },
+        logs: [...prev.logs, {
+          id: 'repair_heir_' + Date.now(),
+          day: prev.day,
+          text: '🛠️ Relic Restored: Polished and repaired "' + relicName + '" back to 100% pristine condition.',
+          type: 'general' as const,
+          timestamp: 'Maintenance'
+        }].slice(-150)
+      };
+    });
+  };
+
   // Formalize Founder's Will & Testament
   const handleSaveWill = (will: WillAndTestament) => {
     if (!gameState) return;
@@ -2605,6 +2681,8 @@ export function App() {
               onBestowHeirloom={handleBestowHeirloom}
               onStokeWoodstove={handleStokeWoodstove}
               onSaveWill={handleSaveWill}
+              onInscribeRelic={handleInscribeRelic}
+              onRepairRelic={handleRepairRelic}
               onDeclareSpouseFallen={handleDeclareSpouseFallen}
             />
           )}

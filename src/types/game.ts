@@ -103,12 +103,19 @@ export interface SurvivorBackstory {
 export interface FamilyHeirloom {
   id: string;
   name: string;
-  type: 'weapon' | 'ring' | 'journal' | 'tool' | 'locket';
+  type: 'weapon' | 'ring' | 'journal' | 'tool' | 'locket' | 'watch' | 'medallion';
   bonusSkill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness';
   bonusValue: number;
   description: string;
   passedFrom: string;
+  originalMaker?: string;
+  originStory: string;
+  engravedMotto?: string;
   generation: number;
+  durability: number;
+  condition: 'Pristine' | 'Battle-Worn' | 'Weathered' | 'Antique';
+  forgedDay: number;
+  lineageHistory?: string[];
 }
 
 export interface SurvivorChild {
@@ -120,6 +127,9 @@ export interface SurvivorChild {
   traits?: Trait[];
   skills?: { combat: number; medical: number; crafting: number; stealth: number; fitness: number };
   lastMentoredDay?: number;
+  spouseName?: string;
+  isDeceased?: boolean;
+  deathCause?: string;
 }
 
 export interface Survivor {

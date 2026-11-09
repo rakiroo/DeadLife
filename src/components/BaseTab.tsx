@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { HookupModal } from './HookupModal';
 import { WillAndTestamentModal } from './WillAndTestamentModal';
+import { InscribeRelicModal } from './InscribeRelicModal';
+import { HeirloomDetailModal } from './HeirloomDetailModal';
+import { DynastyTreeModal } from './DynastyTreeModal';
+import { FamilyHeirloom } from '../types/game';
 import { WillAndTestament } from '../types/game';
 import { MatchmakeModal } from './MatchmakeModal';
 
@@ -47,6 +51,8 @@ interface Props {
   onStokeWoodstove?: () => void;
   onSaveWill?: (will: WillAndTestament) => void;
   onDeclareSpouseFallen?: () => void;
+  onInscribeRelic?: (heirloom: FamilyHeirloom, consumedItemId?: string) => void;
+  onRepairRelic?: (heirloomId: string) => void;
 }
 
 export const BaseTab: React.FC<Props> = ({
@@ -84,7 +90,9 @@ export const BaseTab: React.FC<Props> = ({
   onBestowHeirloom,
   onStokeWoodstove,
   onSaveWill,
-  onDeclareSpouseFallen
+  onDeclareSpouseFallen,
+  onInscribeRelic,
+  onRepairRelic
 }) => {
   const { shelter, campMembers, inventory, player } = gameState;
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
@@ -94,6 +102,9 @@ export const BaseTab: React.FC<Props> = ({
   const [hookupModalMember, setHookupModalMember] = useState<CampMember | null>(null);
   const [showMatchmakeModal, setShowMatchmakeModal] = useState(false);
   const [showWillModal, setShowWillModal] = useState(false);
+  const [showInscribeModal, setShowInscribeModal] = useState(false);
+  const [inspectHeirloom, setInspectHeirloom] = useState<FamilyHeirloom | null>(null);
+  const [showTreeModal, setShowTreeModal] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newBaseName, setNewBaseName] = useState(shelter.name || 'Sanctuary Haven');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
@@ -662,9 +673,18 @@ export const BaseTab: React.FC<Props> = ({
                 </span>
                 <h3 className="text-sm font-bold text-white mt-0.5">{player.name} & Family</h3>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowTreeModal(true)}
+                  className="py-1 px-2.5 rounded-full text-[10px] font-bold bg-white/10 hover:bg-white/15 text-zinc-200 border border-white/10 flex items-center gap-1 active:scale-95 transition-all shadow-sm"
+                >
+                  <span>🌳 Dynasty Tree</span>
+                </button>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
                 {isSpouseMissing ? 'Married (Missing)' : isPartnerMissing ? (player.romanceStage === 'engaged' ? 'Engaged (Missing)' : 'Dating (Missing)') : player.romanceStage === 'married' ? 'Married' : player.romanceStage === 'dating' ? 'Dating' : 'Single'}
-              </span>
+                </span>
+              </div>
             </div>
 
             {/* Spouse & Dating status */}
@@ -977,24 +997,13 @@ export const BaseTab: React.FC<Props> = ({
               <div className="space-y-1.5 pt-3 border-t border-white/5">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold flex items-center gap-1">
-                    <Crown className="w-3 h-3 text-amber-400" /> Family Heirlooms & Relics ({player.heirlooms ? player.heirlooms.length : 0})
+                    <Crown className="w-3 h-3 text-amber-400" /> Family Relics & Heirlooms ({player.heirlooms ? player.heirlooms.length : 0}/3)
                   </span>
-                  {onBestowHeirloom && (!player.heirlooms || player.heirlooms.length < 3) && (
+                  {(!player.heirlooms || player.heirlooms.length < 3) && (
                     <button
                       type="button"
-                      onClick={() => {
-                        const heirloomTypes = [
-                          { name: "Founder's Engraved Sidearm", type: 'weapon', skill: 'combat' },
-                          { name: "Ancestral Silver Ring", type: 'ring', skill: 'fitness' },
-                          { name: "Field Surgeon's Pocket Kit", type: 'tool', skill: 'medical' },
-                          { name: "Pioneer's Weathered Compass", type: 'tool', skill: 'stealth' },
-                          { name: "Master Builder's Claw Hammer", type: 'tool', skill: 'crafting' }
-                        ];
-                        const chosen = heirloomTypes[(player.heirlooms ? player.heirlooms.length : 0) % heirloomTypes.length];
-                        onBestowHeirloom(chosen.name, chosen.type as any, chosen.skill as any);
-                        triggerFeedback(`Dedicated family heirloom "${chosen.name}" (+1 ${chosen.skill}).`);
-                      }}
-                      className="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1"
+                      onClick={() => setShowInscribeModal(true)}
+                      className="text-[10px] font-bold text-amber-300 hover:text-amber-200 flex items-center gap-1 py-0.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-all"
                     >
                       + Inscribe Relic
                     </button>
@@ -1003,23 +1012,27 @@ export const BaseTab: React.FC<Props> = ({
 
                 {(!player.heirlooms || player.heirlooms.length === 0) ? (
                   <div className="p-3 text-center text-zinc-500 bg-black/20 rounded-2xl border border-white/5 text-[11px]">
-                    No relics inscribed yet. Inscribe a family weapon, tool, or heirloom to pass down permanent stat bonuses to your heirs!
+                    No relics inscribed yet. Consecrate a weapon or heirloom to record its origin story, durability, and pass down permanent stat blessings!
                   </div>
                 ) : (
                   <div className="space-y-1.5">
                     {player.heirlooms.map(h => (
-                      <div key={h.id} className="p-2.5 bg-black/40 border border-amber-500/20 rounded-2xl flex items-center justify-between text-xs">
+                      <div
+                        key={h.id}
+                        onClick={() => setInspectHeirloom(h)}
+                        className="p-2.5 bg-black/40 hover:bg-black/60 border border-amber-500/20 hover:border-amber-400/50 rounded-2xl flex items-center justify-between text-xs cursor-pointer transition-all active:scale-[0.99] group shadow-sm"
+                      >
                         <div>
-                          <div className="font-bold text-amber-200 flex items-center gap-1.5">
+                          <div className="font-bold text-amber-200 group-hover:text-amber-300 flex items-center gap-1.5">
                             <Crown className="w-3 h-3 text-amber-400" />
                             <span>{h.name}</span>
                           </div>
                           <p className="text-[10px] text-zinc-400 mt-0.5">
-                            Passed down by {h.passedFrom} (Gen {h.generation}) • +{h.bonusValue} {h.bonusSkill.toUpperCase()}
+                            {h.condition || 'Pristine'} • {h.durability ?? 100}% Durability • +{h.bonusValue} {h.bonusSkill.toUpperCase()}
                           </p>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
-                          Dynasty Relic
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0 group-hover:bg-amber-500/25">
+                          Inspect Lore
                         </span>
                       </div>
                     ))}
@@ -1028,9 +1041,7 @@ export const BaseTab: React.FC<Props> = ({
               </div>
             </div>
           </div>
-
-
-          {/* Founder's Dynasty Will & Testament Card */}
+{/* Founder's Dynasty Will & Testament Card */}
           <div className="p-3.5 bg-gradient-to-r from-amber-950/30 via-zinc-900 to-black/60 border border-amber-500/30 rounded-2xl space-y-2">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
@@ -2370,6 +2381,47 @@ export const BaseTab: React.FC<Props> = ({
           onClose={() => setShowWillModal(false)}
         />
       )}
+
+      {/* INSCRIBE RELIC WORKSHOP MODAL */}
+      {showInscribeModal && onInscribeRelic && (
+        <InscribeRelicModal
+          player={player}
+          inventory={inventory}
+          campMembers={campMembers}
+          currentDay={gameState.day}
+          onConfirmInscribe={(heirloom, consumedId) => {
+            onInscribeRelic(heirloom, consumedId);
+            setShowInscribeModal(false);
+            triggerFeedback('Consecrated family relic: "' + heirloom.name + '"!');
+          }}
+          onClose={() => setShowInscribeModal(false)}
+        />
+      )}
+
+      {/* INSPECT HEIRLOOM DETAIL MODAL */}
+      {inspectHeirloom && (
+        <HeirloomDetailModal
+          heirloom={inspectHeirloom}
+          player={player}
+          currentDay={gameState.day}
+          onRepairRelic={(id) => {
+            onRepairRelic && onRepairRelic(id);
+            setInspectHeirloom(prev => prev ? { ...prev, durability: 100, condition: 'Pristine' } : null);
+            triggerFeedback('Polished and restored relic to pristine condition.');
+          }}
+          onClose={() => setInspectHeirloom(null)}
+        />
+      )}
+
+      {/* DYNASTY FAMILY TREE MODAL */}
+      {showTreeModal && (
+        <DynastyTreeModal
+          player={player}
+          campMembers={campMembers}
+          onClose={() => setShowTreeModal(false)}
+        />
+      )}
+
     </div>
   );
 };
