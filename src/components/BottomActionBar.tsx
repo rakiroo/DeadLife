@@ -100,7 +100,7 @@ export const BottomActionBar: React.FC<Props> = ({
                 }`}
               >
                 <Clock className="w-4 h-4" />
-                <span>Survive +1 Day</span>
+                <span>+1 Day</span>
               </button>
             )}
 
@@ -116,7 +116,7 @@ export const BottomActionBar: React.FC<Props> = ({
                 }`}
               >
                 <FastForward className="w-4 h-4" />
-                <span>Survive +1 Week</span>
+                <span>+1 Week</span>
               </button>
             )}
 
@@ -132,7 +132,7 @@ export const BottomActionBar: React.FC<Props> = ({
                 }`}
               >
                 <Calendar className="w-4 h-4" />
-                <span>Advance +1 Month</span>
+                <span>+1 Month</span>
               </button>
             )}
 
@@ -149,7 +149,7 @@ export const BottomActionBar: React.FC<Props> = ({
                 }`}
               >
                 <FastForward className="w-4 h-4" />
-                <span>Survive +1 Week</span>
+                <span>+1 Week</span>
               </button>
             )}
 
@@ -165,7 +165,7 @@ export const BottomActionBar: React.FC<Props> = ({
                 }`}
               >
                 <Calendar className="w-4 h-4" />
-                <span>Advance +1 Month</span>
+                <span>+1 Month</span>
               </button>
             )}
 
@@ -181,7 +181,7 @@ export const BottomActionBar: React.FC<Props> = ({
                 }`}
               >
                 <CalendarDays className="w-4 h-4" />
-                <span>Advance +1 Year</span>
+                <span>+1 Year</span>
               </button>
             )}
           </div>

@@ -106,7 +106,7 @@ export const BabyNamingModal: React.FC<Props> = ({ prompt, onConfirm }) => {
             className="w-full py-3 px-4 rounded-2xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 active:scale-[0.98] transition-all"
           >
             <Check className="w-4 h-4" />
-            <span>Welcome {firstName.trim() || 'Child'} to the Colony (+25 Morale)</span>
+            <span>Confirm Name</span>
           </button>
         </form>
       </div>

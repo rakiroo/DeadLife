@@ -118,7 +118,7 @@ export const MatchmakeModal: React.FC<Props> = ({
               className="w-full py-3 px-4 rounded-2xl font-bold text-xs bg-rose-500 hover:bg-rose-400 disabled:opacity-40 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2 shadow-lg shadow-rose-950/40 active:scale-[0.98] transition-all"
             >
               <Check className="w-4 h-4" />
-              <span>Bless Their Union & Wed (+15 Morale)</span>
+              <span>Arrange Marriage</span>
             </button>
           </form>
         )}

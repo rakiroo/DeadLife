@@ -87,7 +87,7 @@ export const HookupModal: React.FC<Props> = ({
             </div>
             <div>
               <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
-                {protectionLabel}
+                Use Protection
               </div>
               <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug">
                 {protectionSubtext} Safe pleasure (+Sanity & Trust).
@@ -106,7 +106,7 @@ export const HookupModal: React.FC<Props> = ({
             </div>
             <div>
               <div className="text-xs font-bold text-rose-200 group-hover:text-white transition-colors">
-                Take the Risk (No Protection)
+                No Protection
               </div>
               <p className="text-[10px] text-rose-300/80 mt-0.5 leading-snug">
                 Passionate and uninhibited. 35% chance of pregnancy and conceiving a child!
@@ -120,7 +120,7 @@ export const HookupModal: React.FC<Props> = ({
           onClick={onClose}
           className="w-full py-2 text-xs text-zinc-400 hover:text-white transition-colors"
         >
-          Never mind, step away
+          Cancel
         </button>
       </div>
     </div>

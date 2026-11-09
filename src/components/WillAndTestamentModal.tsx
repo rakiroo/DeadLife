@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Survivor, CampMember, CampRoom, WillAndTestament, FamilyHeirloom } from '../types/game';
-import { Scroll, Crown, Shield, Swords, Hammer, Compass, X, Check, Heart, Sparkles, BookOpen } from 'lucide-react';
+import { Survivor, CampMember, CampRoom, WillAndTestament } from '../types/game';
+import { Scroll, Crown, Shield, Swords, Hammer, Compass, X, Check } from 'lucide-react';
 
 interface Props {
   player: Survivor;
@@ -14,12 +14,10 @@ interface Props {
 export const WillAndTestamentModal: React.FC<Props> = ({
   player,
   campMembers,
-  rooms,
   currentDay,
   onSaveWill,
   onClose
 }) => {
-  // Potential heirs list: children, spouse, and companions
   const childrenHeirs = (player.children || []).map(c => ({
     id: c.id,
     name: c.name,
@@ -42,7 +40,6 @@ export const WillAndTestamentModal: React.FC<Props> = ({
   }));
 
   const allPossibleHeirs = [...childrenHeirs, ...spouseHeir, ...companionHeirs];
-
   const existingWill = player.will;
 
   const [selectedHeirId, setSelectedHeirId] = useState<string>(
@@ -53,16 +50,8 @@ export const WillAndTestamentModal: React.FC<Props> = ({
     existingWill?.founderCreed || 'protect'
   );
 
-  const [selectedHeirloomId, setSelectedHeirloomId] = useState<string>(
-    existingWill?.bequeathedHeirloomId || (player.heirlooms && player.heirlooms[0]?.id) || ''
-  );
-
-  const [selectedRoomId, setSelectedRoomId] = useState<string>(
-    existingWill?.inheritedRoomId || player.roomId || (rooms[0]?.id || '')
-  );
-
   const [message, setMessage] = useState<string>(
-    existingWill?.personalMessage || "Keep the lanterns burning and never let our haven fall. Our legacy will survive the ruins."
+    existingWill?.personalMessage || "Keep our lanterns burning and our walls strong. Live for tomorrow."
   );
 
   const CREEDS: { id: 'endure' | 'protect' | 'build' | 'adapt'; title: string; perk: string; icon: React.ReactNode }[] = [
@@ -94,16 +83,12 @@ export const WillAndTestamentModal: React.FC<Props> = ({
 
   const chosenHeir = allPossibleHeirs.find(h => h.id === selectedHeirId);
   const chosenCreedObj = CREEDS.find(c => c.id === selectedCreed);
-  const chosenHeirloom = (player.heirlooms || []).find(h => h.id === selectedHeirloomId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const will: WillAndTestament = {
       designatedHeirId: selectedHeirId,
       designatedHeirName: chosenHeir ? chosenHeir.name : 'Unknown Heir',
-      bequeathedHeirloomId: selectedHeirloomId || undefined,
-      bequeathedHeirloomName: chosenHeirloom ? chosenHeirloom.name : undefined,
-      inheritedRoomId: selectedRoomId || undefined,
       founderCreed: selectedCreed,
       creedTitle: chosenCreedObj?.title || 'Dynasty Creed',
       creedPerkDescription: chosenCreedObj?.perk || '',
@@ -117,7 +102,6 @@ export const WillAndTestamentModal: React.FC<Props> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in font-sans select-none">
       <div className="bg-zinc-900 border border-amber-500/30 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
@@ -125,9 +109,9 @@ export const WillAndTestamentModal: React.FC<Props> = ({
             </div>
             <div>
               <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold block">
-                Colony Founder's Will
+                Colony Succession
               </span>
-              <h2 className="text-base font-bold text-white tracking-tight">Last Will & Testament</h2>
+              <h2 className="text-base font-bold text-white tracking-tight">Will & Testament</h2>
             </div>
           </div>
           <button
@@ -139,24 +123,30 @@ export const WillAndTestamentModal: React.FC<Props> = ({
           </button>
         </div>
 
-        <p className="text-xs text-zinc-300 leading-relaxed bg-black/40 p-2.5 rounded-2xl border border-white/5">
-          In a world where any day may be your last, formalize your succession wishes. Designate your primary heir, pass down family relics, and bestow a dynasty creed that permanently empowers your successor.
-        </p>
+        {/* Full Asset Inheritance Explanation */}
+        <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 space-y-1">
+          <div className="flex items-center gap-1.5 font-bold text-amber-300">
+            <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Full Asset & Role Inheritance</span>
+          </div>
+          <p className="text-[10px] text-amber-200/80 leading-snug">
+            Your designated successor automatically inherits the Colony Leader title, all family heirlooms, founder's quarters, and the dynasty creed perk upon your passing.
+          </p>
+        </div>
 
         {allPossibleHeirs.length === 0 ? (
           <div className="p-4 text-center text-zinc-500 bg-white/[0.02] rounded-2xl border border-white/5 text-xs space-y-1">
-            <Crown className="w-6 h-6 text-zinc-600 mx-auto" />
-            <p className="font-semibold text-zinc-400">No Potential Heirs in Colony Yet</p>
+            <p className="font-semibold text-zinc-400">No Potential Heirs Yet</p>
             <p className="text-[10px] text-zinc-500">
-              Marry, raise children, or welcome trusted companions into your haven to designate a successor.
+              Marry, raise children, or welcome companions to designate a successor.
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3.5 pt-1 text-xs">
-            {/* 1. Primary Successor Picker */}
+          <form onSubmit={handleSubmit} className="space-y-3 pt-1 text-xs">
+            {/* 1. Pick Successor */}
             <div className="space-y-1">
               <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
-                1. Designate Primary Successor
+                Designated Successor
               </label>
               <select
                 value={selectedHeirId}
@@ -171,10 +161,10 @@ export const WillAndTestamentModal: React.FC<Props> = ({
               </select>
             </div>
 
-            {/* 2. Founder Creed Picker */}
+            {/* 2. Pick Creed */}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
-                2. Dynasty Creed & Heirloom Perk
+                Dynasty Creed & Perk
               </label>
               <div className="space-y-1.5">
                 {CREEDS.map(c => {
@@ -184,11 +174,11 @@ export const WillAndTestamentModal: React.FC<Props> = ({
                       key={c.id}
                       type="button"
                       onClick={() => setSelectedCreed(c.id)}
-                      className={`w-full p-2.5 rounded-xl text-left border transition-all flex items-start gap-2.5 ${
+                      className={'w-full p-2.5 rounded-xl text-left border transition-all flex items-start gap-2.5 ' + (
                         isSelected
                           ? 'bg-amber-500/15 border-amber-500/50 text-white shadow-sm'
                           : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/5'
-                      }`}
+                      )}
                     >
                       <div className="p-1.5 rounded-lg bg-black/40 shrink-0 mt-0.5">
                         {c.icon}
@@ -208,51 +198,10 @@ export const WillAndTestamentModal: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 3. Bequeath Heirloom */}
-            {player.heirlooms && player.heirlooms.length > 0 && (
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
-                  3. Bequeath Family Relic to Heir
-                </label>
-                <select
-                  value={selectedHeirloomId}
-                  onChange={(e) => setSelectedHeirloomId(e.target.value)}
-                  className="w-full bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
-                >
-                  <option value="">None / Keep in Family Cache</option>
-                  {player.heirlooms.map(h => (
-                    <option key={h.id} value={h.id}>
-                      {h.name} (+{h.bonusValue} {h.bonusSkill.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* 4. Inherited Quarters */}
-            {rooms.length > 0 && (
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
-                  4. Inherited Quarters (Estate Cabin)
-                </label>
-                <select
-                  value={selectedRoomId}
-                  onChange={(e) => setSelectedRoomId(e.target.value)}
-                  className="w-full bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
-                >
-                  {rooms.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} (Comfort {r.comfort}%)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* 5. Personal Message / Words of Wisdom */}
+            {/* 3. Parting Words */}
             <div className="space-y-1">
               <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
-                5. Founder's Words of Wisdom to Successor
+                Final Words & Motto
               </label>
               <textarea
                 value={message}
@@ -268,7 +217,7 @@ export const WillAndTestamentModal: React.FC<Props> = ({
               className="w-full py-3 px-4 rounded-2xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 active:scale-[0.98] transition-all"
             >
               <Check className="w-4 h-4" />
-              <span>Seal Founder's Will & Testament</span>
+              <span>Seal Will</span>
             </button>
           </form>
         )}

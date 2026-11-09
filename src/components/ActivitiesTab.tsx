@@ -156,7 +156,7 @@ export const ActivitiesTab: React.FC<Props> = ({
                 onChange={(e) => setSelectedCompanionId(e.target.value)}
                 className="w-full bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-emerald-400"
               >
-                <option value="">👤 Solo Expedition (Go Alone)</option>
+                <option value="">👤 Solo (Go Alone)</option>
                 {companions.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.relation} • {c.role.toUpperCase()} • HP {c.health}%)
@@ -224,7 +224,7 @@ export const ActivitiesTab: React.FC<Props> = ({
                 onClick={() => onLaunchExpedition(loc.id, selectedCompanionId || undefined)}
                 className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-white hover:bg-zinc-100 text-zinc-950 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-sm"
               >
-                <span>Depart on Expedition</span>
+                <span>Explore</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
