@@ -309,6 +309,7 @@ export interface InventoryItem {
 export interface LogEntry {
   id: string;
   day: number;
+  dayLabel?: string; // Optional custom range label, e.g. "2 – 8"
   text: string;
   type: 'general' | 'combat' | 'medical' | 'camp' | 'loot' | 'hazard' | 'death' | 'milestone';
   timestamp: string;

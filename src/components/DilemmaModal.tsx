@@ -93,11 +93,7 @@ export const DilemmaModal: React.FC<Props> = ({ dilemma, gameState, onSelectChoi
                       {choice.text}
                     </span>
 
-                    {choice.consequenceSummary && (
-                      <p className="text-[11px] text-zinc-400 leading-tight">
-                        {choice.consequenceSummary}
-                      </p>
-                    )}
+
 
                     {choice.requiredSkill && (
                       <span className="inline-block text-[9px] font-mono font-medium px-1.5 py-0.2 rounded-full bg-white/10 text-zinc-300 border border-white/10 capitalize mt-0.5">

@@ -711,43 +711,279 @@ export function advanceOneDay(state: GameState): GameState {
 export function advanceOneWeek(state: GameState): GameState {
   if (state.player.isDead) return state;
 
-  let currentState = { ...state };
-  const weekStartDay = currentState.day + 1;
-  const weekEndDay = currentState.day + 7;
+  const weekStartDay = state.day + 1;
+  const weekEndDay = state.day + 7;
+  const dayLabel = `${weekStartDay} – ${weekEndDay}`;
+  const newLogs: LogEntry[] = [];
 
-  const weeklyNarrative: string[] = [];
+  let player = { ...state.player };
+  let inventory = state.inventory.map(i => ({ ...i }));
+  let campMembers = state.campMembers.map(m => ({ ...m }));
+  let shelter = { ...state.shelter };
+  let { storedRainwater, barricadeIntegrity } = shelter;
+  let { daysWithoutFood, daysWithoutWater } = state;
+  let isDead = false;
+  let deathCause = player.deathCause;
 
-  // Run day by day simulation for 7 days
-  for (let d = 0; d < 7; d++) {
-    currentState = advanceOneDay({
-      ...currentState,
-      activeDilemma: null // Don't block daily loop until after week summary
-    });
+  // 1. Weather update for the week
+  const newWeather = Math.random() < 0.45 
+    ? WEATHERS[Math.floor(Math.random() * WEATHERS.length)] 
+    : state.weather;
+  let temp = state.temperatureCelsius;
+  if (newWeather === 'freezing_cold') temp = Math.max(-10, temp - 8);
+  else if (newWeather === 'heavy_rain') temp = Math.max(8, temp - 3);
+  else temp = 18;
 
-    if (currentState.player.isDead) {
-      break;
+  // 2. Resource balance for 7 days
+  const totalConsumers = Math.max(1, campMembers.length + 1);
+  const totalFoodNeeded = totalConsumers * 7;
+  const totalWaterNeeded = totalConsumers * 7;
+
+  // Production over 7 days
+  const greenhouseLevel = shelter.greenhouseLevel || 0;
+  const gardenYield = Math.floor(greenhouseLevel * 3);
+  const scoutsCount = campMembers.filter(m => m.role === 'scavenger').length;
+  const scoutFoodYield = scoutsCount * 3;
+  const scoutWaterYield = scoutsCount * 3;
+  const scoutMatsYield = scoutsCount * 1;
+
+  let totalFoodGen = gardenYield + scoutFoodYield;
+  let totalWaterGen = scoutWaterYield;
+
+  if (shelter.isEstablished && (newWeather === 'heavy_rain' || newWeather === 'thunderstorm')) {
+    const collected = Math.min(shelter.maxRainwater - storedRainwater, (shelter.waterCollectorLevel || 1) * 6);
+    storedRainwater += collected;
+    totalWaterGen += collected;
+  }
+
+  const existingFood = inventory.filter(i => i.category === 'food').reduce((sum, i) => sum + i.quantity, 0);
+  const existingWater = inventory.filter(i => i.category === 'water').reduce((sum, i) => sum + i.quantity, 0);
+
+  let foodDeduct = Math.min(existingFood, totalFoodNeeded);
+  for (const item of inventory) {
+    if (item.category === 'food' && foodDeduct > 0) {
+      const take = Math.min(item.quantity, foodDeduct);
+      item.quantity -= take;
+      foodDeduct -= take;
     }
   }
 
-  // Add high level weekly recap
-  if (!currentState.player.isDead) {
-    weeklyNarrative.push("Seven days slipped by in fortified isolation. Hands calloused from routine chores and barricade checks, I watched the empty horizon.");
-
-    // Pick 1 major event for the conclusion of the week
-    currentState.activeDilemma = getRandomSurvivalEvent(currentState);
+  let waterDeduct = Math.min(existingWater, totalWaterNeeded);
+  for (const item of inventory) {
+    if (item.category === 'water' && waterDeduct > 0) {
+      const take = Math.min(item.quantity, waterDeduct);
+      item.quantity -= take;
+      waterDeduct -= take;
+    }
   }
 
-  const recapLog: LogEntry = {
-    id: `log_week_${Date.now()}`,
-    day: currentState.day,
-    text: weeklyNarrative[0] || `Week ended with tragic loss on Day ${currentState.day}.`,
-    type: 'milestone',
-    timestamp: 'Week End'
-  };
+  if (gardenYield > 0) {
+    inventory.push({
+      id: 'harvest_veg_' + Date.now(),
+      name: 'Greenhouse Harvest Rations',
+      category: 'food',
+      quantity: gardenYield,
+      description: 'Weekly yield of fresh greenhouse vegetables.'
+    });
+  }
+
+  if (scoutMatsYield > 0) {
+    inventory.push({
+      id: 'scout_wood_' + Date.now(),
+      name: 'Salvaged Timber Studs',
+      category: 'resource',
+      quantity: scoutMatsYield,
+      description: 'Wood gathered by scouts during the week.'
+    });
+  }
+
+  inventory = inventory.filter(i => i.quantity > 0);
+
+  const starvationOccurred = existingFood + totalFoodGen < totalFoodNeeded;
+  const thirstOccurred = existingWater + totalWaterGen < totalWaterNeeded;
+
+  if (starvationOccurred) {
+    daysWithoutFood += 3;
+    const starvationDmg = daysWithoutFood * 8;
+    player.health = Math.max(0, player.health - starvationDmg);
+    player.sanity = Math.max(0, player.sanity - 10);
+    shelter.morale = Math.max(10, (shelter.morale ?? 75) - 15);
+    if (player.health <= 0 && !isDead) {
+      isDead = true;
+      deathCause = 'starved to death during the week';
+    }
+  } else {
+    daysWithoutFood = 0;
+    player.health = Math.min(100, player.health + 8);
+  }
+
+  if (thirstOccurred) {
+    daysWithoutWater += 2;
+    const dehydrationDmg = daysWithoutWater * 12;
+    player.health = Math.max(0, player.health - dehydrationDmg);
+    player.sanity = Math.max(0, player.sanity - 15);
+    if (player.health <= 0 && !isDead) {
+      isDead = true;
+      deathCause = 'succumbed to severe dehydration during the week';
+    }
+  } else {
+    daysWithoutWater = 0;
+    player.thirst = Math.min(100, player.thirst + 10);
+  }
+
+  // 3. Viral Infection Progression (7 Days)
+  let infectionRisk = player.infectionRisk || 0;
+  let infectionDays = (player.infectionDays || 0);
+
+  if (infectionRisk > 0 && !isDead) {
+    infectionDays += 7;
+    let weeklyRate = 18;
+    const strain = state.mutationStrain;
+
+    if (strain) {
+      if (strain.id === 'crimson_rabies') weeklyRate += 15;
+      else if (strain.id === 'toxic_spore_bloom' && (newWeather === 'dense_fog' || newWeather === 'heavy_rain')) weeklyRate += 10;
+      else if (strain.id === 'glacial_stasis' && newWeather === 'freezing_cold') weeklyRate += 10;
+      else if (strain.id === 'solar_frenzy' && newWeather === 'clear') weeklyRate += 8;
+      else if (strain.id === 'necrotic_carapace') weeklyRate -= 4;
+    }
+
+    if (player.biteTreated) weeklyRate = Math.max(5, weeklyRate - 8);
+    const traitIds = player.traits ? player.traits.map(t => t.id) : [];
+    if (traitIds.includes('thick_skinned') || traitIds.includes('stoic') || traitIds.includes('antibody_carrier')) {
+      weeklyRate = Math.max(4, weeklyRate - 5);
+    }
+    if (player.medicalSkill >= 7) weeklyRate = Math.max(4, weeklyRate - 4);
+    if (campMembers.some(m => m.role === 'medic')) weeklyRate = Math.max(4, weeklyRate - 4);
+
+    infectionRisk = Math.min(100, infectionRisk + weeklyRate);
+
+    if (infectionRisk >= 100) {
+      isDead = true;
+      deathCause = 'succumbed to ' + (strain?.name || 'viral') + ' infection during the week and turned';
+    } else if (infectionRisk >= 70) {
+      player.health = Math.max(5, player.health - 18);
+      player.sanity = Math.max(5, player.sanity - 18);
+    } else if (infectionRisk >= 40) {
+      player.health = Math.max(10, player.health - 10);
+      player.sanity = Math.max(10, player.sanity - 10);
+    }
+  }
+
+  // 4. Autonomous pregnancy progress (every 30 days)
+  if (player.isPregnant && weekEndDay % 30 < 7) {
+    player.pregnancyMonths = (player.pregnancyMonths || 0) + 1;
+  }
+
+  // 5. First-Person Authentic Journal Entries (NOT bullet points!)
+  const weatherDesc = newWeather.replace('_', ' ');
+  const districtName = state.district ? state.district.name : 'the city ruins';
+
+  // Entry 1: Weekly Survival & Atmosphere
+  newLogs.push({
+    id: 'week_narrative_' + Date.now(),
+    day: weekEndDay,
+    dayLabel,
+    text: 'Seven days passed inside our sanctuary. We kept our watch disciplined while ' + weatherDesc + ' skies settled across ' + districtName + '. Routine maintenance and daily guard shifts kept our dread at bay.',
+    type: 'general',
+    timestamp: '7-Day Chronicle'
+  });
+
+  // Entry 2: Food & Supplies
+  if (starvationOccurred || thirstOccurred) {
+    newLogs.push({
+      id: 'week_famine_' + Date.now(),
+      day: weekEndDay,
+      dayLabel,
+      text: '⚠️ We ran short of food rations mid-week. Tight rationing and empty stomachs sapped my physical strength and tested our endurance (-' + ((daysWithoutFood * 8) || 12) + '% HP).',
+      type: 'hazard',
+      timestamp: '7-Day Chronicle'
+    });
+  } else {
+    newLogs.push({
+      id: 'week_supplies_' + Date.now(),
+      day: weekEndDay,
+      dayLabel,
+      text: 'Our stores held up well over the seven days. Between rooftop greenhouse beds and scout runs, we hauled in +' + totalFoodGen + ' food rations and +' + totalWaterGen + 'L of water, keeping everyone nourished.',
+      type: 'loot',
+      timestamp: '7-Day Chronicle'
+    });
+  }
+
+  // Entry 3: Personal Health & Infection Status
+  if (isDead) {
+    newLogs.push({
+      id: 'week_death_' + Date.now(),
+      day: weekEndDay,
+      dayLabel,
+      text: '💀 TERMINAL COLLAPSE: My body gave out under the weight of ' + deathCause + '. The journey ends on Day ' + weekEndDay + '.',
+      type: 'death',
+      timestamp: '7-Day Chronicle'
+    });
+  } else if (infectionRisk > 0) {
+    newLogs.push({
+      id: 'week_inf_' + Date.now(),
+      day: weekEndDay,
+      dayLabel,
+      text: '☣️ The viral pathogen simmered in my bloodstream over the week. Spiking fevers and dark vein discoloration brought my viral load to ' + infectionRisk + '%. I am fighting to keep my mind clear.',
+      type: 'medical',
+      timestamp: '7-Day Chronicle'
+    });
+  } else {
+    newLogs.push({
+      id: 'week_health_' + Date.now(),
+      day: weekEndDay,
+      dayLabel,
+      text: 'I checked my skin and temperature every evening after sundown. No viral markers, bites, or fevers—feeling sharp, healthy, and alert.',
+      type: 'general',
+      timestamp: '7-Day Chronicle'
+    });
+  }
+
+  // End of week dilemma roll
+  let activeDilemma = null;
+  if (!isDead) {
+    activeDilemma = getRandomSurvivalEvent({
+      ...state,
+      day: weekEndDay,
+      player,
+      inventory,
+      campMembers,
+      shelter
+    });
+  }
 
   return {
-    ...currentState,
-    logs: [...currentState.logs, recapLog].slice(-150)
+    ...state,
+    day: weekEndDay,
+    weather: newWeather,
+    temperatureCelsius: temp,
+    daysWithoutFood,
+    daysWithoutWater,
+    inventory,
+    campMembers,
+    shelter: {
+      ...shelter,
+      storedRainwater,
+      barricadeIntegrity,
+      morale: Math.max(10, Math.min(100, (shelter.morale ?? 75) + (starvationOccurred ? -10 : 3)))
+    },
+    player: {
+      ...player,
+      health: Math.max(0, player.health),
+      sanity: Math.max(0, Math.min(100, player.sanity)),
+      thirst: Math.max(0, Math.min(100, player.thirst)),
+      infectionRisk,
+      infectionDays,
+      isDead,
+      deathCause
+    },
+    activeDilemma,
+    stats: {
+      ...state.stats,
+      daysSurvived: isDead ? state.stats.daysSurvived : weekEndDay
+    },
+    logs: [...state.logs, ...newLogs].slice(-150)
   };
 }
 
@@ -756,7 +992,9 @@ export function advanceOneMonth(state: GameState): GameState {
   if (state.player.isDead) return state;
 
   let currentState = { ...state };
+  const monthStartDay = currentState.day + 1;
   const currentDay = currentState.day + 30;
+  const dayLabel = `${monthStartDay} – ${currentDay}`;
   const newLogs: LogEntry[] = [];
   let inventory = currentState.inventory.map(i => ({ ...i }));
   let campMembers = currentState.campMembers.map(m => ({ ...m }));
@@ -1141,10 +1379,13 @@ export function advanceOneMonth(state: GameState): GameState {
   const monthlyRecap: LogEntry = {
     id: 'month_recap_' + Date.now(),
     day: currentDay,
-    text: '📅 30 Days Advanced (Day ' + currentDay + '): Another month concluded. Food harvest: +' + totalFoodGenerated + ' rations, Water: +' + totalWaterGenerated + 'L. Settlement population: ' + (campMembers.length + 1) + ' survivors.',
+    dayLabel,
+    text: 'A full month of survival has drawn to a close. Over the thirty days, our greenhouse and scouts harvested +' + totalFoodGenerated + ' rations and +' + totalWaterGenerated + 'L of water, keeping our ' + (campMembers.length + 1) + ' survivors alive.',
     type: 'milestone',
     timestamp: 'Month End'
   };
+
+  const labeledLogs = newLogs.map(l => ({ ...l, dayLabel }));
 
   return {
     ...currentState,
@@ -1154,7 +1395,7 @@ export function advanceOneMonth(state: GameState): GameState {
     shelter,
     player,
     pendingBabyNaming,
-    logs: [...currentState.logs, ...newLogs, monthlyRecap].slice(-150)
+    logs: [...currentState.logs, ...labeledLogs, monthlyRecap].slice(-150)
   };
 }
 
@@ -1162,7 +1403,9 @@ export function advanceOneYear(state: GameState): GameState {
   if (state.player.isDead) return state;
 
   let currentState = { ...state };
+  const yearStartDay = currentState.day + 1;
   const currentDay = currentState.day + 365;
+  const dayLabel = `${yearStartDay} – ${currentDay}`;
   const newLogs: LogEntry[] = [];
   let player = { ...currentState.player };
   let shelter = { ...currentState.shelter };

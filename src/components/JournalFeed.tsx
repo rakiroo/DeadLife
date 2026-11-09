@@ -14,13 +14,15 @@ export const JournalFeed: React.FC<Props> = ({ logs, onOpenAmbitions }) => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs.length]);
 
-  // Group log entries by day (BitLife style)
+  // Group log entries by day or day range (e.g. Day 2 – 8)
   const groupedLogs = useMemo(() => {
-    const groups: { day: number; entries: LogEntry[] }[] = [];
+    const groups: { dayKey: string; dayLabel: string; entries: LogEntry[] }[] = [];
     logs.forEach((log) => {
-      let g = groups.find((item) => item.day === log.day);
+      const dayKey = log.dayLabel ? `range_${log.dayLabel}` : `day_${log.day}`;
+      const dayLabel = log.dayLabel || `${log.day}`;
+      let g = groups.find((item) => item.dayKey === dayKey);
       if (!g) {
-        g = { day: log.day, entries: [] };
+        g = { dayKey, dayLabel, entries: [] };
         groups.push(g);
       }
       g.entries.push(log);
@@ -30,14 +32,14 @@ export const JournalFeed: React.FC<Props> = ({ logs, onOpenAmbitions }) => {
 
   if (logs.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 text-center text-zinc-500 text-sm italic font-sans max-w-md mx-auto w-full">
+      <div className="flex-1 flex items-center justify-center p-8 text-center text-zinc-500 text-xs italic font-sans max-w-md mx-auto w-full">
         No survival events recorded yet.
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 max-w-md mx-auto w-full font-sans select-text">
+    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 max-w-md mx-auto w-full font-sans select-text">
       {/* Top Feed Header with Optional Ambitions Button */}
       <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
         <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
@@ -54,15 +56,16 @@ export const JournalFeed: React.FC<Props> = ({ logs, onOpenAmbitions }) => {
           </button>
         )}
       </div>
+
       {groupedLogs.map((group) => (
-        <div key={group.day} className="space-y-1.5">
-          {/* Day Header - BitLife Age style in bold blue */}
-          <h3 className="text-base font-bold text-sky-400 font-sans tracking-tight">
-            Day: {group.day}
+        <div key={group.dayKey} className="space-y-1">
+          {/* Day Header - Sleek, compact monospace */}
+          <h3 className="text-xs font-bold text-sky-400 font-mono tracking-tight uppercase">
+            Day: {group.dayLabel}
           </h3>
 
-          {/* Clean, compact event lines without bulky card containers */}
-          <div className="space-y-1 text-sm text-zinc-300 leading-relaxed font-sans">
+          {/* Clean, compact event lines with lowered/smaller text size */}
+          <div className="space-y-1 text-xs text-zinc-300 leading-normal font-sans">
             {group.entries.map((entry) => {
               const isDanger = entry.type === 'hazard' || entry.type === 'combat' || entry.type === 'death';
               const isMedical = entry.type === 'medical';

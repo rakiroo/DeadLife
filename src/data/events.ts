@@ -657,23 +657,59 @@ export function generateProceduralSurvivorDilemma(
   if (contextType === 'loot_spot') {
     eventTitle = 'Survivor in the Shadows: ' + fullName + ' (' + archetype.profession + ')';
     eventDesc = 'While searching ' + (spotName || 'the ruins') + ' inside ' + loc + ', your flashlight catches a lone survivor crouching in the dark. They freeze, lowering a makeshift blade: "Hold on... I am not here to fight. Just searching for food and clean water." It is ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook;
-    welcomeText = 'Lower weapon, share water, and invite ' + fullName + ' to team up';
+    welcomeText = 'Welcome Inside';
   } else if (contextType === 'outpost') {
     eventTitle = 'St. Michael Church: ' + fullName + ' (' + archetype.profession + ')';
     eventDesc = 'You step through the reinforced oak doors of St. Michael Church. A group of survivors have built barricades around the altar. Sitting by the fellowship fire is ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' They wave you over: "Sit down, friend. If you are looking for capable survivors to watch each other\'s backs, we should team up."';
-    welcomeText = 'Discuss defense plans and invite ' + fullName + ' to team up';
+    welcomeText = 'Welcome Inside';
   } else if (isInBase) {
-    eventTitle = 'Knocking at the Gate: ' + fullName + ' (' + archetype.profession + ')';
-    eventDesc = 'Loud, rhythmic knocks echo from the perimeter entrance of ' + loc + '. Looking through the observation slit, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Clutching their rucksack with watchful, exhausted eyes, they call out: "Hello? I saw lantern light. I have supplies and honest trade skills to offer—just looking for safe walls and good survivors."';
-    welcomeText = 'Unbolt the gate, welcome ' + fullName + ' inside, and integrate them into camp';
+    const baseStories = [
+      {
+        title: 'Fleeing a Horde: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'Fierce, desperate pounding rattles the iron perimeter gate of ' + loc + '! Peering through the observation slit, you see ' + fullName + ' (Age ' + age + ', ' + archetype.profession + ') frantically bracing their back against the door, holding a bent steel pipe. Screams and guttural snarls echo two avenues down: "Open up! Please! A pack broke through the avenue checkpoint and they are right behind me!"'
+      },
+      {
+        title: 'Wounded Traveler: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'A hesitant, rhythmic tapping strikes the gate of ' + loc + '. Outside sits ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '), holding a clean cloth to a shallow shrapnel scrape on their shoulder. They hold up an ammo pouch: "Peace to the living. I was ambushed two blocks back. Looking for safe shelter to wash my scrape—I can pay my way with ammunition and watch duty."'
+      },
+      {
+        title: 'Stranded Mechanic: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'A heavy metal wrench raps firmly against the gate of ' + loc + '. Standing outside is ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '), setting down a heavy canvas toolkit. "My salvage wagon threw an axle on the boulevard. I have heavy tools, structural hardware, and trade skills to fortify this base if you have a spare bunk."'
+      },
+      {
+        title: 'Seed-Saver & Forager: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'Quiet, deliberate knocks sound at the heavy door of ' + loc + '. ' + fullName + ' (Age ' + age + ', ' + archetype.profession + ') calls through the observation slit in a measured, calm voice: "Hello inside. I carry heirloom tomato seeds, dried medicinal roots, and clean provisions. Looking for good people to trade with and join."'
+      },
+      {
+        title: 'Former Resident: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'Urgent knocks echo at the entrance of ' + loc + '. ' + fullName + ' (Age ' + age + ', ' + archetype.profession + ') stares up at the windows with recognition: "Is anyone alive in there? I used to live two avenues over before the military evacuated. I know every maintenance tunnel and basement cellar in this sector. Let me team up with you."'
+      },
+      {
+        title: 'Radio Signal Tracker: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'Three short raps, three long, three short—a disciplined signal taps against the gate of ' + loc + '. Outside stands ' + fullName + ' (Age ' + age + ', ' + archetype.profession + ') holding a crackling portable transceiver: "I tracked antenna static in this sector. Trekked four miles across the ruins hoping someone had established a sanctuary here."'
+      },
+      {
+        title: 'Storm Refugee: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'Weak, shivering knocks strike the reinforced entrance of ' + loc + '. Shivering violently in soaked clothes from the bitter wind, ' + fullName + ' (Age ' + age + ', ' + archetype.profession + ') huddles under the doorway: "I need shelter before hypothermia takes me. I am clean, uninfected, and ready to work any shift you need."'
+      },
+      {
+        title: 'Cautious Wanderer: ' + fullName + ' (' + archetype.profession + ')',
+        desc: 'A steady, measured knock sounds at the gate of ' + loc + '. ' + fullName + ' (Age ' + age + ', ' + archetype.profession + ') stands back with hands visible and empty: "Saw smoke from your chimney pipe. I have provisions in my pack and good eyes for scouting. Looking for honest survivors to build with."'
+      }
+    ];
+
+    const chosenStory = baseStories[Math.floor(Math.random() * baseStories.length)];
+    eventTitle = chosenStory.title;
+    eventDesc = chosenStory.desc + ' They ' + bioHook;
+    welcomeText = 'Welcome Inside';
   } else if (isInWorkplace) {
     eventTitle = 'Surprise Visitor at ' + state.startingLocation.name + ': ' + fullName;
     eventDesc = 'Hurried knocks rattle the security entrance of ' + state.startingLocation.name + '. Through the blinds, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Sheltering from the chaotic streets outside, they call out: "Please! Is someone in there? I am uninfected, and I have trade skills and gear—can we team up to survive?"';
-    welcomeText = 'Open the door, welcome ' + fullName + ' inside, and agree to team up';
+    welcomeText = 'Welcome Inside';
   } else {
     eventTitle = 'Encounter in the Ruins: ' + fullName + ' (' + archetype.profession + ')';
     eventDesc = 'While moving through the fog along the avenue, you cross paths with another lone survivor: ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Lowering their makeshift weapon with cautious eyes, they call out: "Easy! I am not infected. Just looking for an honest survivor to travel with and watch each other\'s backs."';
-    welcomeText = 'Lower your weapon and invite ' + fullName + ' to travel and survive together';
+    welcomeText = 'Welcome Inside';
   }
 
   return {
@@ -733,7 +769,7 @@ export function generateProceduralSurvivorDilemma(
       },
       {
         id: 'quarantine_' + uniqueEventId,
-        text: 'Cautious Safety Check: Inspect carefully for hidden bites before teaming up',
+        text: 'Check for Bites',
         consequenceSummary: 'Safe protocol: verifies bite-free status. ' + fullName + ' joins with high trust (+Trust: 85).',
         execute: (s: GameState) => {
           const newMember: CampMember = {
@@ -775,7 +811,7 @@ export function generateProceduralSurvivorDilemma(
       },
       {
         id: 'rations_' + uniqueEventId,
-        text: 'Offer food and water from your pack, but decline to team up',
+        text: 'Share Rations & Turn Away',
         consequenceSummary: 'Merciful parting: Shares supplies without adding an extra mouth to feed (-1 Food, -1 Water, +5 Sanity).',
         execute: (s: GameState) => {
           let inv = [...s.inventory];
@@ -799,7 +835,7 @@ export function generateProceduralSurvivorDilemma(
       },
       {
         id: 'deny_' + uniqueEventId,
-        text: 'Keep your weapon raised and order ' + fullName + ' to move along',
+        text: 'Turn Away',
         consequenceSummary: 'Preserves total security with zero resource expenditure.',
         execute: (s: GameState) => {
           return {
