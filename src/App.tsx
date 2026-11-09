@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, CampMember, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom, BabyNamingPrompt, WillAndTestament } from './types/game';
 import { BabyNamingModal } from './components/BabyNamingModal';
+import { generateProceduralDistrict } from './data/districts';
+import { getRandomMutationStrain } from './data/mutationStrains';
+import { generateProceduralMystery } from './data/mysteries';
+import { loadCodexData, saveCodexData, calculateRunLegacyMarks } from './data/codex';
+import { CodexScreen } from './components/CodexScreen';
+import { InvestigationBoardModal } from './components/InvestigationBoardModal';
+import { CodexSaveData } from './types/game';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
 import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear } from './utils/simulation';
 import { LegacySuccessionModal } from './components/LegacySuccessionModal';
@@ -24,7 +31,7 @@ import { SandboxAmbition } from './data/ambitions';
 import { getContextualBackstory } from './data/backstories';
 import { getNextBackstoryDilemma } from './data/backstoryQuests';
 
-type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings';
+type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings' | 'codex';
 
 const SAVE_KEY = 'deadlife_save';
 const GRAVEYARD_KEY = 'deadlife_graveyard';
@@ -162,6 +169,26 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
     timestamp: 'Morning'
   };
 
+  const district = generateProceduralDistrict();
+  const mutationStrain = getRandomMutationStrain();
+  const mystery = generateProceduralMystery();
+
+  const districtLog: LogEntry = {
+    id: 'log_district_' + Date.now(),
+    day: 0,
+    text: '📍 Starting District: ' + district.name + ' (' + district.type.toUpperCase() + '). ' + district.description + ' Environment: ' + district.environmentalFeature,
+    type: 'general',
+    timestamp: 'Morning'
+  };
+
+  const strainLog: LogEntry = {
+    id: 'log_strain_' + Date.now(),
+    day: 0,
+    text: '☣️ Outbreak Strain: ' + mutationStrain.name + ' (' + mutationStrain.codeName + '). ' + mutationStrain.tagline + ' Active Rule: ' + mutationStrain.ruleSummary,
+    type: 'milestone',
+    timestamp: 'Morning'
+  };
+
   return {
     day: 0,
     timeOfDay: 'Morning',
@@ -201,7 +228,10 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
       fuelGallons: 0
     },
     inventory: [],
-    logs: [initialLog, backstoryLog],
+    logs: [initialLog, backstoryLog, districtLog, strainLog],
+    district,
+    mutationStrain,
+    mystery,
     activeDilemma: dayZeroDilemma,
     dilemmaResult: null,
     daysWithoutFood: 0,
@@ -222,6 +252,8 @@ export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('journal');
   const [graveyard, setGraveyard] = useState<CemeteryRecord[]>([]);
   const [showAmbitionsModal, setShowAmbitionsModal] = useState<boolean>(false);
+  const [codexData, setCodexData] = useState<CodexSaveData>(loadCodexData());
+  const [showInvestigationBoard, setShowInvestigationBoard] = useState<boolean>(false);
   const [pendingTimeWarning, setPendingTimeWarning] = useState<{ type: 'month' | 'year'; foodNeeded: number; waterNeeded: number; currentFood: number; currentWater: number } | null>(null);
 
   // Load graveyard records on mount
@@ -1872,6 +1904,50 @@ export function App() {
     });
   };
 
+  // Outbreak Origin Mystery Solving & Vault Breach
+  const handleSolveMystery = () => {
+    if (!gameState || !gameState.mystery) return;
+    const mystery = gameState.mystery;
+
+    setGameState(prev => {
+      if (!prev || !prev.mystery) return null;
+      let updatedInv = [...prev.inventory];
+      for (const item of mystery.rewardItems) {
+        const ex = updatedInv.find(i => i.id === item.id);
+        if (ex) ex.quantity += item.quantity;
+        else updatedInv.push({ ...item });
+      }
+
+      const updatedMystery = {
+        ...prev.mystery,
+        isSolved: true
+      };
+
+      const updatedCodex: CodexSaveData = {
+        ...codexData,
+        legacyMarks: codexData.legacyMarks + 60,
+        completedMysteryIds: Array.from(new Set([...(codexData.completedMysteryIds || []), mystery.id]))
+      };
+      saveCodexData(updatedCodex);
+      setCodexData(updatedCodex);
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        mystery: updatedMystery,
+        player: { ...prev.player, sanity: Math.min(100, prev.player.sanity + 30) },
+        logs: [...prev.logs, {
+          id: 'mystery_solved_' + Date.now(),
+          day: prev.day,
+          text: '🏛️ VAULT BREACHED: Classified coordinates decrypted! We breached ' + mystery.rewardBunkerName + ' and secured military armaments, surgical rigs, and emergency rations (+60 Legacy Marks, +30 Sanity)!',
+          type: 'milestone' as const,
+          timestamp: 'Breakthrough'
+        }].slice(-150)
+      };
+    });
+    setShowInvestigationBoard(false);
+  };
+
   // Quick Voluntary Activities
   const handleQuickActivity = (activityId: string) => {
     if (!gameState) return;
@@ -2220,6 +2296,16 @@ export function App() {
     );
   }
 
+  if (screen === 'codex') {
+    return (
+      <CodexScreen
+        codexData={codexData}
+        onUpdateCodex={setCodexData}
+        onBack={() => setScreen('title')}
+      />
+    );
+  }
+
   if (screen === 'creator') {
     return (
       <CharacterCreator
@@ -2324,6 +2410,7 @@ export function App() {
               onRepairBarricade={handleRepairBarricade}
               onQuickActivity={handleQuickActivity}
               onOpenAmbitions={() => setShowAmbitionsModal(true)}
+              onOpenInvestigation={() => setShowInvestigationBoard(true)}
             />
           )}
         </main>
@@ -2339,6 +2426,17 @@ export function App() {
           disabled={gameState.player.isDead || !!gameState.activeDilemma || !!gameState.dilemmaResult}
           gameState={gameState}
         />
+
+        
+        {/* Outbreak Origin Investigation Board Modal */}
+        {showInvestigationBoard && gameState.mystery && (
+          <InvestigationBoardModal
+            mystery={gameState.mystery}
+            gameState={gameState}
+            onSolveMystery={handleSolveMystery}
+            onClose={() => setShowInvestigationBoard(false)}
+          />
+        )}
 
         {/* Active Dilemma Modal */}
         {gameState.activeDilemma && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, Play, BookOpen, RotateCcw } from 'lucide-react';
+import { Skull, Play, BookOpen, RotateCcw, Award } from 'lucide-react';
 
 interface Props {
   hasSaveGame: boolean;
@@ -7,6 +7,8 @@ interface Props {
   onLoadGame: () => void;
   onOpenGraveyard: () => void;
   graveyardCount: number;
+  onOpenCodex?: () => void;
+  legacyMarks?: number;
   onOpenSettings?: () => void;
 }
 
@@ -15,7 +17,9 @@ export const TitleScreen: React.FC<Props> = ({
   onStartNew,
   onLoadGame,
   onOpenGraveyard,
-  graveyardCount
+  graveyardCount,
+  onOpenCodex,
+  legacyMarks = 0
 }) => {
   return (
     <div className="h-[100dvh] max-h-[100dvh] bg-zinc-950 text-zinc-100 flex flex-col justify-between px-4 py-3 sm:p-6 select-none relative overflow-y-auto max-w-md mx-auto w-full font-sans pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -72,6 +76,18 @@ export const TitleScreen: React.FC<Props> = ({
             <RotateCcw className="w-4 h-4" />
             <span>{hasSaveGame ? 'Continue Survival' : 'No Saved Game'}</span>
           </button>
+
+          {/* Survivor's Codex */}
+          {onOpenCodex && (
+            <button
+              type="button"
+              onClick={onOpenCodex}
+              className="w-full py-2.5 sm:py-3 px-5 rounded-2xl font-medium text-xs tracking-wide bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-sm"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span>Survivor's Codex ({legacyMarks} Marks)</span>
+            </button>
+          )}
 
           {/* Graveyard */}
           <button

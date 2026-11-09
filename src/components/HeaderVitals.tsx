@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Heart, Droplets, Utensils, CloudRain, Sun, CloudFog, Snowflake, 
   Settings, Shield, HeartPulse, Hammer, EyeOff, Activity, Sparkles
@@ -22,8 +22,9 @@ const getSeasonInfo = (day: number) => {
 };
 
 export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact = false }) => {
-  const { player, weather, temperatureCelsius, day } = state;
+  const { player, weather, temperatureCelsius, day, district, mutationStrain } = state;
   const seasonInfo = getSeasonInfo(day);
+  const [showStrainIntel, setShowStrainIntel] = useState(false);
 
   const getWeatherIcon = (w: WeatherType) => {
     switch (w) {
@@ -92,6 +93,23 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact =
                 <h1 className="text-base font-bold text-white tracking-tight truncate">
                   {player.name}
                 </h1>
+                                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                  {district && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-zinc-300 bg-white/5 border border-white/10">
+                      📍 {district.name}
+                    </span>
+                  )}
+                  {mutationStrain && (
+                    <button
+                      type="button"
+                      onClick={() => setShowStrainIntel(!showStrainIntel)}
+                      className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500/25 transition-all flex items-center gap-1 active:scale-95"
+                      title="View active mutation strain tactical rules"
+                    >
+                      <span>☣️ {mutationStrain.name}</span>
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-0.5 font-sans">
                   <span className="font-medium text-zinc-300 truncate">{player.profession}</span>
                   <span className="text-zinc-600">•</span>
@@ -236,6 +254,30 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact =
               </div>
             </div>
           </>
+        )}
+
+        {/* Active Strain Tactical Intel Popup */}
+        {showStrainIntel && mutationStrain && (
+          <div className="p-2.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs space-y-1 animate-fade-in font-sans">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-rose-300 flex items-center gap-1">
+                <span>☣️ {mutationStrain.name} ({mutationStrain.codeName})</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowStrainIntel(false)}
+                className="text-[10px] text-zinc-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-300 leading-snug">
+              <strong className="text-white">Active Rule:</strong> {mutationStrain.ruleSummary}
+            </p>
+            <p className="text-[10px] text-amber-300/90 leading-snug">
+              <strong>Tactical Tip:</strong> {mutationStrain.tacticalTip}
+            </p>
+          </div>
         )}
       </div>
     </header>

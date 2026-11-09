@@ -354,6 +354,97 @@ export interface BabyNamingPrompt {
   parentMemberId?: string;
 }
 
+export type DistrictType = 'harbor' | 'downtown' | 'rural_valley' | 'industrial' | 'university' | 'quarantine_zone';
+
+export interface LandmarkLocation {
+  id: string;
+  title: string;
+  distance: string;
+  danger: 'Low Risk' | 'Moderate Risk' | 'High Danger' | 'Extreme Danger';
+  dangerColor: string;
+  lootDescription: string;
+  category: 'medical' | 'food' | 'weapons' | 'materials' | 'research';
+  iconName: string;
+  hasInvestigatedClue?: boolean;
+}
+
+export interface CityDistrict {
+  id: string;
+  name: string;
+  type: DistrictType;
+  description: string;
+  environmentalFeature: string;
+  landmarks: LandmarkLocation[];
+}
+
+export type StrainId = 
+  | 'acoustic_stalkers' 
+  | 'toxic_spore_bloom' 
+  | 'solar_frenzy' 
+  | 'neuro_hive' 
+  | 'crimson_rabies' 
+  | 'glacial_stasis' 
+  | 'necrotic_carapace'
+  | 'classic_walkers';
+
+export interface MutationStrain {
+  id: StrainId;
+  name: string;
+  codeName: string;
+  tagline: string;
+  description: string;
+  icon: string;
+  color: string;
+  ruleSummary: string;
+  tacticalTip: string;
+  stealthMultiplier?: number;
+  gunshotHazardRisk?: number;
+  duskInfectionRisk?: number;
+  daySpeedMultiplier?: number;
+}
+
+export interface MysteryClue {
+  id: string;
+  mysteryId: string;
+  stage: 1 | 2 | 3 | 4;
+  title: string;
+  source: string;
+  snippet: string;
+  discoveredDay?: number;
+  locationName?: string;
+}
+
+export interface OutbreakMystery {
+  id: string;
+  title: string;
+  codeName: string;
+  premise: string;
+  conspiracySummary: string;
+  rewardBunkerName: string;
+  rewardItems: InventoryItem[];
+  allClues: MysteryClue[];
+  discoveredClueIds: string[];
+  isSolved: boolean;
+}
+
+export interface CodexUnlockItem {
+  id: string;
+  type: 'career' | 'trait' | 'modifier';
+  name: string;
+  description: string;
+  cost: number;
+  icon: string;
+}
+
+export interface CodexSaveData {
+  legacyMarks: number;
+  totalRunsPlayed: number;
+  totalDaysSurvived: number;
+  totalZombiesKilled: number;
+  unlockedIds: string[];
+  completedMysteryIds: string[];
+}
+
 export interface GameState {
   day: number; // Starts at 0
   timeOfDay: 'Morning' | 'Noon' | 'Dusk' | 'Night';
@@ -387,4 +478,7 @@ export interface GameState {
     candidates: { id: string; name: string; relation: string; profession: string; age: number; isOffspring: boolean; skills: { combat: number; medical: number; crafting: number; stealth: number; fitness: number } }[];
   } | null;
   pendingBabyNaming?: BabyNamingPrompt | null;
+  district?: CityDistrict;
+  mutationStrain?: MutationStrain;
+  mystery?: OutbreakMystery;
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GameState } from '../types/game';
 import { 
+  FileText,
   Cross, ShoppingBag, ShieldAlert, Wrench, Users, ArrowUpRight, 
   ArrowLeft, Compass, Eye, Shield, Hammer, Activity, Sparkles, 
   Radio, Target, ChevronRight, Check, AlertCircle, Flame
@@ -12,6 +13,7 @@ interface Props {
   onRepairBarricade: () => void;
   onQuickActivity: (activityId: string) => void;
   onOpenAmbitions: () => void;
+  onOpenInvestigation?: () => void;
 }
 
 export const ActivitiesTab: React.FC<Props> = ({
@@ -19,7 +21,8 @@ export const ActivitiesTab: React.FC<Props> = ({
   onLaunchExpedition,
   onRepairBarricade,
   onQuickActivity,
-  onOpenAmbitions
+  onOpenAmbitions,
+  onOpenInvestigation
 }) => {
   const [view, setView] = useState<'main' | 'landmarks' | 'crafting'>('main');
   const [selectedCompanionId, setSelectedCompanionId] = useState<string>('');
@@ -41,6 +44,8 @@ export const ActivitiesTab: React.FC<Props> = ({
   const canCraftMolotov = Boolean(matchesItem) && Boolean(fuelBottle);
 
   const woodForRepair = inventory.some(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity > 0);
+
+
 
   const LOCATIONS = [
     {
@@ -89,6 +94,22 @@ export const ActivitiesTab: React.FC<Props> = ({
       icon: <Users className="w-5 h-5 text-cyan-400" />
     }
   ];
+
+  const districtLandmarks = gameState.district?.landmarks && gameState.district.landmarks.length > 0
+    ? gameState.district.landmarks.map(dl => ({
+        id: dl.id,
+        title: dl.title,
+        distance: dl.distance,
+        danger: dl.danger,
+        dangerColor: dl.dangerColor,
+        loot: dl.lootDescription,
+        icon: dl.category === 'medical' ? <Cross className="w-5 h-5 text-rose-400" />
+            : dl.category === 'food' ? <ShoppingBag className="w-5 h-5 text-amber-400" />
+            : dl.category === 'weapons' ? <ShieldAlert className="w-5 h-5 text-rose-500" />
+            : dl.category === 'materials' ? <Hammer className="w-5 h-5 text-amber-300" />
+            : <Compass className="w-5 h-5 text-indigo-400" />
+      }))
+    : LOCATIONS;
 
   // SUBVIEW 1: LANDMARK EXPEDITIONS
   if (view === 'landmarks') {
@@ -194,7 +215,7 @@ export const ActivitiesTab: React.FC<Props> = ({
         })()}
 
         <div className="space-y-2.5">
-          {LOCATIONS.map((loc) => (
+          {districtLandmarks.map((loc) => (
             <div
               key={loc.id}
               className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5 shadow-sm"
@@ -380,6 +401,31 @@ export const ActivitiesTab: React.FC<Props> = ({
           Exploration & Looting
         </span>
         <div className="bg-white/[0.04] border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+          {/* Investigation Board Lead Button */}
+          {onOpenInvestigation && gameState.mystery && (
+            <button
+              type="button"
+              onClick={onOpenInvestigation}
+              className="w-full p-3 text-left flex items-center justify-between hover:bg-white/[0.04] active:bg-white/[0.08] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>Investigation Board</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300">
+                      {gameState.mystery.discoveredClueIds ? gameState.mystery.discoveredClueIds.length : 0}/4 Leads
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 truncate">{gameState.mystery.title}</div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-500" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setView('landmarks')}
