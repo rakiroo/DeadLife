@@ -28,7 +28,7 @@ import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
 import { AmbitionsModal } from './components/AmbitionsModal';
 import { SettingsScreen } from './components/SettingsScreen';
-import { SandboxAmbition } from './data/ambitions';
+import { SandboxAmbition, SANDBOX_AMBITIONS } from './data/ambitions';
 import { getContextualBackstory } from './data/backstories';
 import { getNextBackstoryDilemma } from './data/backstoryQuests';
 
@@ -88,6 +88,15 @@ export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, d
       : ''
     : '';
 
+  const ambitionStories = (state.completedAmbitionIds || []).map(id => {
+    const amb = SANDBOX_AMBITIONS.find(a => a.id === id);
+    return amb ? amb.biographySnippet : '';
+  }).filter(Boolean);
+
+  const ambitionStory = ambitionStories.length > 0
+    ? 'Along their journey, they carved monumental achievements into the wasteland: ' + ambitionStories.join(' ') + ' '
+    : '';
+
   const finalStory = 'In the end, they ' + deathCause + '. Generation ' + (player.generation || 1) + ' rests here. Their memory is eternal in the Memorial Hall of the Fallen.';
 
   const fullBio = (
@@ -100,6 +109,7 @@ export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, d
     familyStory +
     willStory +
     mysteryStory +
+    ambitionStory +
     finalStory
   );
 
@@ -127,7 +137,8 @@ export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, d
     mysteryTitle: mystery?.title,
     mysterySolved: mystery?.isSolved,
     equippedWeaponName: player.equippedWeapon?.name,
-    founderCreedTitle: player.will?.creedTitle
+    founderCreedTitle: player.will?.creedTitle,
+    completedAmbitionTitles: (state.completedAmbitionIds || []).map(id => SANDBOX_AMBITIONS.find(a => a.id === id)?.title || id)
   };
 }
 
@@ -1927,34 +1938,43 @@ export function App() {
     setScreen('title');
   };
 
-  const handleTriggerEvac = (ambition: SandboxAmbition) => {
+  const handleClaimMilestone = (ambition: SandboxAmbition) => {
     if (!gameState) return;
-    setShowAmbitionsModal(false);
+    const alreadyClaimed = (gameState.completedAmbitionIds || []).includes(ambition.id);
+    if (alreadyClaimed) return;
 
-    const newLog: LogEntry = {
-      id: 'evac_' + Date.now(),
-      day: gameState.day,
-      text: ambition.evacStory,
-      type: 'milestone',
-      timestamp: 'Evac'
-    };
+    setGameState(prev => {
+      if (!prev) return null;
+      const updatedIds = [...(prev.completedAmbitionIds || []), ambition.id];
 
-    const victoryRecord = buildCemeteryRecord(gameState, ambition.rewardRibbon, 'Escaped the quarantine: ' + ambition.title);
-    const updatedGrave = [victoryRecord, ...graveyard].slice(0, 50);
-    setGraveyard(updatedGrave);
-    localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updatedGrave));
+      // Award Legacy Marks to Codex
+      const updatedCodex: CodexSaveData = {
+        ...codexData,
+        legacyMarks: codexData.legacyMarks + ambition.milestoneBonus.marks
+      };
+      saveCodexData(updatedCodex);
+      setCodexData(updatedCodex);
 
-    setGameState({
-      ...gameState,
-      logs: [...gameState.logs, newLog].slice(-150),
-      dilemmaResult: {
-        title: ambition.title + ' — Evacuation Success',
-        text: ambition.evacStory,
-        isFatal: false
-      }
+      const logText = '🏆 MILESTONE ACHIEVED: ' + ambition.title + '! ' + ambition.biographySnippet + ' The colony celebrates our endurance (+' + ambition.milestoneBonus.morale + '% Morale, +' + ambition.milestoneBonus.sanity + ' Sanity, +' + ambition.milestoneBonus.marks + ' Legacy Marks)!';
+
+      return {
+        ...prev,
+        completedAmbitionIds: updatedIds,
+        player: { ...prev.player, sanity: Math.min(100, prev.player.sanity + ambition.milestoneBonus.sanity) },
+        shelter: {
+          ...prev.shelter,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + ambition.milestoneBonus.morale)
+        },
+        logs: [...prev.logs, {
+          id: 'milestone_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'milestone' as const,
+          timestamp: 'Achievement'
+        }].slice(-150)
+      };
     });
   };
-
   const handleExileSurvivor = (memberId: string) => {
     if (!gameState) return;
     setGameState(prev => {
@@ -2645,7 +2665,7 @@ export function App() {
           <AmbitionsModal
             gameState={gameState}
             onClose={() => setShowAmbitionsModal(false)}
-            onTriggerEvac={handleTriggerEvac}
+            onClaimMilestone={handleClaimMilestone}
           />
         )}
 

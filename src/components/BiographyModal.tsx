@@ -109,6 +109,12 @@ export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
                 📜 {record.founderCreedTitle}
               </span>
             )}
+
+            {record.completedAmbitionTitles && record.completedAmbitionTitles.map((title, i) => (
+              <span key={'amb_' + i} className="px-2 py-0.5 rounded-full text-[9px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                🏆 {title}
+              </span>
+            ))}
           </div>
         )}
 

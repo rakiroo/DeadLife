@@ -354,6 +354,7 @@ export interface CemeteryRecord {
   founderCreedTitle?: string;
   ribbonDesc?: string;
   secondaryRibbons?: { title: string; desc: string; icon: string }[];
+  completedAmbitionTitles?: string[];
 }
 
 export interface BabyNamingPrompt {
@@ -493,4 +494,5 @@ export interface GameState {
   district?: CityDistrict;
   mutationStrain?: MutationStrain;
   mystery?: OutbreakMystery;
+  completedAmbitionIds?: string[];
 }
