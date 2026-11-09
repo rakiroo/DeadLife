@@ -87,73 +87,69 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact =
 
         {!compact && (
           <>
-            {/* Character Identity: Name, Profession & Age */}
-            <div className="flex items-center justify-between pt-0.5">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-base font-bold text-white tracking-tight truncate">
-                  {player.name}
-                </h1>
-                                <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                  {district && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-zinc-300 bg-white/5 border border-white/10">
-                      📍 {district.name}
+            {/* Character Identity & Status Badges */}
+            <div className="space-y-1 pt-0.5">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                  <h1 className="text-base font-bold text-white tracking-tight truncate">
+                    {player.name}
+                  </h1>
+                  <span className="text-xs text-zinc-400 truncate">
+                    {player.profession} • Age {player.age}
+                  </span>
+                </div>
+
+                {/* Status Effects & Infection Risk */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {player.infectionRisk > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider animate-pulse">
+                      ☣️ Virus {player.infectionRisk}%
                     </span>
                   )}
-                  {mutationStrain && (
-                    <button
-                      type="button"
-                      onClick={() => setShowStrainIntel(!showStrainIntel)}
-                      className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500/25 transition-all flex items-center gap-1 active:scale-95"
-                      title="View active mutation strain tactical rules"
+                  {player.statusEffects.map((eff, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider animate-pulse"
+                      title={eff.description}
                     >
-                      <span>☣️ {mutationStrain.name}</span>
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-0.5 font-sans">
-                  <span className="font-medium text-zinc-300 truncate">{player.profession}</span>
-                  <span className="text-zinc-600">•</span>
-                  <span className="shrink-0">Age {player.age}</span>
+                      {eff.name}
+                    </span>
+                  ))}
                 </div>
               </div>
 
-              {/* Status Effects & Virus Alert Badges */}
-              <div className="flex gap-1 overflow-x-auto py-0.5 shrink-0 ml-2">
-                {player.infectionRisk > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider animate-pulse">
-                    ☣️ Virus {player.infectionRisk}%
+              {/* District, Strain & Traits - Compact Unified Row */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {district && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-zinc-300 bg-white/5 border border-white/10 shrink-0">
+                    📍 {district.name}
                   </span>
                 )}
-                {player.statusEffects.map((eff, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider animate-pulse"
-                    title={eff.description}
+                {mutationStrain && (
+                  <button
+                    type="button"
+                    onClick={() => setShowStrainIntel(!showStrainIntel)}
+                    className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500/25 transition-all flex items-center gap-1 active:scale-95 shrink-0"
+                    title="View mutation strain rules"
                   >
-                    {eff.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Active Character Traits Badges in Navbar */}
-            {player.traits.length > 0 && (
-              <div className="flex gap-1 overflow-x-auto py-0.5 no-scrollbar">
+                    <span>☣️ {mutationStrain.name}</span>
+                  </button>
+                )}
                 {player.traits.map(t => (
                   <span
                     key={t.id}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${
+                    className={'px-2 py-0.5 rounded-full text-[9px] font-semibold border shrink-0 ' + (
                       t.type === 'positive'
                         ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                         : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                    }`}
+                    )}
                     title={t.description}
                   >
                     {t.name}
                   </span>
                 ))}
               </div>
-            )}
+            </div>
 
             {/* Vitals Grid (Health, Sanity/Mind, Hydration, Food) */}
             <div className="grid grid-cols-4 gap-2 text-xs">
