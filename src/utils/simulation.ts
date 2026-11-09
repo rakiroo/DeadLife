@@ -1,4 +1,12 @@
-import { GameState, LogEntry, WeatherType, StatusEffect, CampMember, Survivor } from '../types/game';
+import { GameState, LogEntry, WeatherType, StatusEffect, CampMember, Survivor, Season } from '../types/game';
+
+export function getSeason(day: number): Season {
+  const dayOfYear = day % 365;
+  if (dayOfYear < 90) return 'spring';
+  if (dayOfYear < 180) return 'summer';
+  if (dayOfYear < 270) return 'autumn';
+  return 'winter';
+}
 import { getRandomSurvivalEvent } from '../data/events';
 import { generateDailyHappenings } from '../data/dailyHappenings';
 import { getRandomMicroDilemma } from '../data/microDilemmas';
@@ -40,6 +48,14 @@ export function createSuccessionPromptIfEligible(
   }));
 
   const candidates = [...childrenCandidates, ...companionCandidates];
+  if (player.will?.designatedHeirId) {
+    const willHeirId = player.will.designatedHeirId;
+    const willCandidate = candidates.find(c => c.id === willHeirId);
+    if (willCandidate) {
+      willCandidate.relation = 'Designated Heir in Will (' + (player.will.creedTitle || 'Dynasty Creed') + ')';
+      candidates.sort((a, b) => a.id === willHeirId ? -1 : b.id === willHeirId ? 1 : 0);
+    }
+  }
   if (candidates.length > 0) {
     return {
       cause,

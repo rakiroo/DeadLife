@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, CampMember, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom, BabyNamingPrompt } from './types/game';
+import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, CampMember, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom, BabyNamingPrompt, WillAndTestament } from './types/game';
 import { BabyNamingModal } from './components/BabyNamingModal';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
 import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear } from './utils/simulation';
@@ -165,6 +165,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   return {
     day: 0,
     timeOfDay: 'Morning',
+    season: 'spring',
     weather: 'clear',
     temperatureCelsius: 18,
     player: survivor,
@@ -1668,6 +1669,18 @@ export function App() {
 
       const updatedMembers = [...prev.campMembers.filter(m => m.id !== candidate.id), ...survivingSiblings];
 
+      if (prev.player.will?.founderCreed) {
+        const creed = prev.player.will.founderCreed;
+        if (creed === 'endure') {
+          candidate.skills.combat = Math.min(10, candidate.skills.combat + 2);
+          candidate.skills.fitness = Math.min(10, candidate.skills.fitness + 2);
+        } else if (creed === 'build') {
+          candidate.skills.crafting = Math.min(10, candidate.skills.crafting + 2);
+        } else if (creed === 'adapt') {
+          candidate.skills.stealth = Math.min(10, candidate.skills.stealth + 2);
+        }
+      }
+
       const successorSurvivor: Survivor = {
         name: candidate.name,
         age: candidate.age,
@@ -1939,8 +1952,56 @@ export function App() {
     setActiveTab('journal');
   };
 
+  // Stoke woodstove for heating
+  const handleStokeWoodstove = () => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const wood = prev.inventory.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity > 0);
+      let updatedInv = prev.inventory;
+      if (wood) {
+        updatedInv = updatedInv.map(i => i === wood ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
+      }
+      return {
+        ...prev,
+        inventory: updatedInv,
+        shelter: {
+          ...prev.shelter,
+          heatingDaysRemaining: (prev.shelter.heatingDaysRemaining || 0) + 7,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 5)
+        },
+        logs: [...prev.logs, {
+          id: 'stove_' + Date.now(),
+          day: prev.day,
+          text: '🔥 Stoked Woodstove: Loaded cured timber into the central stove (+7 Days Haven Heat, +Warmth & Morale).',
+          type: 'camp' as const,
+          timestamp: 'Sanctuary'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Formalize Founder's Will & Testament
+  const handleSaveWill = (will: WillAndTestament) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        player: { ...prev.player, will },
+        logs: [...prev.logs, {
+          id: 'will_' + Date.now(),
+          day: prev.day,
+          text: '📜 Dynasty Will & Testament Sealed: Overseer ' + prev.player.name + ' named ' + will.designatedHeirName + ' as designated successor under the creed of "' + will.creedTitle + '".',
+          type: 'milestone' as const,
+          timestamp: 'Dynasty'
+        }].slice(-150)
+      };
+    });
+  };
+
   // Launch Scavenge Expedition
-  const handleLaunchExpedition = (locationId: string) => {
+  const handleLaunchExpedition = (locationId: string, companionId?: string) => {
     if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
@@ -1972,18 +2033,18 @@ export function App() {
       const traits = prev.player.traits ? prev.player.traits.map(t => t.id) : [];
       const hasTrait = (id: string) => traits.includes(id);
 
+      const companion = companionId 
+        ? (prev.campMembers.find(m => m.id === companionId) || (prev.player.children || []).find(c => c.id === companionId))
+        : null;
+
+      const compRole = companion ? ((companion as any).role || 'scavenger') : null;
+      const isOffspring = companion ? (prev.player.children || []).some(c => c.id === companionId) : false;
+      const isSpouse = companion ? companion.id === prev.player.spouseId : false;
+
       let successRate = 0.60 + (prev.player.stealthSkill * 0.04);
-      if (profession.includes('ranger') || profession.includes('locksmith') || profession.includes('security')) {
-        successRate += 0.12;
-      }
-
-      // Trait stealth & detection modifiers
-      if (hasTrait('light_footed')) successRate += 0.12; // 50% less footstep noise
-      if (hasTrait('eagle_eyed')) successRate += 0.08;   // Spots lurkers far away
-      if (hasTrait('tinnitus')) successRate -= 0.10;     // Ear ringing penalty
-      if (hasTrait('nearsighted')) successRate -= 0.08;  // Poor distance eyesight
-      if (hasTrait('feeble')) successRate -= 0.05;       // Slower movement
-
+      if (companion) successRate += 0.12; // Base teamwork bonus
+      if (compRole === 'guard') successRate += 0.15; // Guard covering fire
+      if (compRole === 'scavenger') successRate += 0.10; // Scout route reconnaissance
       const isSuccess = Math.random() < Math.max(0.15, Math.min(0.95, successRate));
       let newItems: InventoryItem[] = [];
       let logText = '';
@@ -2001,6 +2062,12 @@ export function App() {
       let mitigatedDamage = Math.max(3, baseDamage - damageReduction);
       if (hasTrait('thick_skinned')) {
         mitigatedDamage = Math.max(2, Math.floor(mitigatedDamage * 0.75));
+      }
+      if (compRole === 'medic') {
+        mitigatedDamage = Math.max(1, Math.floor(mitigatedDamage * 0.5)); // Medic field dressing reduces damage
+      }
+      if (compRole === 'guard') {
+        mitigatedDamage = Math.max(1, mitigatedDamage - 6); // Guard absorbs impact
       }
 
       if (locationId === 'pharmacy') {
@@ -2205,6 +2272,8 @@ export function App() {
               onMentorChild={handleMentorChild}
               onToddlerInteract={handleToddlerInteract}
               onBestowHeirloom={handleBestowHeirloom}
+              onStokeWoodstove={handleStokeWoodstove}
+              onSaveWill={handleSaveWill}
             />
           )}
           {activeTab === 'inventory' && (

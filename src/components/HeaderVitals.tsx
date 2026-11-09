@@ -12,8 +12,18 @@ interface Props {
   compact?: boolean;
 }
 
+
+const getSeasonInfo = (day: number) => {
+  const dayOfYear = day % 365;
+  if (dayOfYear < 90) return { name: 'Spring', badge: '🌸 Spring', color: 'text-pink-400 bg-pink-500/10 border-pink-500/20' };
+  if (dayOfYear < 180) return { name: 'Summer', badge: '☀️ Summer', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+  if (dayOfYear < 270) return { name: 'Autumn', badge: '🍂 Autumn', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' };
+  return { name: 'Winter', badge: '❄️ Winter', color: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20' };
+};
+
 export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact = false }) => {
-  const { player, weather, temperatureCelsius } = state;
+  const { player, weather, temperatureCelsius, day } = state;
+  const seasonInfo = getSeasonInfo(day);
 
   const getWeatherIcon = (w: WeatherType) => {
     switch (w) {
@@ -49,6 +59,9 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact =
           <div className="flex items-center gap-1.5">
             <span className="font-black text-sm tracking-widest uppercase font-mono text-rose-500">
               DEADLIFE
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${seasonInfo.color} font-mono`}>
+              {seasonInfo.badge}
             </span>
           </div>
 

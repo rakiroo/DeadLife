@@ -8,7 +8,7 @@ import {
 
 interface Props {
   gameState: GameState;
-  onLaunchExpedition: (locationId: string) => void;
+  onLaunchExpedition: (locationId: string, companionId?: string) => void;
   onRepairBarricade: () => void;
   onQuickActivity: (activityId: string) => void;
   onOpenAmbitions: () => void;
@@ -22,6 +22,7 @@ export const ActivitiesTab: React.FC<Props> = ({
   onOpenAmbitions
 }) => {
   const [view, setView] = useState<'main' | 'landmarks' | 'crafting'>('main');
+  const [selectedCompanionId, setSelectedCompanionId] = useState<string>('');
 
   const { inventory, shelter, player } = gameState;
 
@@ -107,6 +108,91 @@ export const ActivitiesTab: React.FC<Props> = ({
           </div>
         </div>
 
+
+        {/* DUO EXPEDITION COMPANION SELECTOR */}
+        {(() => {
+          const companions = [
+            ...gameState.campMembers.filter(m => !m.isChild || (m.age !== undefined && m.age >= 16)).map(m => ({
+              id: m.id,
+              name: m.name,
+              role: m.role,
+              relation: m.id === gameState.player.spouseId ? 'Spouse' : m.relation || 'Companion',
+              health: m.health,
+              isOffspring: false,
+              profession: m.profession
+            })),
+            ...(gameState.player.children || []).filter(c => c.age >= 16).map(c => ({
+              id: c.id,
+              name: c.name,
+              role: 'scavenger' as const,
+              relation: 'Adult Heir (Offspring)',
+              health: 100,
+              isOffspring: true,
+              profession: 'Dynasty Heir'
+            }))
+          ];
+
+          const partner = companions.find(c => c.id === selectedCompanionId);
+
+          return (
+            <div className="p-3.5 bg-gradient-to-r from-emerald-950/30 to-cyan-950/30 border border-emerald-500/20 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Expedition Partner (Duo Runs)
+                </span>
+                {selectedCompanionId && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCompanionId('')}
+                    className="text-[10px] text-zinc-400 hover:text-white"
+                  >
+                    Go Solo
+                  </button>
+                )}
+              </div>
+
+              <select
+                value={selectedCompanionId}
+                onChange={(e) => setSelectedCompanionId(e.target.value)}
+                className="w-full bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-emerald-400"
+              >
+                <option value="">👤 Solo Expedition (Go Alone)</option>
+                {companions.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.relation} • {c.role.toUpperCase()} • HP {c.health}%)
+                  </option>
+                ))}
+              </select>
+
+              {partner ? (
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] space-y-1">
+                  <div className="flex items-center justify-between font-bold text-white">
+                    <span>Teaming with: {partner.name}</span>
+                    <span className="text-[10px] font-mono text-emerald-400">HP {partner.health}%</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-300/90 leading-snug">
+                    {partner.isOffspring
+                      ? '🎓 Mentorship Run: Real combat experience grants +2 Combat & Fitness to your child!'
+                      : partner.role === 'medic'
+                      ? '🩺 Medical Support: Halves hazard damage, prevents infections, and treats injuries!'
+                      : partner.role === 'guard'
+                      ? '🛡️ Covering Fire: +25% ambush defense and boosts expedition success rate!'
+                      : partner.role === 'scavenger'
+                      ? '🔍 Keen Eyes: Discovers hidden supply caches (+50% bonus food & ammo)!'
+                      : partner.role === 'craftsman'
+                      ? '🔨 Salvage Master: Retrieves bonus structural lumber and construction nails!'
+                      : '❤️ Mutual Protection: Deepens trust and affection through shared survival.'}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-zinc-400">
+                  Select a companion to explore together and unlock specialized class synergies!
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
         <div className="space-y-2.5">
           {LOCATIONS.map((loc) => (
             <div
@@ -135,7 +221,7 @@ export const ActivitiesTab: React.FC<Props> = ({
 
               <button
                 type="button"
-                onClick={() => onLaunchExpedition(loc.id)}
+                onClick={() => onLaunchExpedition(loc.id, selectedCompanionId || undefined)}
                 className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-white hover:bg-zinc-100 text-zinc-950 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-sm"
               >
                 <span>Depart on Expedition</span>

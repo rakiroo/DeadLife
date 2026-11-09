@@ -158,6 +158,7 @@ export interface Survivor {
   pregnantWith?: string;
   pregnantFatherId?: string;
   secretAffairs?: string[];
+  will?: WillAndTestament;
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';
@@ -261,6 +262,8 @@ export interface BaseShelter {
   farmingDecree?: 'standard' | 'intensive' | 'water_saving';
   scavengeQuotaDecree?: 'conservative' | 'balanced' | 'aggressive';
   birthDecree?: 'encouraged' | 'normal' | 'austerity';
+  heatingDaysRemaining?: number;
+  storedFirewood?: number;
 }
 
 export type ItemCategory = 'food' | 'water' | 'medical' | 'weapon' | 'tool' | 'resource';
@@ -301,6 +304,21 @@ export interface EventDilemma {
   choices: EventChoice[];
 }
 
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
+
+export interface WillAndTestament {
+  designatedHeirId?: string;
+  designatedHeirName?: string;
+  bequeathedHeirloomId?: string;
+  bequeathedHeirloomName?: string;
+  inheritedRoomId?: string;
+  founderCreed?: 'endure' | 'protect' | 'build' | 'adapt';
+  creedTitle?: string;
+  creedPerkDescription?: string;
+  personalMessage?: string;
+  lastUpdatedDay?: number;
+}
+
 export type WeatherType = 'clear' | 'heavy_rain' | 'thunderstorm' | 'dense_fog' | 'freezing_cold' | 'heatwave';
 
 export interface CemeteryRecord {
@@ -337,6 +355,7 @@ export interface BabyNamingPrompt {
 export interface GameState {
   day: number; // Starts at 0
   timeOfDay: 'Morning' | 'Noon' | 'Dusk' | 'Night';
+  season?: Season;
   weather: WeatherType;
   temperatureCelsius: number;
   player: Survivor;

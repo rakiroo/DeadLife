@@ -7,6 +7,8 @@ import {
   Egg, Crown, Flame, Swords, BookOpen, Brush, ShieldCheck, AlertCircle
 } from 'lucide-react';
 import { HookupModal } from './HookupModal';
+import { WillAndTestamentModal } from './WillAndTestamentModal';
+import { WillAndTestament } from '../types/game';
 import { MatchmakeModal } from './MatchmakeModal';
 
 interface Props {
@@ -42,6 +44,8 @@ interface Props {
   onProposeMarriage: (memberId: string) => void;
   onTryForBaby: () => void;
   onMakeLove: () => void;
+  onStokeWoodstove?: () => void;
+  onSaveWill?: (will: WillAndTestament) => void;
 }
 
 export const BaseTab: React.FC<Props> = ({
@@ -76,7 +80,9 @@ export const BaseTab: React.FC<Props> = ({
   onMakeLove,
   onMentorChild,
   onToddlerInteract,
-  onBestowHeirloom
+  onBestowHeirloom,
+  onStokeWoodstove,
+  onSaveWill
 }) => {
   const { shelter, campMembers, inventory, player } = gameState;
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
@@ -85,6 +91,7 @@ export const BaseTab: React.FC<Props> = ({
   const [assignToRoom, setAssignToRoom] = useState<CampRoom | null>(null);
   const [hookupModalMember, setHookupModalMember] = useState<CampMember | null>(null);
   const [showMatchmakeModal, setShowMatchmakeModal] = useState(false);
+  const [showWillModal, setShowWillModal] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newBaseName, setNewBaseName] = useState(shelter.name || 'Sanctuary Haven');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
@@ -1016,6 +1023,58 @@ export const BaseTab: React.FC<Props> = ({
             </div>
           </div>
 
+
+          {/* Founder's Dynasty Will & Testament Card */}
+          <div className="p-3.5 bg-gradient-to-r from-amber-950/30 via-zinc-900 to-black/60 border border-amber-500/30 rounded-2xl space-y-2">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <Scroll className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold block">
+                    Dynasty Succession
+                  </span>
+                  <h4 className="text-xs font-bold text-white">Founder's Will & Testament</h4>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowWillModal(true)}
+                className="py-1 px-3 rounded-xl text-[10px] font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm active:scale-95 transition-all"
+              >
+                {player.will ? 'Edit Testament' : 'Draft Will'}
+              </button>
+            </div>
+
+            {player.will ? (
+              <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-300 font-medium">Designated Successor:</span>
+                  <span className="font-bold text-amber-300">{player.will.designatedHeirName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400 text-[10px]">Dynasty Creed:</span>
+                  <span className="font-bold text-zinc-200 text-[10px]">{player.will.creedTitle}</span>
+                </div>
+                {player.will.bequeathedHeirloomName && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 text-[10px]">Bequeathed Relic:</span>
+                    <span className="text-amber-200 text-[10px]">{player.will.bequeathedHeirloomName}</span>
+                  </div>
+                )}
+                <p className="text-[10px] text-zinc-400 italic pt-1 border-t border-white/5">
+                  "{player.will.personalMessage}"
+                </p>
+              </div>
+            ) : (
+              <p className="text-[10px] text-zinc-400">
+                You have not formalized a will yet. Designate a primary successor, choose a guiding creed, and bequeath relics to secure your family's future.
+              </p>
+            )}
+          </div>
+
           {/* Colony Marriages & Romance Web */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between px-1">
@@ -1256,6 +1315,37 @@ export const BaseTab: React.FC<Props> = ({
           </div>
 
           <div className="space-y-2.5">
+
+            {/* Winter Woodstove & Heating */}
+            <div className="p-3.5 bg-gradient-to-r from-orange-950/30 to-amber-950/20 border border-amber-500/20 rounded-2xl space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-orange-400" />
+                    Sanctuary Woodstove Heating
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {shelter.heatingDaysRemaining && shelter.heatingDaysRemaining > 0
+                      ? 'Active Warmth: ' + shelter.heatingDaysRemaining + ' days remaining (+Morale, frost-proof)'
+                      : 'Unheated: Sub-zero winter chills cause hypothermia and illness'}
+                  </p>
+                </div>
+                {onStokeWoodstove && (
+                  <button
+                    type="button"
+                    disabled={woodCount < 1}
+                    onClick={() => triggerFeedback('Stoked the woodstove with timber (+7 Days Sanctuary Heat)!', onStokeWoodstove)}
+                    className={'px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ' + (woodCount >= 1 ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95' : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5')}
+                  >
+                    Stoke Stove (1 Wood)
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
+                Keeps living quarters and bunkhouses cozy. Essential during Winter and freezing cold snaps to protect residents from frostbite and pneumonia.
+              </p>
+            </div>
+
             {/* Rooftop Greenhouse */}
             <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
               <div className="flex items-start justify-between">
@@ -2225,6 +2315,22 @@ export const BaseTab: React.FC<Props> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* WILL & TESTAMENT MODAL */}
+      {showWillModal && onSaveWill && (
+        <WillAndTestamentModal
+          player={player}
+          campMembers={campMembers}
+          rooms={rooms}
+          currentDay={gameState.day}
+          onSaveWill={(will) => {
+            onSaveWill(will);
+            setShowWillModal(false);
+            triggerFeedback('Founder\'s Will & Testament sealed successfully!');
+          }}
+          onClose={() => setShowWillModal(false)}
+        />
       )}
     </div>
   );
