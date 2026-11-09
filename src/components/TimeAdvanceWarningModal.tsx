@@ -77,7 +77,7 @@ export const TimeAdvanceWarningModal: React.FC<Props> = ({
             className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
           >
             <FastForward className="w-4 h-4" />
-            <span>Proceed & Advance Time Anyway</span>
+            <span>Proceed</span>
           </button>
 
           <button
@@ -85,7 +85,7 @@ export const TimeAdvanceWarningModal: React.FC<Props> = ({
             onClick={onCancel}
             className="w-full py-2 px-4 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 active:scale-[0.98] transition-all"
           >
-            Cancel & Return to Base
+            Cancel
           </button>
         </div>
       </div>

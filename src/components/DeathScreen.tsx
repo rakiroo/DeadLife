@@ -75,7 +75,7 @@ export const DeathScreen: React.FC<Props> = ({ gameState, onRestart }) => {
           className="w-full py-2.5 px-3 rounded-xl font-semibold text-sm bg-white hover:bg-zinc-100 text-zinc-950 flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
         >
           <RefreshCw className="w-4 h-4" />
-          <span>Begin New Life</span>
+          <span>New Game</span>
         </button>
       </div>
     </div>

@@ -174,27 +174,23 @@ export const WillAndTestamentModal: React.FC<Props> = ({
                       key={c.id}
                       type="button"
                       onClick={() => setSelectedCreed(c.id)}
-                      className={'w-full p-2.5 rounded-xl text-left border transition-all flex items-start gap-2.5 ' + (
+                      className={'w-full py-2.5 px-3 rounded-xl text-left border transition-all flex items-center justify-between ' + (
                         isSelected
                           ? 'bg-amber-500/15 border-amber-500/50 text-white shadow-sm'
                           : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/5'
                       )}
                     >
-                      <div className="p-1.5 rounded-lg bg-black/40 shrink-0 mt-0.5">
+                      <div className="flex items-center gap-2">
                         {c.icon}
+                        <span className="text-xs font-bold text-white">{c.title}</span>
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <span>{c.title}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-amber-400" />}
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug">
-                          {c.perk}
-                        </p>
-                      </div>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-amber-400" />}
                     </button>
                   );
                 })}
+              </div>
+              <div className="text-[10px] font-mono text-amber-300/90 pl-1">
+                {chosenCreedObj?.perk}
               </div>
             </div>
 

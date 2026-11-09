@@ -1743,6 +1743,8 @@ export function App() {
         player: successorSurvivor,
         campMembers: updatedMembers,
         legacySuccessionPrompt: null,
+        activeDilemma: null,
+        dilemmaResult: null,
         logs: [...prev.logs, newLog].slice(-150)
       };
     });

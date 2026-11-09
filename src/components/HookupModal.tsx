@@ -1,6 +1,6 @@
 import React from 'react';
 import { CampMember, Survivor } from '../types/game';
-import { Heart, ShieldCheck, Flame, AlertTriangle, X } from 'lucide-react';
+import { ShieldCheck, Flame, AlertTriangle, X } from 'lucide-react';
 
 interface Props {
   member: CampMember;
@@ -15,18 +15,9 @@ export const HookupModal: React.FC<Props> = ({
   onConfirm,
   onClose
 }) => {
-  const isPlayerFemale = player.gender === 'female';
   const isMemberMarried = member.datingStage === 'married' && member.spouseId !== 'player';
   const isPlayerMarried = player.romanceStage === 'married' && player.spouseId !== member.id;
   const isAffair = isMemberMarried || isPlayerMarried;
-
-  const protectionLabel = isPlayerFemale
-    ? 'Use Protection (Contraception)'
-    : 'Use Protection (Condom)';
-  
-  const protectionSubtext = isPlayerFemale
-    ? 'Take morning-after emergency pills or contraception from the medical stash. 0% chance of pregnancy.'
-    : 'Use a sealed latex condom scavenged from pharmacy supplies. 0% chance of pregnancy.';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in font-sans select-none">
@@ -74,54 +65,36 @@ export const HookupModal: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Options */}
-        <div className="space-y-2.5 pt-1">
+        {/* Clean, Simple Choice Buttons */}
+        <div className="space-y-2 pt-1">
           {/* Protected */}
           <button
             type="button"
             onClick={() => onConfirm(true)}
-            className="w-full p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all group flex items-start gap-3 active:scale-[0.98]"
+            className="w-full py-3 px-4 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-sm"
           >
-            <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 shrink-0 mt-0.5">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
-                Use Protection
-              </div>
-              <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug">
-                {protectionSubtext} Safe pleasure (+Sanity & Trust).
-              </p>
-            </div>
+            <ShieldCheck className="w-4 h-4 text-cyan-400" />
+            <span>Use Protection</span>
           </button>
 
           {/* Unprotected */}
           <button
             type="button"
             onClick={() => onConfirm(false)}
-            className="w-full p-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-left transition-all group flex items-start gap-3 active:scale-[0.98]"
+            className="w-full py-3 px-4 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 hover:text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-sm"
           >
-            <div className="p-2 rounded-xl bg-rose-500/30 text-rose-300 shrink-0 mt-0.5">
-              <Flame className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-rose-200 group-hover:text-white transition-colors">
-                No Protection
-              </div>
-              <p className="text-[10px] text-rose-300/80 mt-0.5 leading-snug">
-                Passionate and uninhibited. 35% chance of pregnancy and conceiving a child!
-              </p>
-            </div>
+            <Flame className="w-4 h-4 text-rose-400" />
+            <span>No Protection</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 text-xs text-zinc-400 hover:text-white transition-colors font-medium text-center"
+          >
+            Cancel
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full py-2 text-xs text-zinc-400 hover:text-white transition-colors"
-        >
-          Cancel
-        </button>
       </div>
     </div>
   );

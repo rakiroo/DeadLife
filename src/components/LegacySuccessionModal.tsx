@@ -57,7 +57,7 @@ export const LegacySuccessionModal: React.FC<Props> = ({
                     className="py-1.5 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 flex items-center gap-1 shadow-md shadow-amber-950/40 active:scale-95 transition-all"
                   >
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span>Choose Leader</span>
+                    <span>Choose Heir</span>
                   </button>
                 </div>
 
@@ -96,7 +96,7 @@ export const LegacySuccessionModal: React.FC<Props> = ({
             onClick={onDeclineSuccession}
             className="text-xs text-zinc-500 hover:text-zinc-300 font-medium"
           >
-            End Colony & View Epitaph
+            Decline & View Memorial
           </button>
         </div>
       </div>
