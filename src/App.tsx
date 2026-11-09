@@ -1677,7 +1677,7 @@ export function App() {
 
       if (prompt.isPlayerChild) {
         const isAffair = prev.player.romanceStage === 'married' && prompt.motherName !== prev.player.spouseName;
-        const origin = prompt.origin || (isAffair ? 'affair' as const : prev.player.romanceStage === 'married' ? 'marital' as const : 'out_of_wedlock' as const);
+        const origin = prompt.origin || (isAffair ? 'affair' as const : prev.player.romanceStage === 'married' ? 'legitimate' as const : 'illegitimate' as const);
 
         const newChild = {
           id: 'child_player_' + Date.now(),

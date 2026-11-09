@@ -130,7 +130,7 @@ export interface SurvivorChild {
   spouseName?: string;
   isDeceased?: boolean;
   deathCause?: string;
-  origin?: 'marital' | 'out_of_wedlock' | 'affair' | 'adopted';
+  origin?: 'legitimate' | 'illegitimate' | 'affair' | 'adopted';
   motherName?: string;
   fatherName?: string;
   isPlayedLeader?: boolean;
@@ -380,7 +380,7 @@ export interface BabyNamingPrompt {
   suggestedLastName: string;
   isPlayerChild: boolean;
   parentMemberId?: string;
-  origin?: 'marital' | 'out_of_wedlock' | 'affair' | 'adopted';
+  origin?: 'legitimate' | 'illegitimate' | 'affair' | 'adopted';
 }
 
 export type DistrictType = 'harbor' | 'downtown' | 'rural_valley' | 'industrial' | 'university' | 'quarantine_zone';

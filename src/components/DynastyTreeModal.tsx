@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Survivor, CampMember, SurvivorChild } from '../types/game';
-import { Crown, Heart, X, Baby, User, GitBranch } from 'lucide-react';
+import { Crown, Heart, X, Baby, User } from 'lucide-react';
+import { DynastyMemberModal, DynastyMemberData } from './DynastyMemberModal';
 
 interface Props {
   player: Survivor;
@@ -13,13 +14,15 @@ export const DynastyTreeModal: React.FC<Props> = ({
   campMembers,
   onClose
 }) => {
+  const [inspectMember, setInspectMember] = useState<DynastyMemberData | null>(null);
+
   const spouse = campMembers.find(m => m.id === player.spouseId);
   const dating = campMembers.find(m => m.id === player.datingTargetId);
   const spouseName = spouse?.name || player.spouseName;
   const partnerName = dating?.name || player.datingTargetName;
 
-  const isSpouseMissing = player.isSpouseMissing || (player.spouseId && player.spouseId.startsWith('missing_'));
-  const isPartnerMissing = player.isPartnerMissing || (player.datingTargetId && player.datingTargetId.startsWith('missing_'));
+  const isSpouseMissing = Boolean(player.isSpouseMissing || (player.spouseId && player.spouseId.startsWith('missing_')));
+  const isPartnerMissing = Boolean(player.isPartnerMissing || (player.datingTargetId && player.datingTargetId.startsWith('missing_')));
 
   const children = player.children || [];
   const genNumber = player.generation || 1;
@@ -30,26 +33,26 @@ export const DynastyTreeModal: React.FC<Props> = ({
       case 'affair':
         return (
           <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            🔥 Affair
+            🔥 Born of an Affair
           </span>
         );
-      case 'out_of_wedlock':
+      case 'illegitimate':
         return (
           <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            ⚡ Out of Wedlock
+            ⚡ Illegitimate
           </span>
         );
       case 'adopted':
         return (
           <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-            🤝 Adopted
+            🤝 Adopted Orphan
           </span>
         );
-      case 'marital':
+      case 'legitimate':
       default:
         return (
           <span className="px-1.5 py-0.2 rounded-full text-[8px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            💍 In Wedlock
+            💍 Legitimate
           </span>
         );
     }
@@ -69,7 +72,7 @@ export const DynastyTreeModal: React.FC<Props> = ({
                 Colony Lineage
               </span>
               <h2 className="text-base font-bold text-white tracking-tight">Family & Dynasty Tree</h2>
-              <span className="text-[10px] font-mono text-zinc-400">Generation {genNumber} Dynasty</span>
+              <span className="text-[10px] font-mono text-zinc-400">Generation {genNumber} Dynasty • Tap Any Name to Inspect</span>
             </div>
           </div>
           <button
@@ -82,20 +85,22 @@ export const DynastyTreeModal: React.FC<Props> = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-3 text-[10px] font-mono text-zinc-400 border-y border-white/5 py-1.5">
+        <div className="flex items-center justify-center gap-3 text-[9px] font-mono text-zinc-400 border-y border-white/5 py-1.5 flex-wrap">
           <span className="flex items-center gap-1 text-amber-300">
             <Crown className="w-3 h-3 text-amber-400 fill-amber-400" /> Player Used
           </span>
           <span className="text-zinc-600">•</span>
-          <span className="text-rose-300">💍 In Wedlock</span>
+          <span className="text-rose-300">💍 Legitimate</span>
           <span className="text-zinc-600">•</span>
-          <span className="text-purple-300">🔥 Affair</span>
+          <span className="text-purple-300">🔥 Born of an Affair</span>
           <span className="text-zinc-600">•</span>
-          <span className="text-cyan-300">🤝 Adopted</span>
+          <span className="text-amber-300">⚡ Illegitimate</span>
+          <span className="text-zinc-600">•</span>
+          <span className="text-cyan-300">🤝 Adopted Orphan</span>
         </div>
 
         {/* TREE VISUAL WITH CONNECTED LINES */}
-        <div className="space-y-1 pt-2">
+        <div className="space-y-1 pt-1">
           {/* Generation Tag */}
           <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold block text-center mb-2">
             — Generation {genNumber} (Parents) —
@@ -104,7 +109,32 @@ export const DynastyTreeModal: React.FC<Props> = ({
           {/* PARENTS ROW WITH HORIZONTAL MARRIAGE CONNECTOR */}
           <div className="flex items-center justify-center relative max-w-sm mx-auto">
             {/* Parent 1: Player / Founder */}
-            <div className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/60 shadow-md text-center relative z-10">
+            <div
+              onClick={() => setInspectMember({
+                id: 'player',
+                name: player.name,
+                gender: player.gender,
+                age: player.age,
+                generation: genNumber,
+                isPlayerUsed: true,
+                isLeader: true,
+                relation: 'Colony Founder & Leader',
+                profession: player.profession,
+                bio: player.bio,
+                health: player.health,
+                origin: 'legitimate',
+                skills: {
+                  combat: player.combatSkill,
+                  medical: player.medicalSkill,
+                  crafting: player.craftingSkill,
+                  stealth: player.stealthSkill,
+                  fitness: player.fitnessSkill
+                },
+                currentRoomName: player.roomId,
+                isDesignatedHeir: true
+              })}
+              className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border-2 border-amber-500/60 shadow-md text-center relative z-10 cursor-pointer active:scale-95 transition-all"
+            >
               <div className="flex items-center justify-center gap-1">
                 <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
                 <span className="text-xs font-bold text-white truncate">{player.name}</span>
@@ -121,7 +151,30 @@ export const DynastyTreeModal: React.FC<Props> = ({
 
             {/* Parent 2: Spouse or Partner */}
             {spouseName ? (
-              <div className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-center relative z-10">
+              <div
+                onClick={() => setInspectMember({
+                  id: player.spouseId || 'spouse',
+                  name: spouseName,
+                  age: spouse?.age || player.age,
+                  generation: genNumber,
+                  isPlayerUsed: playedList.includes(spouseName),
+                  isLeader: false,
+                  relation: isSpouseMissing ? 'Separated Spouse (Missing)' : 'Co-habiting Spouse',
+                  profession: spouse?.profession || 'Haven Pioneer',
+                  health: spouse?.health ?? 90,
+                  isMissing: isSpouseMissing,
+                  searchGoal: player.backstory?.searchGoal,
+                  origin: 'legitimate',
+                  skills: spouse ? {
+                    combat: spouse.combatSkill || 5,
+                    medical: spouse.medicalSkill || 5,
+                    crafting: spouse.craftingSkill || 5,
+                    stealth: spouse.stealthSkill || 5,
+                    fitness: spouse.fitnessSkill || 5
+                  } : undefined
+                })}
+                className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/40 text-center relative z-10 cursor-pointer active:scale-95 transition-all"
+              >
                 <div className="flex items-center justify-center gap-1">
                   {playedList.includes(spouseName) && (
                     <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
@@ -133,7 +186,23 @@ export const DynastyTreeModal: React.FC<Props> = ({
                 )}
               </div>
             ) : partnerName ? (
-              <div className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-pink-500/10 border border-pink-500/40 text-center relative z-10">
+              <div
+                onClick={() => setInspectMember({
+                  id: player.datingTargetId || 'partner',
+                  name: partnerName,
+                  age: dating?.age || player.age,
+                  generation: genNumber,
+                  isPlayerUsed: playedList.includes(partnerName),
+                  isLeader: false,
+                  relation: isPartnerMissing ? 'Partner (Missing)' : 'Dating Partner',
+                  profession: dating?.profession || 'Haven Companion',
+                  health: dating?.health ?? 90,
+                  isMissing: isPartnerMissing,
+                  searchGoal: player.backstory?.searchGoal,
+                  origin: 'legitimate'
+                })}
+                className="flex-1 max-w-[140px] p-2.5 rounded-2xl bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/40 text-center relative z-10 cursor-pointer active:scale-95 transition-all"
+              >
                 <div className="flex items-center justify-center gap-1">
                   {playedList.includes(partnerName) && (
                     <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
@@ -177,11 +246,32 @@ export const DynastyTreeModal: React.FC<Props> = ({
                       <div className="w-0.5 h-3 bg-rose-500/50" />
 
                       {/* Child Node Card */}
-                      <div className={'p-2.5 rounded-2xl border text-center space-y-1 min-w-[120px] max-w-[150px] shadow-sm ' + (
-                        isPlayed
-                          ? 'bg-amber-500/15 border-2 border-amber-500/60'
-                          : 'bg-black/50 border-white/10'
-                      )}>
+                      <div
+                        onClick={() => setInspectMember({
+                          id: child.id,
+                          name: child.name,
+                          gender: child.gender,
+                          age: child.age,
+                          generation: genNumber + 1,
+                          isPlayerUsed: isPlayed,
+                          isLeader: false,
+                          relation: child.age >= 16 ? 'Adult Heir' : child.stage,
+                          profession: child.age >= 16 ? 'Dynasty Heir' : 'Colony Child',
+                          health: 100,
+                          origin: child.origin || 'legitimate',
+                          motherName: child.motherName,
+                          fatherName: child.fatherName,
+                          stage: child.stage,
+                          skills: child.skills,
+                          isDesignatedHeir: player.will?.designatedHeirId === child.id,
+                          bequeathedRelicName: player.will?.designatedHeirId === child.id ? player.will.bequeathedHeirloomName : undefined
+                        })}
+                        className={'p-2.5 rounded-2xl border text-center space-y-1 min-w-[120px] max-w-[150px] shadow-sm cursor-pointer hover:border-amber-400/50 active:scale-95 transition-all ' + (
+                          isPlayed
+                            ? 'bg-amber-500/15 border-2 border-amber-500/60'
+                            : 'bg-black/50 border-white/10'
+                        )}
+                      >
                         <div className="flex items-center justify-center gap-1">
                           {isPlayed && (
                             <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
@@ -189,12 +279,12 @@ export const DynastyTreeModal: React.FC<Props> = ({
                           <span className="text-xs font-bold text-white truncate">{child.name}</span>
                         </div>
 
-                        {/* Origin Badge (Wedlock, Affair, Adopted) */}
+                        {/* Origin Badge */}
                         <div className="flex justify-center">
                           {getOriginBadge(child.origin)}
                         </div>
 
-                        {/* Other Parent note if affair or different mother */}
+                        {/* Mother subtitle if affair */}
                         {child.motherName && child.motherName !== spouseName && (
                           <span className="text-[8px] font-mono text-zinc-500 block truncate">
                             Mother: {child.motherName}
@@ -208,6 +298,15 @@ export const DynastyTreeModal: React.FC<Props> = ({
             </div>
           )}
         </div>
+
+        {/* DYNASTY MEMBER DOSSIER MODAL */}
+        {inspectMember && (
+          <DynastyMemberModal
+            member={inspectMember}
+            player={player}
+            onClose={() => setInspectMember(null)}
+          />
+        )}
 
         <button
           type="button"
