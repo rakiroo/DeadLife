@@ -716,8 +716,18 @@ export function App() {
         };
       });
 
+      const updatedMembers = prev.campMembers.map(m =>
+        m.id === memberId ? { ...m, roomId, isSleepingRough: false } : m
+      );
+
+      const updatedPlayer = memberId === 'player'
+        ? { ...prev.player, roomId }
+        : prev.player;
+
       return {
         ...prev,
+        player: updatedPlayer,
+        campMembers: updatedMembers,
         shelter: {
           ...prev.shelter,
           rooms: updatedRooms
@@ -1524,6 +1534,10 @@ export function App() {
         player: updatedPlayer,
         campMembers: updatedCamp,
         pendingBabyNaming: null,
+        stats: {
+          ...prev.stats,
+          childrenRaised: (prev.stats.childrenRaised || 0) + 1
+        },
         shelter: {
           ...prev.shelter,
           childrenBornCount: (prev.shelter.childrenBornCount || 0) + 1,
@@ -1629,7 +1643,30 @@ export function App() {
       const newGeneration = (prev.player.generation || 1) + 1;
 
       // Filter successor out of camp members
-      const updatedMembers = prev.campMembers.filter(m => m.id !== candidate.id);
+      const survivingSiblings: CampMember[] = (prev.player.children || [])
+        .filter(c => c.id !== candidate.id)
+        .map(c => ({
+          id: c.id,
+          name: c.name,
+          gender: c.gender,
+          age: c.age,
+          relation: c.age >= 16 ? 'Sibling' : 'Younger Sibling',
+          profession: c.age >= 16 ? 'Haven Pioneer' : 'Colony Child',
+          health: 100,
+          trust: 95,
+          isChild: c.age < 16,
+          stage: c.stage,
+          combatSkill: c.skills?.combat || 5,
+          medicalSkill: c.skills?.medical || 5,
+          craftingSkill: c.skills?.crafting || 5,
+          stealthSkill: c.skills?.stealth || 5,
+          fitnessSkill: c.skills?.fitness || 5,
+          role: (c.age >= 16 ? 'guard' : 'idle') as CampRole,
+          statusEffects: [],
+          parentNames: [prev.player.name, prev.player.spouseName || 'Parent']
+        }));
+
+      const updatedMembers = [...prev.campMembers.filter(m => m.id !== candidate.id), ...survivingSiblings];
 
       const successorSurvivor: Survivor = {
         name: candidate.name,

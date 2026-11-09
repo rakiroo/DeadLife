@@ -315,7 +315,39 @@ export function advanceOneDay(state: GameState): GameState {
     });
   });
 
-  // 7. Base Sanctuary & Camp Survivor Simulation
+  // Daily pregnancy progress (every 30 days)
+  let dayPendingBabyNaming = state.pendingBabyNaming || null;
+  if (state.player.isPregnant && currentDay % 30 === 0) {
+    const pMonths = (state.player.pregnancyMonths || 0) + 1;
+    if (pMonths >= 9) {
+      state.player.isPregnant = false;
+      state.player.pregnancyMonths = 0;
+      const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+      const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
+      const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
+      const chosenName = babyGender === 'male' ? boyNames[Math.floor(Math.random() * boyNames.length)] : girlNames[Math.floor(Math.random() * girlNames.length)];
+      const surname = state.player.name.split(' ').slice(-1)[0] || 'Vance';
+      dayPendingBabyNaming = {
+        motherName: state.player.gender === 'female' ? state.player.name : (state.player.spouseName || 'Spouse'),
+        fatherName: state.player.gender === 'female' ? (state.player.pregnantWith || 'Unknown Father') : state.player.name,
+        gender: babyGender as 'male' | 'female',
+        suggestedFirstName: chosenName,
+        suggestedLastName: surname,
+        isPlayerChild: true
+      };
+      newLogs.push({
+        id: 'birth_player_day_' + Date.now(),
+        day: currentDay,
+        text: '👶 Delivery Day! 9 months of pregnancy have arrived! A healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' was born in our sanctuary (+25 Morale).',
+        type: 'milestone',
+        timestamp: 'New Life'
+      });
+    } else {
+      state.player.pregnancyMonths = pMonths;
+    }
+  }
+
+    // 7. Base Sanctuary & Camp Survivor Simulation
   let campMorale = state.shelter.morale ?? 75;
   const rationPolicy = state.shelter.rationPolicy ?? 'standard';
   
@@ -561,6 +593,7 @@ export function advanceOneDay(state: GameState): GameState {
       deathCause
     },
     logs: [...state.logs, ...newLogs].slice(-150),
+    pendingBabyNaming: dayPendingBabyNaming,
     activeDilemma: nextDilemma,
     stats: {
       ...state.stats,
@@ -1107,6 +1140,40 @@ export function advanceOneYear(state: GameState): GameState {
     });
   }
 
+  // Deliver any active camp member pregnancies over the year
+  campMembers = campMembers.map(m => {
+    if (m.isPregnant) {
+      const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+      const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
+      const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
+      const chosenName = babyGender === 'male' ? boyNames[Math.floor(Math.random() * boyNames.length)] : girlNames[Math.floor(Math.random() * girlNames.length)];
+      const surname = m.name.split(' ').slice(-1)[0] || 'Haven';
+
+      if (!yearPendingBabyNaming) {
+        yearPendingBabyNaming = {
+          motherName: m.name,
+          fatherName: m.partnerName || m.spouseName || (m.pregnantFatherId === 'player' ? player.name : 'Unknown Father'),
+          gender: babyGender as 'male' | 'female',
+          suggestedFirstName: chosenName,
+          suggestedLastName: surname,
+          isPlayerChild: m.pregnantFatherId === 'player',
+          parentMemberId: m.id
+        };
+      }
+
+      newLogs.push({
+        id: 'birth_m_year_' + m.id + '_' + Date.now(),
+        day: currentDay,
+        text: '👶 Annual Birth: ' + m.name + ' delivered a healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' during the year (+20 Morale).',
+        type: 'milestone',
+        timestamp: 'New Life'
+      });
+
+      return { ...m, isPregnant: false, pregnancyMonths: 0 };
+    }
+    return m;
+  });
+  
   // 2. Annual Resource Balance
   const totalConsumers = Math.max(1, campMembers.length + 1);
   const rationPolicy = shelter.rationPolicy ?? 'standard';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameState, CampMember, CampRole, SurvivorChild } from '../types/game';
+import { GameState, CampMember, CampRole, CampRoom, SurvivorChild } from '../types/game';
 import { 
   Home, Users, Shield, HeartPulse, Hammer, Search, Bed, MessageSquare, 
   Utensils, UserMinus, Sparkles, Droplets, Edit3, Award, DoorOpen, Scroll, Check,
@@ -82,6 +82,7 @@ export const BaseTab: React.FC<Props> = ({
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
   const [selectedMember, setSelectedMember] = useState<CampMember | null>(null);
   const [roomAssignModalMember, setRoomAssignModalMember] = useState<{ id: string; name: string; isPlayer?: boolean } | null>(null);
+  const [assignToRoom, setAssignToRoom] = useState<CampRoom | null>(null);
   const [hookupModalMember, setHookupModalMember] = useState<CampMember | null>(null);
   const [showMatchmakeModal, setShowMatchmakeModal] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -187,7 +188,7 @@ export const BaseTab: React.FC<Props> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none pb-4">
+    <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none pb-24">
       {/* ACTION TOAST */}
       {actionFeedback && (
         <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-xs text-emerald-300 font-mono text-center animate-fade-in shadow-sm">
@@ -1167,7 +1168,7 @@ export const BaseTab: React.FC<Props> = ({
                     <button
                       type="button"
                       disabled={isRoomFull}
-                      onClick={() => setRoomAssignModalMember({ id: 'select_survivor', name: 'Survivor' })}
+                      onClick={() => setAssignToRoom(room)}
                       className="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold"
                     >
                       + Assign Survivor
@@ -2142,6 +2143,88 @@ export const BaseTab: React.FC<Props> = ({
           }}
           onClose={() => setShowMatchmakeModal(false)}
         />
+      )}
+
+      {/* ASSIGN SURVIVOR TO SPECIFIC ROOM MODAL */}
+      {assignToRoom && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 animate-fade-in font-sans select-none">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-4 space-y-3 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <DoorOpen className="w-4 h-4 text-emerald-400" />
+                  Assign Occupant to {assignToRoom.name}
+                </h3>
+                <p className="text-[10px] text-zinc-400 mt-0.5">
+                  Select a survivor or yourself to move into this room
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignToRoom(null)}
+                className="p-1 rounded-full bg-white/10 text-zinc-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              {/* Player Option */}
+              {player.roomId !== assignToRoom.id && onAssignPlayerRoom && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAssignPlayerRoom(assignToRoom.id);
+                    triggerFeedback('Moved your quarters to ' + assignToRoom.name + '.');
+                    setAssignToRoom(null);
+                  }}
+                  className="w-full p-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left transition-all flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-400" />
+                    <div>
+                      <span className="text-xs font-bold text-white">{player.name} (You)</span>
+                      <span className="text-[10px] text-zinc-400 block">Colony Leader</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-lg">
+                    Move Here
+                  </span>
+                </button>
+              )}
+
+              {/* All Camp Members */}
+              {campMembers.filter(m => !assignToRoom.assignedMemberIds || !assignToRoom.assignedMemberIds.includes(m.id)).map(m => {
+                const currentRoom = rooms.find(r => r.assignedMemberIds && r.assignedMemberIds.includes(m.id));
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      onAssignRoom(m.id, assignToRoom.id);
+                      triggerFeedback('Assigned ' + m.name + ' to ' + assignToRoom.name + '.');
+                      setAssignToRoom(null);
+                    }}
+                    className="w-full p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-left transition-all flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>{m.name}</span>
+                        {m.isChild && <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300">Child</span>}
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        {m.profession} • Current: {currentRoom ? currentRoom.name : 'Floor / Sleeping Rough'}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                      Assign
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
