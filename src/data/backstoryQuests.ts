@@ -750,12 +750,173 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
   }
 
   // SCENARIO 3 (HEROIC HAPPY RESCUE): Reunited Alive & Healthy!
+  const isLove = bs.theme === 'love' || relation.includes('Spouse') || relation.includes('Fiancé') || relation.includes('Girlfriend') || relation.includes('Boyfriend') || relation.includes('Partner');
+  const hasBaseSpouse = s.player.romanceStage === 'married' && s.player.spouseName;
+  const hasBaseDating = s.player.romanceStage === 'dating' && s.player.datingTargetName;
+
+  if (isLove && hasBaseSpouse) {
+    const baseSpouse = s.player.spouseName;
+    return {
+      id: 'bs_ch5_alive_spouse_drama_' + bs.id + '_' + currentDay,
+      title: target + ': The Impossible Reunion & The Vows Left Behind',
+      category: 'discovery',
+      dangerLevel: 'medium',
+      description: 'I breach the sanctuary courtyard! Two walkers are clawing at the stone shed door, but the wood holds. Inside, ' + target + ' shouts defiantly with a metal pipe in hand! My chest heaves with tears and sudden panic: in the brutal months apart, I believed ' + target + ' had died and married ' + baseSpouse + ' in the haven. Finding ' + target + ' alive brings joy, but also a devastating collision of worlds!',
+      choices: [
+        {
+          id: 'ch5_recommit_backstory_spouse',
+          text: 'Rescue ' + target + ' into my arms: Reaffirm devotion to my original love (Break the news to ' + baseSpouse + ')',
+          consequenceSummary: 'Reunites with ' + target + ' as your true spouse. ' + baseSpouse + ' is heartbroken and steps down to single.',
+          execute: (state: GameState) => {
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Rescued long-lost spouse and recommitted' };
+            const companion = generateCompanionFromBackstory(state.player, bs, 'healthy');
+            companion.datingStage = 'married';
+            companion.spouseId = 'player';
+            companion.spouseName = state.player.name;
+
+            const updatedCamp = state.campMembers.map(m => {
+              if (m.id === state.player.spouseId || m.name === baseSpouse) {
+                return {
+                  ...m,
+                  datingStage: 'single' as const,
+                  spouseId: undefined,
+                  spouseName: undefined,
+                  trust: Math.max(20, m.trust - 35)
+                };
+              }
+              return m;
+            });
+
+            return {
+              state: {
+                ...state,
+                campMembers: [...updatedCamp, companion],
+                isCampEstablished: true,
+                player: {
+                  ...state.player,
+                  backstory: updatedBs,
+                  spouseId: companion.id,
+                  spouseName: companion.name,
+                  romanceStage: 'married',
+                  sanity: 90
+                },
+                stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 2, peopleSaved: state.stats.peopleSaved + 1 }
+              },
+              log: 'I saved ' + target + ' and brought them home! With tears and heavy guilt, I confessed the truth to ' + baseSpouse + '. ' + baseSpouse + ' was deeply heartbroken, but stepped aside. ' + target + ' has returned as my spouse.',
+              outcomeTitle: 'Devotion & Heartbreak',
+              outcomeText: target + ' wept in my arms. When we returned to camp, ' + baseSpouse + ' confronted us. The truth was agonizing, but ' + target + ' is home at my side.'
+            };
+          }
+        },
+        {
+          id: 'ch5_honour_base_spouse',
+          text: 'Rescue ' + target + ' from the infected, but gently confess that you married ' + baseSpouse + ' during the apocalypse',
+          consequenceSummary: 'Remain loyal to your haven marriage with ' + baseSpouse + '. ' + target + ' stays as a loyal ally and friend.',
+          execute: (state: GameState) => {
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Rescued alive; agreed to remain loyal friends' };
+            const companion = generateCompanionFromBackstory(state.player, bs, 'healthy');
+            companion.datingStage = 'single';
+
+            return {
+              state: {
+                ...state,
+                campMembers: [...state.campMembers, companion],
+                isCampEstablished: true,
+                player: { ...state.player, backstory: updatedBs, sanity: 90 },
+                stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 2, peopleSaved: state.stats.peopleSaved + 1 }
+              },
+              log: 'I neutralized the walkers and freed ' + target + '. I sat with them in the shed and honestly confessed that I married ' + baseSpouse + ' to survive. ' + target + ' cried in silence, but respected my truth and agreed to join our haven as a loyal ally.',
+              outcomeTitle: 'Bittersweet Honesty',
+              outcomeText: target + ' held my hands with tear-filled eyes: "I am just glad you survived... even if life moved on." ' + target + ' is now safe in our sanctuary.'
+            };
+          }
+        }
+      ]
+    };
+  }
+
+  if (isLove && hasBaseDating) {
+    const datingName = s.player.datingTargetName;
+    return {
+      id: 'bs_ch5_alive_dating_drama_' + bs.id + '_' + currentDay,
+      title: target + ': Reunited Love & The Colony Dilemma',
+      category: 'discovery',
+      dangerLevel: 'medium',
+      description: 'I breach the courtyard and find ' + target + ' holding off infected inside the tool shed! My heart leaps, but I remember that back at camp, I started courting ' + datingName + '.',
+      choices: [
+        {
+          id: 'ch5_reunite_backstory_partner',
+          text: 'Rescue ' + target + ' and embrace as true lovers (Breaks off courting with ' + datingName + ')',
+          consequenceSummary: 'Reunites with ' + target + ' as your romantic partner. ' + datingName + ' steps back gracefully.',
+          execute: (state: GameState) => {
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Reunited and resumed romance' };
+            const companion = generateCompanionFromBackstory(state.player, bs, 'healthy');
+            companion.datingStage = 'dating';
+            companion.partnerId = 'player';
+            companion.partnerName = state.player.name;
+
+            const updatedCamp = state.campMembers.map(m => {
+              if (m.name === datingName) {
+                return { ...m, datingStage: 'single' as const, partnerId: undefined, partnerName: undefined };
+              }
+              return m;
+            });
+
+            return {
+              state: {
+                ...state,
+                campMembers: [...updatedCamp, companion],
+                isCampEstablished: true,
+                player: {
+                  ...state.player,
+                  backstory: updatedBs,
+                  datingTargetId: companion.id,
+                  datingTargetName: companion.name,
+                  romanceStage: 'dating',
+                  sanity: 100
+                },
+                stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 2, peopleSaved: state.stats.peopleSaved + 1 }
+              },
+              log: 'I rescued ' + target + ' and we embraced in tears! I had an honest conversation with ' + datingName + ', who stepped back with grace. ' + target + ' and I are together again!',
+              outcomeTitle: 'Reunited in Love',
+              outcomeText: 'We held each other tightly as the morning sun rose over the ruins. Our love withstood the end of the world!'
+            };
+          }
+        },
+        {
+          id: 'ch5_friend_backstory_partner',
+          text: 'Rescue ' + target + ', but admit that you have fallen for ' + datingName + ' back at haven',
+          consequenceSummary: target + ' joins camp as a dear companion and friend.',
+          execute: (state: GameState) => {
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'reunited', outcomeSummary: 'Rescued alive; joined as friend' };
+            const companion = generateCompanionFromBackstory(state.player, bs, 'healthy');
+            companion.datingStage = 'single';
+
+            return {
+              state: {
+                ...state,
+                campMembers: [...state.campMembers, companion],
+                isCampEstablished: true,
+                player: { ...state.player, backstory: updatedBs, sanity: 90 },
+                stats: { ...state.stats, zombiesEliminated: state.stats.zombiesEliminated + 2, peopleSaved: state.stats.peopleSaved + 1 }
+              },
+              log: 'I rescued ' + target + ' and explained that I had begun a new romance with ' + datingName + '. ' + target + ' accepted it and joined our camp as a close companion.',
+              outcomeTitle: 'A New Understanding',
+              outcomeText: target + ' nodded with understanding: "You kept fighting and living. That is all that matters." They are now safe in camp.'
+            };
+          }
+        }
+      ]
+    };
+  }
+
+  // Standard Heroic Reunion (Single or family/friend)
   return {
     id: 'bs_ch5_alive_' + bs.id + '_' + currentDay,
     title: target + ': Reunited at the Sanctuary',
     category: 'discovery',
     dangerLevel: 'medium',
-    description: 'I breach the sanctuary courtyard! Two walkers are clawing at the stone tool shed door, but the wood hasn\'t given way! From inside, ' + target + '\'s voice shouts with fierce defiance: "Stay back, I have a pipe!" ' + target + ' is completely unbitten and fighting for their life!',
+    description: "I breach the sanctuary courtyard! Two walkers are clawing at the stone tool shed door, but the wood hasn't given way! From inside, " + target + "'s voice shouts with fierce defiance: \"Stay back, I have a pipe!\" " + target + " is completely unbitten and fighting for their life!",
     choices: [
       {
         id: 'ch5_heroic_rescue_alive',

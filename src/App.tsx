@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom } from './types/game';
+import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, CampMember, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom, BabyNamingPrompt } from './types/game';
+import { BabyNamingModal } from './components/BabyNamingModal';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
 import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear } from './utils/simulation';
 import { LegacySuccessionModal } from './components/LegacySuccessionModal';
@@ -268,6 +269,12 @@ export function App() {
         ? 'Patient Zero' 
         : 'Fallen Survivor';
 
+      const bio = `${gameState.player.name} was a ${gameState.player.profession.toLowerCase()} who fought for survival across ${gameState.day} days in the ruins. ` +
+        (gameState.shelter.name ? `They claimed and fortified '${gameState.shelter.name}', providing a beacon of hope. ` : '') +
+        (gameState.player.spouseName ? `They married ${gameState.player.spouseName} and built a loving home. ` : '') +
+        (gameState.player.children && gameState.player.children.length > 0 ? `They raised ${gameState.player.children.length} ${gameState.player.children.length === 1 ? 'child' : 'children'}, passing down survival knowledge to their heirs. ` : '') +
+        `Throughout their journey, they neutralized ${gameState.stats.zombiesEliminated} infected, undertook ${gameState.stats.scavengeRuns} dangerous supply runs, and led ${gameState.stats.peopleSaved} survivors to safety. In the end, they ${gameState.player.deathCause || 'perished in the line of duty'}. Their courage lives on in the Memorial Hall of the Fallen.`;
+
       const newRecord: CemeteryRecord = {
         id: `grave_${Date.now()}`,
         name: gameState.player.name,
@@ -277,9 +284,13 @@ export function App() {
         deathCause: gameState.player.deathCause || 'died fighting in the ruins',
         date: new Date().toLocaleDateString(),
         ribbon,
-        stats: gameState.stats
+        stats: gameState.stats,
+        biography: bio,
+        spouseName: gameState.player.spouseName,
+        childrenCount: gameState.player.children ? gameState.player.children.length : 0,
+        generation: gameState.player.generation || 1,
+        baseName: gameState.shelter.isEstablished ? gameState.shelter.name : undefined
       };
-
       const updated = [newRecord, ...graveyard].slice(0, 50);
       setGraveyard(updated);
       localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updated));
@@ -952,53 +963,574 @@ export function App() {
     });
   };
 
-  // Try for a baby / Start a family
-  const handleHaveBaby = () => {
-    if (!gameState || !gameState.player.spouseName) return;
+  // Try for a baby (explicit family planning)
+  const handleTryForBaby = () => {
+    if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
-      const babyGender = Math.random() < 0.5 ? 'male' : 'female';
-      const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Julian', 'Elias', 'Finn'];
-      const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy'];
-      const chosenName = babyGender === 'male' 
-        ? boyNames[Math.floor(Math.random() * boyNames.length)]
-        : girlNames[Math.floor(Math.random() * girlNames.length)];
-      const surname = prev.player.name.split(' ').slice(-1)[0] || 'Vance';
-      const fullName = chosenName + ' ' + surname;
+      let updatedPlayer = { ...prev.player };
+      let updatedCamp = [...prev.campMembers];
+      let motherName = '';
 
-      const newChild = {
-        id: 'child_player_' + Date.now(),
-        name: fullName,
-        age: 0,
-        gender: babyGender as 'male' | 'female',
-        stage: 'infant' as const,
-        skills: {
-          combat: Math.floor(prev.player.combatSkill * 0.5) + 2,
-          medical: Math.floor(prev.player.medicalSkill * 0.5) + 2,
-          crafting: Math.floor(prev.player.craftingSkill * 0.5) + 2,
-          stealth: Math.floor(prev.player.stealthSkill * 0.5) + 2,
-          fitness: Math.floor(prev.player.fitnessSkill * 0.5) + 2
+      if (prev.player.gender === 'female') {
+        updatedPlayer.isPregnant = true;
+        updatedPlayer.pregnancyMonths = 1;
+        updatedPlayer.pregnantWith = prev.player.spouseName || prev.player.datingTargetName || 'Partner';
+        motherName = prev.player.name;
+      } else {
+        const targetId = prev.player.spouseId || prev.player.datingTargetId;
+        const spouseObj = updatedCamp.find(m => m.id === targetId);
+        if (spouseObj) {
+          spouseObj.isPregnant = true;
+          spouseObj.pregnancyMonths = 1;
+          spouseObj.pregnantFatherId = 'player';
+          motherName = spouseObj.name;
+        } else {
+          motherName = prev.player.spouseName || 'Spouse';
         }
-      };
-
-      const existingChildren = prev.player.children ? [...prev.player.children] : [];
-
-      const logText = '?? A Child Born in the Ruins: ' + prev.player.spouseName + ' gave birth to a healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' named ' + fullName + '! The entire haven gathered to welcome our child. Hope and joy reign in our colony (+25 Morale).';
+      }
 
       return {
         ...prev,
+        player: updatedPlayer,
+        campMembers: updatedCamp,
+        shelter: {
+          ...prev.shelter,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 15)
+        },
+        logs: [...prev.logs, {
+          id: 'try_baby_' + Date.now(),
+          day: prev.day,
+          text: `👶 Trying for a Baby: You and ${prev.player.spouseName || prev.player.datingTargetName || 'your partner'} dedicated an evening to family planning. ${motherName} is now expecting! The baby will arrive in 9 months (or after a year advance).`,
+          type: 'milestone' as const,
+          timestamp: 'Family'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Make Love (passionate intimacy with chance of pregnancy)
+  const handleMakeLove = () => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedPlayer = { ...prev.player, sanity: Math.min(100, prev.player.sanity + 15) };
+      let updatedCamp = [...prev.campMembers];
+      const partnerName = prev.player.spouseName || prev.player.datingTargetName || 'Partner';
+      const isAlreadyPregnant = prev.player.isPregnant || updatedCamp.some(m => (m.id === prev.player.spouseId || m.id === prev.player.datingTargetId) && m.isPregnant);
+      
+      const conceives = !isAlreadyPregnant && Math.random() < 0.35;
+      let logMsg = `🔥 Intimate Evening: You and ${partnerName} spent a quiet, restorative evening in each other's arms (+15 Sanity, +10 Morale).`;
+
+      if (conceives) {
+        let motherName = '';
+        if (prev.player.gender === 'female') {
+          updatedPlayer.isPregnant = true;
+          updatedPlayer.pregnancyMonths = 1;
+          updatedPlayer.pregnantWith = partnerName;
+          motherName = prev.player.name;
+        } else {
+          const targetId = prev.player.spouseId || prev.player.datingTargetId;
+          const spouseObj = updatedCamp.find(m => m.id === targetId);
+          if (spouseObj) {
+            spouseObj.isPregnant = true;
+            spouseObj.pregnancyMonths = 1;
+            spouseObj.pregnantFatherId = 'player';
+            motherName = spouseObj.name;
+          } else {
+            motherName = partnerName;
+          }
+        }
+        logMsg = `🔥 Intimate Passion & Conception: You and ${partnerName} spent an unforgettable evening together (+15 Sanity). Joyful news followed: ${motherName} is expecting a baby! Due in 9 months.`;
+      }
+
+      return {
+        ...prev,
+        player: updatedPlayer,
+        campMembers: updatedCamp,
+        shelter: {
+          ...prev.shelter,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 10)
+        },
+        logs: [...prev.logs, {
+          id: 'makelove_' + Date.now(),
+          day: prev.day,
+          text: logMsg,
+          type: conceives ? ('milestone' as const) : ('camp' as const),
+          timestamp: 'Romance'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Hook up (with or without protection)
+  const handleHookupSurvivor = (memberId: string, useProtection: boolean) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      let updatedPlayer = { ...prev.player, sanity: Math.min(100, prev.player.sanity + 15) };
+      let updatedCamp = [...prev.campMembers];
+      let logMsg = '';
+      let isConceived = false;
+
+      const isAffair = (prev.player.romanceStage === 'married' && prev.player.spouseId !== member.id) || (member.datingStage === 'married' && member.spouseId !== 'player');
+
+      if (useProtection) {
+        logMsg = `🔥 Secret Encounter: You and ${member.name} shared an intimate, stolen hour together behind closed doors (Using protection: zero risk of pregnancy, +15 Sanity).`;
+      } else {
+        const conceives = Math.random() < 0.35;
+        if (conceives) {
+          isConceived = true;
+          if (prev.player.gender === 'female') {
+            updatedPlayer.isPregnant = true;
+            updatedPlayer.pregnancyMonths = 1;
+            updatedPlayer.pregnantWith = member.name;
+          } else {
+            const mObj = updatedCamp.find(m => m.id === memberId);
+            if (mObj) {
+              mObj.isPregnant = true;
+              mObj.pregnancyMonths = 1;
+              mObj.pregnantFatherId = 'player';
+            }
+          }
+          logMsg = `🔥 Wild Passion (Unprotected): You and ${member.name} surrendered to raw desire without protection (+20 Sanity)! Later, signs indicate a pregnancy has begun! Expected in 9 months.`;
+        } else {
+          logMsg = `🔥 Passionate Risk: You and ${member.name} hooked up without protection (+20 Sanity). Fortunately, no pregnancy occurred this time.`;
+        }
+      }
+
+      if (isAffair) {
+        logMsg += ` (Guilt & Tension: A dangerous secret kept from the colony).`;
+      }
+
+      updatedCamp = updatedCamp.map(m => m.id === memberId ? { ...m, trust: Math.min(100, m.trust + 10) } : m);
+
+      return {
+        ...prev,
+        player: updatedPlayer,
+        campMembers: updatedCamp,
+        logs: [...prev.logs, {
+          id: 'hookup_' + Date.now(),
+          day: prev.day,
+          text: logMsg,
+          type: isConceived ? ('milestone' as const) : ('camp' as const),
+          timestamp: 'Encounter'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Seduce survivor
+  const handleSeduceSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const isAffair = (prev.player.romanceStage === 'married' && prev.player.spouseId !== member.id) || (member.datingStage === 'married' && member.spouseId !== 'player');
+
+      const updatedMembers = prev.campMembers.map(m =>
+        m.id === memberId ? { ...m, trust: Math.min(100, m.trust + 12) } : m
+      );
+
+      const logMsg = isAffair
+        ? `🔥 Forbidden Seduction: You shared intimate touches and whispering glances with ${member.name} by the watchtower. A spark was lit despite your commitments (+Affection & Danger).`
+        : `🔥 Seduction: You spent an electric evening teasing and flirting with ${member.name}. Mutual attraction flared (+Affection).`;
+
+      return {
+        ...prev,
+        campMembers: updatedMembers,
+        player: { ...prev.player, sanity: Math.min(100, prev.player.sanity + 10) },
+        logs: [...prev.logs, {
+          id: 'seduce_' + Date.now(),
+          day: prev.day,
+          text: logMsg,
+          type: 'camp' as const,
+          timestamp: 'Seduction'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Spar & train combat
+  const handleSparSurvivor = (memberId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const member = prev.campMembers.find(m => m.id === memberId);
+      if (!member) return prev;
+
+      const updatedMembers = prev.campMembers.map(m =>
+        m.id === memberId ? { 
+          ...m, 
+          combatSkill: Math.min(10, (m.combatSkill || 5) + 1),
+          fitnessSkill: Math.min(10, (m.fitnessSkill || 5) + 1),
+          trust: Math.min(100, m.trust + 8)
+        } : m
+      );
+
+      return {
+        ...prev,
+        campMembers: updatedMembers,
         player: {
           ...prev.player,
-          children: [...existingChildren, newChild],
-          sanity: 100
+          combatSkill: Math.min(10, prev.player.combatSkill + 1),
+          fitnessSkill: Math.min(10, prev.player.fitnessSkill + 1),
+          sanity: Math.min(100, prev.player.sanity + 10)
         },
+        logs: [...prev.logs, {
+          id: 'spar_' + Date.now(),
+          day: prev.day,
+          text: `⚔️ Sparring Session: You and ${member.name} spent hours drilling hand-to-hand disarms and melee evasion in the courtyard (+Combat & Fitness for both).`,
+          type: 'general' as const,
+          timestamp: 'Training'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Matchmaking
+  const handleMatchmake = (member1Id: string, member2Id: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const m1 = prev.campMembers.find(m => m.id === member1Id);
+      const m2 = prev.campMembers.find(m => m.id === member2Id);
+      if (!m1 || !m2) return prev;
+
+      const updatedMembers = prev.campMembers.map(m => {
+        if (m.id === member1Id) {
+          return { ...m, datingStage: 'married' as const, spouseId: m2.id, spouseName: m2.name, trust: 100 };
+        }
+        if (m.id === member2Id) {
+          return { ...m, datingStage: 'married' as const, spouseId: m1.id, spouseName: m1.name, trust: 100 };
+        }
+        return m;
+      });
+
+      const rooms = prev.shelter.rooms ? [...prev.shelter.rooms] : [];
+      const sharedRoom = rooms.find(r => r.type === 'cabin' || r.capacity >= 2) || rooms[0];
+      if (sharedRoom) {
+        sharedRoom.assignedMemberIds = Array.from(new Set([...(sharedRoom.assignedMemberIds || []), m1.id, m2.id]));
+      }
+
+      return {
+        ...prev,
+        campMembers: updatedMembers,
+        shelter: {
+          ...prev.shelter,
+          marriagesCount: (prev.shelter.marriagesCount || 0) + 1,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 15),
+          rooms
+        },
+        logs: [...prev.logs, {
+          id: 'matchmake_' + Date.now(),
+          day: prev.day,
+          text: `💍 Colony Marriage Arranged: As leader, you blessed the union between ${m1.name} and ${m2.name}! The colony cheered and celebrated their new life together (+15 Morale).`,
+          type: 'milestone' as const,
+          timestamp: 'Wedding'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Move player quarters
+  const handleAssignPlayerRoom = (roomId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const rooms = prev.shelter.rooms ? [...prev.shelter.rooms] : [];
+      const targetRoom = rooms.find(r => r.id === roomId);
+      const roomName = targetRoom ? targetRoom.name : 'Living Quarters';
+
+      const updatedRooms = rooms.map(r => {
+        const filtered = (r.assignedMemberIds || []).filter(id => id !== 'player');
+        if (r.id === roomId) {
+          filtered.push('player');
+        }
+        return { ...r, assignedMemberIds: filtered };
+      });
+
+      return {
+        ...prev,
+        player: { ...prev.player, roomId },
+        shelter: { ...prev.shelter, rooms: updatedRooms },
+        logs: [...prev.logs, {
+          id: 'player_room_' + Date.now(),
+          day: prev.day,
+          text: `🏡 Relocated Quarters: You moved your personal living space into ${roomName}! (+Sanity & Comfort).`,
+          type: 'camp' as const,
+          timestamp: 'Housing'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Tidy Room
+  const handleTidyRoom = (roomId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const rooms = (prev.shelter.rooms || []).map(r =>
+        r.id === roomId ? { ...r, comfort: Math.min(100, r.comfort + 5) } : r
+      );
+      return {
+        ...prev,
+        player: { ...prev.player, sanity: Math.min(100, prev.player.sanity + 6) },
+        shelter: { ...prev.shelter, rooms }
+      };
+    });
+  };
+
+  // Reinforce Room
+  const handleReinforceRoom = (roomId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const wood = prev.inventory.find(i => (i.id.includes('wood') || i.id.includes('plank')) && i.quantity > 0);
+      let updatedInv = prev.inventory;
+      if (wood) {
+        updatedInv = updatedInv.map(i => i === wood ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
+      }
+      const rooms = (prev.shelter.rooms || []).map(r =>
+        r.id === roomId ? { ...r, comfort: Math.min(100, r.comfort + 10) } : r
+      );
+      return {
+        ...prev,
+        inventory: updatedInv,
+        shelter: {
+          ...prev.shelter,
+          rooms,
+          barricadeIntegrity: Math.min(100, prev.shelter.barricadeIntegrity + 5)
+        }
+      };
+    });
+  };
+
+  // Facilities Instant Interaction
+  const handleInteractFacility = (facilityType: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedInv = [...prev.inventory];
+      let logText = '';
+      let hpDelta = 0;
+      let sanityDelta = 0;
+      let moraleDelta = 0;
+
+      if (facilityType === 'greenhouse') {
+        const veg = { id: 'harvest_veg_' + Date.now(), name: 'Fresh Harvest Vegetables', category: 'food' as const, quantity: 2, description: 'Fresh vegetables.' };
+        updatedInv.push(veg);
+        logText = '🌱 Tended rooftop raised beds: Harvested +2 fresh vegetable rations (+10 Sanity).';
+        sanityDelta = 10;
+      } else if (facilityType === 'chicken_coop') {
+        const eggs = { id: 'eggs_' + Date.now(), name: 'Fresh Farm Eggs', category: 'food' as const, quantity: 4, description: 'Fresh eggs.' };
+        updatedInv.push(eggs);
+        logText = '🥚 Tended chicken coop: Collected +4 farm eggs (+5 Morale).';
+        moraleDelta = 5;
+      } else if (facilityType === 'sanctuary_well') {
+        const water = { id: 'well_water_' + Date.now(), name: 'Purified Aquifer Water', category: 'water' as const, quantity: 3, description: 'Clean drinking water.' };
+        updatedInv.push(water);
+        logText = '💧 Drew clean, drought-proof aquifer drinking water (+3 Water).';
+      } else if (facilityType === 'infirmary') {
+        hpDelta = 15;
+        logText = '🩺 Rested in clean triage cot: Wounds sterilized and dressed (+15 HP).';
+      } else if (facilityType === 'nursery') {
+        moraleDelta = 10;
+        sanityDelta = 10;
+        logText = '🧸 Checked in on the nursery: Ensured swaddles and cribs were warm (+10 Morale & Sanity).';
+      } else if (facilityType === 'schoolhouse') {
+        sanityDelta = 10;
+        logText = '🎓 Held an afternoon sanctuary class: Taught history and survival mathematics (+10 Sanity).';
+      } else if (facilityType === 'memorial_garden') {
+        sanityDelta = 15;
+        logText = '🌸 Placed fresh wildflowers at the Memorial Garden: Paid respects to fallen pioneers (+15 Sanity).';
+      }
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        player: {
+          ...prev.player,
+          health: Math.min(100, prev.player.health + hpDelta),
+          sanity: Math.min(100, prev.player.sanity + sanityDelta)
+        },
+        shelter: {
+          ...prev.shelter,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + moraleDelta)
+        },
+        logs: [...prev.logs, {
+          id: 'fac_act_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'camp' as const,
+          timestamp: 'Sanctuary'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Toddler & Child Interactions
+  const handleToddlerInteract = (childId: string, actionType: 'play' | 'words' | 'story' | 'feed') => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let childName = 'the child';
+      let logText = '';
+      let updatedInv = [...prev.inventory];
+
+      let updatedPlayerKids = (prev.player.children || []).map(c => {
+        if (c.id === childId) {
+          childName = c.name;
+          if (actionType === 'words') {
+            const currentSkills = { ...(c.skills || { combat: 3, medical: 3, crafting: 3, stealth: 3, fitness: 3 }) };
+            currentSkills.crafting = Math.min(10, currentSkills.crafting + 1);
+            return { ...c, skills: currentSkills };
+          }
+        }
+        return c;
+      });
+
+      let updatedCamp = prev.campMembers.map(m => {
+        if (m.id === childId) {
+          childName = m.name;
+          if (actionType === 'words') {
+            return { ...m, craftingSkill: Math.min(10, (m.craftingSkill || 1) + 1) };
+          }
+        }
+        return m;
+      });
+
+      if (actionType === 'play') {
+        logText = `🧸 Cuddled and played games with little ${childName} (+15 Sanity, +10 Colony Morale).`;
+      } else if (actionType === 'words') {
+        logText = `📖 Taught first words, numbers, and basic survival tools to ${childName} (+Skill).`;
+      } else if (actionType === 'story') {
+        logText = `🌙 Read a soothing bedtime story to ${childName} by the candle (+10 Sanity).`;
+      } else if (actionType === 'feed') {
+        const food = updatedInv.find(i => i.category === 'food' && i.quantity > 0);
+        if (food) food.quantity -= 1;
+        updatedInv = updatedInv.filter(i => i.quantity > 0);
+        logText = `🥣 Fed warm vegetable broth to little ${childName}. They are well-nourished and happy (+Health).`;
+      }
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        player: {
+          ...prev.player,
+          children: updatedPlayerKids,
+          sanity: Math.min(100, prev.player.sanity + 12)
+        },
+        campMembers: updatedCamp,
+        shelter: {
+          ...prev.shelter,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 5)
+        },
+        logs: [...prev.logs, {
+          id: 'toddler_' + Date.now(),
+          day: prev.day,
+          text: logText,
+          type: 'camp' as const,
+          timestamp: 'Family'
+        }].slice(-150)
+      };
+    });
+  };
+
+  // Decrees
+  const handleSetFarmingDecree = (decree: 'standard' | 'intensive' | 'water_saving') => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      shelter: { ...prev.shelter, farmingDecree: decree }
+    } : null);
+  };
+
+  const handleSetScavengeQuotaDecree = (decree: 'conservative' | 'balanced' | 'aggressive') => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      shelter: { ...prev.shelter, scavengeQuotaDecree: decree }
+    } : null);
+  };
+
+  const handleSetBirthDecree = (decree: 'encouraged' | 'normal' | 'austerity') => {
+    if (!gameState) return;
+    setGameState(prev => prev ? {
+      ...prev,
+      shelter: { ...prev.shelter, birthDecree: decree }
+    } : null);
+  };
+
+  // Baby Naming confirmation
+  const handleConfirmBabyNaming = (fullName: string) => {
+    if (!gameState || !gameState.pendingBabyNaming) return;
+    const prompt = gameState.pendingBabyNaming;
+
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedPlayer = { ...prev.player };
+      let updatedCamp = [...prev.campMembers];
+
+      if (prompt.isPlayerChild) {
+        const newChild = {
+          id: 'child_player_' + Date.now(),
+          name: fullName,
+          age: 0,
+          gender: prompt.gender,
+          stage: 'infant' as const,
+          skills: {
+            combat: Math.floor(prev.player.combatSkill * 0.5) + 2,
+            medical: Math.floor(prev.player.medicalSkill * 0.5) + 2,
+            crafting: Math.floor(prev.player.craftingSkill * 0.5) + 2,
+            stealth: Math.floor(prev.player.stealthSkill * 0.5) + 2,
+            fitness: Math.floor(prev.player.fitnessSkill * 0.5) + 2
+          }
+        };
+        updatedPlayer.children = [...(updatedPlayer.children || []), newChild];
+      } else {
+        const newBabyMember: CampMember = {
+          id: 'baby_' + Date.now(),
+          name: fullName,
+          gender: prompt.gender,
+          age: 0,
+          relation: 'Colony Infant',
+          profession: 'Colony Infant',
+          health: 100,
+          trust: 100,
+          isChild: true,
+          stage: 'infant',
+          role: 'idle',
+          statusEffects: [],
+          combatSkill: 1,
+          medicalSkill: 1,
+          craftingSkill: 1,
+          stealthSkill: 1,
+          fitnessSkill: 1,
+          parentNames: [prompt.motherName, prompt.fatherName]
+        };
+        updatedCamp.push(newBabyMember);
+      }
+
+      const logText = `👶 A Child Born in the Ruins: ${fullName} was officially named and recorded in the colony registry! Lanterns glowed as the entire sanctuary toasted to our future (+25 Morale).`;
+
+      return {
+        ...prev,
+        player: updatedPlayer,
+        campMembers: updatedCamp,
+        pendingBabyNaming: null,
         shelter: {
           ...prev.shelter,
           childrenBornCount: (prev.shelter.childrenBornCount || 0) + 1,
           morale: Math.min(100, (prev.shelter.morale ?? 75) + 25)
         },
         logs: [...prev.logs, {
-          id: 'birth_' + Date.now(),
+          id: 'birth_named_' + Date.now(),
           day: prev.day,
           text: logText,
           type: 'milestone' as const,
@@ -1007,8 +1539,7 @@ export function App() {
       };
     });
   };
-
-  // Child Mentorship & Stat Passing
+// Child Mentorship & Stat Passing
   const handleMentorChild = (childId: string, skill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => {
     if (!gameState) return;
     setGameState(prev => {
@@ -1595,8 +2126,8 @@ export function App() {
   }
 
   return (
-    <div className="h-screen max-h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden font-sans select-none">
-      <div className="w-full max-w-md mx-auto flex flex-col h-full max-h-screen bg-zinc-950 border-x border-zinc-900 shadow-2xl relative overflow-hidden">
+    <div className="h-[100dvh] max-h-[100dvh] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden font-sans select-none">
+      <div className="w-full max-w-md mx-auto flex flex-col h-full max-h-[100dvh] bg-zinc-950 border-x border-zinc-900 shadow-2xl relative overflow-hidden">
         {/* Top Sticky Vitals */}
         <HeaderVitals state={gameState} onOpenSettings={() => setScreen('settings')} compact={activeTab !== 'journal'} />
 
@@ -1612,17 +2143,30 @@ export function App() {
               onTalkSurvivor={handleTalkSurvivor}
               onPraiseSurvivor={handlePraiseSurvivor}
               onGiftSurvivor={handleGiftSurvivor}
+              onSparSurvivor={handleSparSurvivor}
+              onSeduceSurvivor={handleSeduceSurvivor}
+              onHookupSurvivor={handleHookupSurvivor}
+              onMatchmake={handleMatchmake}
               onExileSurvivor={handleExileSurvivor}
               onRepairBarricade={handleRepairBarricade}
               onBuildRoom={handleBuildRoom}
               onAssignRoom={handleAssignRoom}
+              onAssignPlayerRoom={handleAssignPlayerRoom}
+              onTidyRoom={handleTidyRoom}
+              onReinforceRoom={handleReinforceRoom}
               onUpgradeFacility={handleUpgradeFacility}
+              onInteractFacility={handleInteractFacility}
               onSetRationPolicy={handleSetRationPolicy}
               onSetSecurityProtocol={handleSetSecurityProtocol}
+              onSetFarmingDecree={handleSetFarmingDecree}
+              onSetScavengeQuotaDecree={handleSetScavengeQuotaDecree}
+              onSetBirthDecree={handleSetBirthDecree}
               onCourtSurvivor={handleCourtSurvivor}
               onProposeMarriage={handleProposeMarriage}
-              onHaveBaby={handleHaveBaby}
+              onTryForBaby={handleTryForBaby}
+              onMakeLove={handleMakeLove}
               onMentorChild={handleMentorChild}
+              onToddlerInteract={handleToddlerInteract}
               onBestowHeirloom={handleBestowHeirloom}
             />
           )}
@@ -1691,6 +2235,14 @@ export function App() {
             currentWater={pendingTimeWarning.currentWater}
             onConfirm={handleConfirmPendingTimeAdvance}
             onCancel={() => setPendingTimeWarning(null)}
+          />
+        )}
+
+        {/* Baby Naming Modal */}
+        {gameState.pendingBabyNaming && (
+          <BabyNamingModal
+            prompt={gameState.pendingBabyNaming}
+            onConfirm={handleConfirmBabyNaming}
           />
         )}
 

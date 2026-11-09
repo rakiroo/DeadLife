@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FastForward, Clock, Package, Zap, BookOpen, Home, Calendar, CalendarDays, ChevronDown } from 'lucide-react';
+import { FastForward, Clock, Package, Zap, BookOpen, Home, Calendar, CalendarDays } from 'lucide-react';
 import { GameState } from '../types/game';
 
 export type ActiveTab = 'journal' | 'base' | 'inventory' | 'activities';
@@ -28,12 +28,10 @@ export const BottomActionBar: React.FC<Props> = ({
   const [timeMode, setTimeMode] = useState<'contextual' | 'micro' | 'macro'>('contextual');
 
   const suppliesCount = gameState.inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const residentCount = gameState.campMembers.length + (gameState.shelter.isEstablished ? 1 : 0);
+  const totalKids = (gameState.player.children ? gameState.player.children.length : 0);
+  const residentCount = gameState.campMembers.length + totalKids + (gameState.shelter.isEstablished ? 1 : 0);
 
-  // Determine current generational phase from BASE.txt:
-  // Phase 1: Early Survival (Days 0-30 or base unestablished)
-  // Phase 2: Established Settlement (Base established + multiple survivors)
-  // Phase 3: Generational Colony (Marriages occurred or children born or long-term haven)
+  // Phase calculation
   const isEstablished = gameState.shelter.isEstablished && (gameState.campMembers.length >= 2 || gameState.day >= 30);
   const hasMarriagesOrKids = (gameState.shelter.marriagesCount ?? 0) > 0 || 
     (gameState.shelter.childrenBornCount ?? 0) > 0 || 
@@ -48,7 +46,7 @@ export const BottomActionBar: React.FC<Props> = ({
   const showMacro = timeMode === 'macro' || (timeMode === 'contextual' && currentPhase === 3);
 
   return (
-    <div className="shrink-0 sticky bottom-0 z-40 bg-zinc-950/80 backdrop-blur-2xl border-t border-white/5 px-3 pt-2 pb-5 max-w-md mx-auto w-full select-none shadow-2xl font-sans">
+    <div className="shrink-0 sticky bottom-0 z-40 bg-zinc-950/95 backdrop-blur-2xl border-t border-white/5 px-3 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-w-md mx-auto w-full select-none shadow-2xl font-sans">
       {/* Evolving Time Progression Action Buttons - ONLY RENDERED ON JOURNAL SCREEN */}
       {activeTab === 'journal' && (
         <div className="mb-2 space-y-1">
@@ -56,7 +54,7 @@ export const BottomActionBar: React.FC<Props> = ({
           <div className="flex items-center justify-between px-1 text-[10px] font-mono text-zinc-400">
             <span className="flex items-center gap-1 font-semibold text-emerald-400">
               {currentPhase === 1 && '🌱 Phase 1: Early Survival'}
-              {currentPhase === 2 && '🏠 Phase 2: Established Haven'}
+              {currentPhase === 2 && '🏡 Phase 2: Established Haven'}
               {currentPhase === 3 && '👑 Phase 3: Generational Dynasty'}
             </span>
             <div className="flex gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5">
@@ -206,7 +204,7 @@ export const BottomActionBar: React.FC<Props> = ({
           <span className="text-[10px]">Journal</span>
         </button>
 
-        {/* Base Tab (Camp Sanctuary, Housing, Family & Decrees) */}
+        {/* Base Tab */}
         <button
           type="button"
           onClick={() => onTabChange('base')}
@@ -227,7 +225,7 @@ export const BottomActionBar: React.FC<Props> = ({
           <span className="text-[10px]">Base</span>
         </button>
 
-        {/* Supplies Tab (Clean Stockpile, Provisions & Gear) */}
+        {/* Supplies Tab */}
         <button
           type="button"
           onClick={() => onTabChange('inventory')}

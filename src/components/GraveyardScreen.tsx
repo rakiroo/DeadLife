@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CemeteryRecord } from '../types/game';
-import { ArrowLeft, Skull, Award, Calendar, Trash2 } from 'lucide-react';
+import { ArrowLeft, Skull, Award, Trash2, BookOpen, ChevronRight } from 'lucide-react';
+import { BiographyModal } from './BiographyModal';
 
 interface Props {
   records: CemeteryRecord[];
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export const GraveyardScreen: React.FC<Props> = ({ records, onBack, onClear }) => {
+  const [selectedRecord, setSelectedRecord] = useState<CemeteryRecord | null>(null);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between max-w-md mx-auto w-full select-none pb-6">
       {/* Top Header */}
@@ -38,7 +41,7 @@ export const GraveyardScreen: React.FC<Props> = ({ records, onBack, onClear }) =
         <div className="text-center py-2 space-y-1">
           <Skull className="w-8 h-8 text-rose-500 mx-auto" />
           <h2 className="text-base font-bold text-zinc-100">Memorial Hall of the Fallen</h2>
-          <p className="text-xs text-zinc-500">Every life fought. Every grave tells a story.</p>
+          <p className="text-xs text-zinc-500">Every life fought. Tap any survivor to read their full life memoir.</p>
         </div>
 
         {records.length === 0 ? (
@@ -51,12 +54,16 @@ export const GraveyardScreen: React.FC<Props> = ({ records, onBack, onClear }) =
             {records.map((rec) => (
               <div
                 key={rec.id}
-                className="p-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl space-y-2.5 relative overflow-hidden"
+                onClick={() => setSelectedRecord(rec)}
+                className="p-4 bg-zinc-900/80 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 rounded-2xl space-y-2.5 relative overflow-hidden cursor-pointer transition-all active:scale-[0.99] group shadow-sm"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-zinc-100">{rec.name}</h3>
-                    <p className="text-xs text-zinc-400">{rec.profession} • Age {rec.age}</p>
+                    <h3 className="text-sm font-bold text-zinc-100 group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                      <span>{rec.name}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-amber-400 transition-transform group-hover:translate-x-0.5" />
+                    </h3>
+                    <p className="text-xs text-zinc-400">{rec.profession} â€¢ Age {rec.age}</p>
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-mono font-bold text-rose-400">
@@ -75,8 +82,9 @@ export const GraveyardScreen: React.FC<Props> = ({ records, onBack, onClear }) =
                     <Award className="w-3.5 h-3.5" />
                     <span>{rec.ribbon}</span>
                   </span>
-                  <span className="font-mono text-zinc-500">
-                    {rec.stats.zombiesEliminated} Kills • {rec.stats.scavengeRuns} Runs
+                  <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-500 hover:text-zinc-300">
+                    <BookOpen className="w-3 h-3 text-cyan-400" />
+                    <span>View Biography</span>
                   </span>
                 </div>
               </div>
@@ -84,6 +92,14 @@ export const GraveyardScreen: React.FC<Props> = ({ records, onBack, onClear }) =
           </div>
         )}
       </div>
+
+      {/* Biography Modal */}
+      {selectedRecord && (
+        <BiographyModal
+          record={selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+        />
+      )}
 
       {/* Bottom Back Button */}
       <div className="px-4">

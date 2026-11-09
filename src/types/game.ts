@@ -152,6 +152,12 @@ export interface Survivor {
   children?: SurvivorChild[];
   generation?: number;
   heirlooms?: FamilyHeirloom[];
+  roomId?: string;
+  isPregnant?: boolean;
+  pregnancyMonths?: number;
+  pregnantWith?: string;
+  pregnantFatherId?: string;
+  secretAffairs?: string[];
 }
 
 export type CampRole = 'guard' | 'scavenger' | 'medic' | 'craftsman' | 'idle' | 'sickbay';
@@ -198,6 +204,9 @@ export interface CampMember {
   relationships?: SurvivorRelationship[];
   isPregnant?: boolean;
   pregnancyMonths?: number;
+  pregnantWith?: string;
+  pregnantFatherId?: string;
+  secretAffairs?: string[];
   isSleepingRough?: boolean;
 }
 
@@ -249,6 +258,9 @@ export interface BaseShelter {
   chickenCoopLevel?: number;
   hasSanctuaryWell?: boolean;
   heirlooms?: FamilyHeirloom[];
+  farmingDecree?: 'standard' | 'intensive' | 'water_saving';
+  scavengeQuotaDecree?: 'conservative' | 'balanced' | 'aggressive';
+  birthDecree?: 'encouraged' | 'normal' | 'austerity';
 }
 
 export type ItemCategory = 'food' | 'water' | 'medical' | 'weapon' | 'tool' | 'resource';
@@ -305,6 +317,21 @@ export interface CemeteryRecord {
     scavengeRuns: number;
     peopleSaved: number;
   };
+  biography?: string;
+  spouseName?: string;
+  childrenCount?: number;
+  generation?: number;
+  baseName?: string;
+}
+
+export interface BabyNamingPrompt {
+  motherName: string;
+  fatherName: string;
+  gender: 'male' | 'female';
+  suggestedFirstName: string;
+  suggestedLastName: string;
+  isPlayerChild: boolean;
+  parentMemberId?: string;
 }
 
 export interface GameState {
@@ -338,4 +365,5 @@ export interface GameState {
     deceasedAge: number;
     candidates: { id: string; name: string; relation: string; profession: string; age: number; isOffspring: boolean; skills: { combat: number; medical: number; crafting: number; stealth: number; fitness: number } }[];
   } | null;
+  pendingBabyNaming?: BabyNamingPrompt | null;
 }

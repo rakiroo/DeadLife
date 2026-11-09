@@ -4,8 +4,10 @@ import {
   Home, Users, Shield, HeartPulse, Hammer, Search, Bed, MessageSquare, 
   Utensils, UserMinus, Sparkles, Droplets, Edit3, Award, DoorOpen, Scroll, Check,
   Heart, Baby, GraduationCap, Flower2, UserPlus,
-  Egg, Crown
+  Egg, Crown, Flame, Swords, BookOpen, Brush, ShieldCheck, AlertCircle
 } from 'lucide-react';
+import { HookupModal } from './HookupModal';
+import { MatchmakeModal } from './MatchmakeModal';
 
 interface Props {
   gameState: GameState;
@@ -15,18 +17,31 @@ interface Props {
   onTalkSurvivor: (memberId: string) => void;
   onPraiseSurvivor?: (memberId: string) => void;
   onGiftSurvivor: (memberId: string) => void;
+  onSparSurvivor?: (memberId: string) => void;
+  onSeduceSurvivor?: (memberId: string) => void;
+  onHookupSurvivor?: (memberId: string, useProtection: boolean) => void;
+  onMatchmake?: (member1Id: string, member2Id: string) => void;
   onExileSurvivor: (memberId: string) => void;
   onRepairBarricade: () => void;
   onBuildRoom: (roomType: 'cots' | 'bunk' | 'cabin') => void;
   onAssignRoom: (memberId: string, roomId: string) => void;
+  onAssignPlayerRoom?: (roomId: string) => void;
+  onTidyRoom?: (roomId: string) => void;
+  onReinforceRoom?: (roomId: string) => void;
   onUpgradeFacility: (facilityId: 'water_collector' | 'greenhouse' | 'infirmary' | 'schoolhouse' | 'nursery' | 'memorial_garden' | 'chicken_coop' | 'sanctuary_well') => void;
+  onInteractFacility?: (facilityType: string) => void;
   onMentorChild?: (childId: string, skill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => void;
+  onToddlerInteract?: (childId: string, actionType: 'play' | 'words' | 'story' | 'feed') => void;
   onBestowHeirloom?: (name: string, type: 'weapon' | 'ring' | 'journal' | 'tool' | 'locket', bonusSkill: 'combat' | 'medical' | 'crafting' | 'stealth' | 'fitness') => void;
   onSetRationPolicy: (policy: 'full' | 'standard' | 'half') => void;
   onSetSecurityProtocol: (protocol: 'open' | 'quarantine' | 'lockdown') => void;
+  onSetFarmingDecree?: (decree: 'standard' | 'intensive' | 'water_saving') => void;
+  onSetScavengeQuotaDecree?: (decree: 'conservative' | 'balanced' | 'aggressive') => void;
+  onSetBirthDecree?: (decree: 'encouraged' | 'normal' | 'austerity') => void;
   onCourtSurvivor: (memberId: string) => void;
   onProposeMarriage: (memberId: string) => void;
-  onHaveBaby: () => void;
+  onTryForBaby: () => void;
+  onMakeLove: () => void;
 }
 
 export const BaseTab: React.FC<Props> = ({
@@ -37,23 +52,38 @@ export const BaseTab: React.FC<Props> = ({
   onTalkSurvivor,
   onPraiseSurvivor,
   onGiftSurvivor,
+  onSparSurvivor,
+  onSeduceSurvivor,
+  onHookupSurvivor,
+  onMatchmake,
   onExileSurvivor,
   onRepairBarricade,
   onBuildRoom,
   onAssignRoom,
+  onAssignPlayerRoom,
+  onTidyRoom,
+  onReinforceRoom,
   onUpgradeFacility,
+  onInteractFacility,
   onSetRationPolicy,
   onSetSecurityProtocol,
+  onSetFarmingDecree,
+  onSetScavengeQuotaDecree,
+  onSetBirthDecree,
   onCourtSurvivor,
   onProposeMarriage,
-  onHaveBaby,
+  onTryForBaby,
+  onMakeLove,
   onMentorChild,
+  onToddlerInteract,
   onBestowHeirloom
 }) => {
   const { shelter, campMembers, inventory, player } = gameState;
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
   const [selectedMember, setSelectedMember] = useState<CampMember | null>(null);
-  const [roomAssignModalMember, setRoomAssignModalMember] = useState<CampMember | null>(null);
+  const [roomAssignModalMember, setRoomAssignModalMember] = useState<{ id: string; name: string; isPlayer?: boolean } | null>(null);
+  const [hookupModalMember, setHookupModalMember] = useState<CampMember | null>(null);
+  const [showMatchmakeModal, setShowMatchmakeModal] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newBaseName, setNewBaseName] = useState(shelter.name || 'Sanctuary Haven');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
@@ -68,16 +98,31 @@ export const BaseTab: React.FC<Props> = ({
     ? shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
     : (shelter.maxSurvivors || (shelter.isEstablished ? 4 : 2));
   
-  const totalResidents = campMembers.length + 1;
-  const occupiedBeds = totalResidents;
+  // Children under 16 stay with parents in family quarters and don't take adult bed slots!
+  const adultResidents = campMembers.filter(m => !m.isChild || (m.age !== undefined && m.age >= 16)).length + 1;
+  const totalChildrenCount = (campMembers.filter(m => m.isChild && (m.age === undefined || m.age < 16)).length) + (player.children ? player.children.filter(c => c.age < 16).length : 0);
+  const totalSurvivorsCount = campMembers.length + (player.children ? player.children.length : 0) + 1;
+
+  const occupiedBeds = adultResidents;
   const vacantBeds = Math.max(0, defaultBedCapacity - occupiedBeds);
   const campMorale = shelter.morale ?? 75;
   const rationPolicy = shelter.rationPolicy ?? 'standard';
   const securityProtocol = shelter.securityProtocol ?? 'open';
+  const farmingDecree = shelter.farmingDecree ?? 'standard';
+  const scavengeQuotaDecree = shelter.scavengeQuotaDecree ?? 'balanced';
+  const birthDecree = shelter.birthDecree ?? 'normal';
 
   const marriedColonyCouples = campMembers.filter(m => m.datingStage === 'married');
   const totalMarriages = (shelter.marriagesCount ?? 0) + (player.romanceStage === 'married' ? 1 : 0);
-  const totalChildren = (campMembers.filter(m => m.isChild).length) + (player.children ? player.children.length : 0);
+
+  // Pregnancy status check for player or partner
+  const spouseMember = campMembers.find(m => m.id === player.spouseId);
+  const datingMember = campMembers.find(m => m.id === player.datingTargetId);
+  const isExpectingBaby = player.isPregnant || (spouseMember && spouseMember.isPregnant) || (datingMember && datingMember.isPregnant);
+  const pregnancyMonths = player.isPregnant ? (player.pregnancyMonths || 1) : (spouseMember?.pregnancyMonths || datingMember?.pregnancyMonths || 1);
+  const pregnantMotherName = player.gender === 'female' && player.isPregnant 
+    ? player.name 
+    : (spouseMember?.name || datingMember?.name || player.spouseName || 'Spouse');
 
   const triggerFeedback = (msg: string, cb?: () => void) => {
     if (cb) cb();
@@ -122,7 +167,7 @@ export const BaseTab: React.FC<Props> = ({
           <div>
             <h2 className="text-base font-bold text-white tracking-tight">No Base Sanctuary Established</h2>
             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-              You are currently wandering exposed ruins. Establish a permanent sanctuary to welcome survivors, marry, raise families, construct cabins, and build a lasting dynasty.
+              You are currently wandering exposed ruins. Establish a permanent sanctuary to welcome survivors, allocate housing, marry, raise children, construct cabins, and build a lasting dynasty.
             </p>
           </div>
 
@@ -142,7 +187,7 @@ export const BaseTab: React.FC<Props> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none">
+    <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none pb-4">
       {/* ACTION TOAST */}
       {actionFeedback && (
         <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-xs text-emerald-300 font-mono text-center animate-fade-in shadow-sm">
@@ -191,7 +236,7 @@ export const BaseTab: React.FC<Props> = ({
             <p className="text-[11px] text-zinc-400 mt-0.5">
               Settlement Overseer: <span className="text-zinc-200 font-medium">{player.name}</span> (Age {player.age})
               {player.romanceStage === 'married' && (
-                <span className="text-rose-400 font-semibold ml-1">â€¢ Married to {player.spouseName || 'Spouse'}</span>
+                <span className="text-rose-400 font-semibold ml-1">• Married to {player.spouseName || 'Spouse'}</span>
               )}
             </p>
           </div>
@@ -208,7 +253,7 @@ export const BaseTab: React.FC<Props> = ({
         <div className="grid grid-cols-4 gap-1.5 text-center text-xs pt-1">
           <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
             <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Bed className="w-3 h-3 text-cyan-400" /> Beds
+              <Bed className="w-3 h-3 text-cyan-400" /> Adult Beds
             </div>
             <div className="font-mono text-xs font-bold text-white mt-0.5">
               {occupiedBeds}/{defaultBedCapacity}
@@ -217,19 +262,19 @@ export const BaseTab: React.FC<Props> = ({
 
           <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
             <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Heart className="w-3 h-3 text-rose-400" /> Marriages
+              <Users className="w-3 h-3 text-emerald-400" /> Total Souls
             </div>
-            <div className="font-mono text-xs font-bold text-rose-300 mt-0.5">
-              {totalMarriages}
+            <div className="font-mono text-xs font-bold text-emerald-300 mt-0.5">
+              {totalSurvivorsCount}
             </div>
           </div>
 
           <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
             <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Baby className="w-3 h-3 text-amber-400" /> Children
+              <Baby className="w-3 h-3 text-amber-400" /> Kids
             </div>
             <div className="font-mono text-xs font-bold text-amber-300 mt-0.5">
-              {totalChildren}
+              {totalChildrenCount}
             </div>
           </div>
 
@@ -267,7 +312,7 @@ export const BaseTab: React.FC<Props> = ({
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>Survivors ({totalResidents})</span>
+          <span>Survivors ({totalSurvivorsCount})</span>
         </button>
 
         <button
@@ -337,29 +382,54 @@ export const BaseTab: React.FC<Props> = ({
                   <h3 className="text-xs font-bold text-white">{player.name} (You)</h3>
                 </div>
                 <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Age {player.age} â€¢ {player.profession}
-                  {player.romanceStage === 'dating' && <span className="text-pink-400 font-semibold ml-1">â€¢ Dating {player.datingTargetName || 'Partner'}</span>}
-                  {player.romanceStage === 'married' && <span className="text-rose-400 font-semibold ml-1">â€¢ Married to {player.spouseName || 'Spouse'}</span>}
+                  Age {player.age} • {player.profession}
+                  {player.romanceStage === 'dating' && <span className="text-pink-400 font-semibold ml-1">• Dating {player.datingTargetName || 'Partner'}</span>}
+                  {player.romanceStage === 'married' && <span className="text-rose-400 font-semibold ml-1">• Married to {player.spouseName || 'Spouse'}</span>}
+                  {player.roomId && (
+                    <span className="text-emerald-400 font-medium ml-1">
+                      • Quarters: {rooms.find(r => r.id === player.roomId)?.name || 'Private Room'}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="font-mono text-[11px] text-emerald-400 font-bold">
-                HP {player.health}% â€¢ Mind {player.sanity}%
+                HP {player.health}% • Mind {player.sanity}%
               </div>
             </div>
 
             <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 pt-1 border-t border-white/5 flex-wrap">
               <span className="text-zinc-500">Skills:</span>
               <span className="text-rose-400 font-semibold">Cbt {player.combatSkill}</span>
-              <span className="text-zinc-600">â€¢</span>
+              <span className="text-zinc-600">•</span>
               <span className="text-cyan-400 font-semibold">Med {player.medicalSkill}</span>
-              <span className="text-zinc-600">â€¢</span>
+              <span className="text-zinc-600">•</span>
               <span className="text-amber-400 font-semibold">Crf {player.craftingSkill}</span>
-              <span className="text-zinc-600">â€¢</span>
+              <span className="text-zinc-600">•</span>
               <span className="text-indigo-400 font-semibold">Stl {player.stealthSkill}</span>
-              <span className="text-zinc-600">â€¢</span>
+              <span className="text-zinc-600">•</span>
               <span className="text-emerald-400 font-semibold">Fit {player.fitnessSkill}</span>
             </div>
           </div>
+
+          {/* Quick Matchmaking Banner Button */}
+          {campMembers.filter(m => !m.isChild && m.datingStage !== 'married').length >= 2 && onMatchmake && (
+            <div className="p-3 bg-gradient-to-r from-rose-950/30 to-purple-950/30 border border-rose-500/20 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-rose-400" />
+                <div>
+                  <h4 className="text-xs font-bold text-white">Arrange Colony Union</h4>
+                  <p className="text-[10px] text-zinc-400">Matchmake two uncommitted survivors</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMatchmakeModal(true)}
+                className="py-1 px-3 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-400 text-white shadow-sm active:scale-95 transition-all"
+              >
+                Matchmake
+              </button>
+            </div>
+          )}
 
           {/* Camp Members */}
           {campMembers.length === 0 ? (
@@ -367,7 +437,7 @@ export const BaseTab: React.FC<Props> = ({
               <Users className="w-6 h-6 text-zinc-600 mx-auto" />
               <p className="font-semibold text-zinc-400">No other survivors in camp yet.</p>
               <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Explore landmarks in Activities or answer knocking survivors during rain to welcome new companions!
+                Explore landmarks in Activities or answer knocking survivors at the gate to welcome new companions!
               </p>
             </div>
           ) : (
@@ -376,6 +446,8 @@ export const BaseTab: React.FC<Props> = ({
                 const isSingle = !member.datingStage || member.datingStage === 'single';
                 const isDatingPlayer = player.datingTargetId === member.id;
                 const isMarriedToPlayer = player.spouseId === member.id;
+                const isChild = member.isChild && (member.age === undefined || member.age < 16);
+                const assignedRoom = rooms.find(r => r.assignedMemberIds && r.assignedMemberIds.includes(member.id));
 
                 return (
                   <div
@@ -386,12 +458,12 @@ export const BaseTab: React.FC<Props> = ({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <h3 className="text-xs font-bold text-white truncate">{member.name}</h3>
-                          {member.isChild && (
+                          {isChild && (
                             <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
-                              {member.stage === 'infant' ? 'Infant' : member.stage === 'child' ? 'Child' : 'Teen'}
+                              {member.stage === 'infant' ? 'Infant' : member.stage === 'child' ? 'Child' : 'Teen'} (Family Quarters)
                             </span>
                           )}
-                          {member.isSleepingRough && (
+                          {!isChild && member.isSleepingRough && (
                             <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
                               No Bed • Floor
                             </span>
@@ -411,35 +483,83 @@ export const BaseTab: React.FC<Props> = ({
                               Dating You
                             </span>
                           )}
+                          {member.isPregnant && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30 shrink-0 animate-pulse">
+                              Pregnant (M{member.pregnancyMonths || 1}/9)
+                            </span>
+                          )}
                           <span className="text-[9px] font-mono text-zinc-500 hover:text-zinc-300">Dossier</span>
                         </div>
-                        <p className="text-[11px] text-zinc-400 mt-0.5 truncate">{member.profession} â€¢ Age {member.age}</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+                          {member.profession} • Age {member.age}
+                          {assignedRoom && <span className="text-zinc-500 ml-1">• {assignedRoom.name}</span>}
+                        </p>
 
-                        {!member.isChild && (
+                        {!isChild && (
                           <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 mt-1 flex-wrap">
                             <span className="text-zinc-500">Skills:</span>
                             <span className="text-rose-400 font-semibold">Cbt {member.combatSkill || 5}</span>
-                            <span className="text-zinc-600">â€¢</span>
+                            <span className="text-zinc-600">•</span>
                             <span className="text-cyan-400 font-semibold">Med {member.medicalSkill || 5}</span>
-                            <span className="text-zinc-600">â€¢</span>
+                            <span className="text-zinc-600">•</span>
                             <span className="text-amber-400 font-semibold">Crf {member.craftingSkill || 5}</span>
-                            <span className="text-zinc-600">â€¢</span>
+                            <span className="text-zinc-600">•</span>
                             <span className="text-indigo-400 font-semibold">Stl {member.stealthSkill || 5}</span>
-                            <span className="text-zinc-600">â€¢</span>
+                            <span className="text-zinc-600">•</span>
                             <span className="text-emerald-400 font-semibold">Fit {member.fitnessSkill || 5}</span>
                           </div>
                         )}
                       </div>
                       <div className="text-right font-mono text-[11px] shrink-0">
                         <span className="text-emerald-400 font-bold">HP {member.health}%</span>
-                        <span className="text-zinc-600 mx-1">â€¢</span>
+                        <span className="text-zinc-600 mx-1">•</span>
                         <span className="text-cyan-400 font-bold">Trust {member.trust}%</span>
                       </div>
                     </div>
 
-                    {/* Role & Interactive Action Buttons */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
-                      {!member.isChild ? (
+                    {/* Toddler/Child interactions if under 16 */}
+                    {isChild && (
+                      <div className="pt-2 border-t border-white/5 space-y-1.5">
+                        <span className="text-[10px] font-mono text-amber-400 font-semibold block">
+                          Toddler & Child Nurturing (Stays in family quarters until 16):
+                        </span>
+                        <div className="grid grid-cols-4 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => triggerFeedback(`Cuddled and played with ${member.name} (+Morale & Sanity).`, () => onToddlerInteract && onToddlerInteract(member.id, 'play'))}
+                            className="py-1 px-1 rounded-lg text-[9px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20"
+                          >
+                            🧸 Cuddle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => triggerFeedback(`Taught survival basics to ${member.name} (+Skills).`, () => onToddlerInteract && onToddlerInteract(member.id, 'words'))}
+                            className="py-1 px-1 rounded-lg text-[9px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20"
+                          >
+                            📖 Teach
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => triggerFeedback(`Read an evening story to ${member.name} (+Sanity).`, () => onToddlerInteract && onToddlerInteract(member.id, 'story'))}
+                            className="py-1 px-1 rounded-lg text-[9px] font-bold bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/20"
+                          >
+                            🌙 Story
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!hasFood}
+                            onClick={() => triggerFeedback(`Fed warm broth to ${member.name} (+Health).`, () => onToddlerInteract && onToddlerInteract(member.id, 'feed'))}
+                            className="py-1 px-1 rounded-lg text-[9px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/20 disabled:opacity-30"
+                          >
+                            🥣 Feed
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Role & Interactive Action Buttons for Adults */}
+                    {!isChild && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
                         <div className="flex flex-wrap gap-1">
                           {ROLES.map((r) => (
                             <button
@@ -458,82 +578,107 @@ export const BaseTab: React.FC<Props> = ({
                             </button>
                           ))}
                         </div>
-                      ) : (
-                        <div className="text-[10px] font-mono text-amber-400 italic">
-                          {member.stage === 'infant' && 'Cared for in Nursery (Consumes half rations)'}
-                          {member.stage === 'child' && 'Helping with light colony chores'}
-                          {member.stage === 'teen' && 'Apprenticing & training attributes'}
-                        </div>
-                      )}
 
-                      <div className="flex gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => triggerFeedback(`Checked in with ${member.name} (+Trust & Sanity).`, () => onTalkSurvivor(member.id))}
-                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300"
-                          title="Talk & Check In"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Court / Flirt Button */}
-                        {!member.isChild && (
-                          <>
-                            {isSingle && player.romanceStage !== 'married' && (
-                              <button
-                                type="button"
-                                onClick={() => triggerFeedback(`Spent quality time courting ${member.name} (+Affection).`, () => onCourtSurvivor(member.id))}
-                                className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
-                                title="Court / Flirt"
-                              >
-                                <Heart className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {isDatingPlayer && (
-                              <button
-                                type="button"
-                                onClick={() => triggerFeedback(`Proposed marriage to ${member.name}! Wedding bells ring (+Morale).`, () => onProposeMarriage(member.id))}
-                                className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 animate-pulse"
-                                title="Propose Marriage"
-                              >
-                                <Heart className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => setRoomAssignModalMember(member)}
-                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-emerald-300"
-                          title="Assign Living Quarters"
-                        >
-                          <DoorOpen className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={!hasFood}
-                          onClick={() => triggerFeedback(`Shared food rations with ${member.name} (+Trust & Health).`, () => onGiftSurvivor(member.id))}
-                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-amber-300 disabled:opacity-30"
-                          title="Share Food Rations"
-                        >
-                          <Utensils className="w-3.5 h-3.5" />
-                        </button>
-
-                        {member.trust < 40 && !member.isChild && (
+                        <div className="flex gap-1 shrink-0 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => triggerFeedback(`Exiled ${member.name} from the camp.`, () => onExileSurvivor(member.id))}
-                            className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
-                            title="Exile from Camp"
+                            onClick={() => triggerFeedback(`Checked in and chatted with ${member.name} (+Trust & Sanity).`, () => onTalkSurvivor(member.id))}
+                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-cyan-300"
+                            title="Talk & Bond"
                           >
-                            <UserMinus className="w-3.5 h-3.5" />
+                            <MessageSquare className="w-3.5 h-3.5" />
                           </button>
-                        )}
+
+                          {onSparSurvivor && (
+                            <button
+                              type="button"
+                              onClick={() => triggerFeedback(`Sparred and conditioned tactics with ${member.name} (+Combat & Fitness).`, () => onSparSurvivor(member.id))}
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-rose-300"
+                              title="Spar & Train Combat"
+                            >
+                              <Swords className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Seduce / Flirt Button */}
+                          {onSeduceSurvivor && !isMarriedToPlayer && (
+                            <button
+                              type="button"
+                              onClick={() => triggerFeedback(`Flirted and shared a forbidden look with ${member.name} (+Attraction).`, () => onSeduceSurvivor(member.id))}
+                              className="p-1.5 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 text-pink-300"
+                              title="Seduce / Flirt"
+                            >
+                              <Flame className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Hook Up Button */}
+                          {onHookupSurvivor && !isMarriedToPlayer && (
+                            <button
+                              type="button"
+                              onClick={() => setHookupModalMember(member)}
+                              className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
+                              title="Hook Up (With or without protection)"
+                            >
+                              <Heart className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Court / Propose */}
+                          {isSingle && player.romanceStage !== 'married' && (
+                            <button
+                              type="button"
+                              onClick={() => triggerFeedback(`Courted ${member.name} (+Affection).`, () => onCourtSurvivor(member.id))}
+                              className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
+                              title="Court / Flirt"
+                            >
+                              <Heart className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {isDatingPlayer && (
+                            <button
+                              type="button"
+                              onClick={() => triggerFeedback(`Proposed marriage to ${member.name}! Wedding bells ring (+Morale).`, () => onProposeMarriage(member.id))}
+                              className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 animate-pulse"
+                              title="Propose Marriage"
+                            >
+                              <Crown className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setRoomAssignModalMember({ id: member.id, name: member.name })}
+                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-emerald-300"
+                            title="Assign Living Quarters"
+                          >
+                            <DoorOpen className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={!hasFood}
+                            onClick={() => triggerFeedback(`Shared food rations with ${member.name} (+Trust & Health).`, () => onGiftSurvivor(member.id))}
+                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-amber-300 disabled:opacity-30"
+                            title="Share Food Rations"
+                          >
+                            <Utensils className="w-3.5 h-3.5" />
+                          </button>
+
+                          {member.trust < 40 && (
+                            <button
+                              type="button"
+                              onClick={() => triggerFeedback(`Exiled ${member.name} from the camp.`, () => onExileSurvivor(member.id))}
+                              className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300"
+                              title="Exile from Camp"
+                            >
+                              <UserMinus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -542,9 +687,51 @@ export const BaseTab: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 2. SUB-VIEW: FAMILY & DYNASTY */}
+      {/* 2. SUB-VIEW: FAMILY & ROMANCE */}
       {subView === 'family' && (
         <div className="space-y-3">
+          {/* Active Pregnancy Card */}
+          {isExpectingBaby && (
+            <div className="p-4 bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-rose-950/40 border border-pink-500/30 rounded-3xl space-y-2.5 shadow-xl animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-pink-500/20 border border-pink-500/30 flex items-center justify-center text-pink-400">
+                    <Baby className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-pink-400 font-bold block">
+                      Expecting a Baby!
+                    </span>
+                    <h3 className="text-xs font-bold text-white">
+                      {pregnantMotherName} is {pregnancyMonths} {pregnancyMonths === 1 ? 'Month' : 'Months'} Pregnant
+                    </h3>
+                  </div>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                  Due in {Math.max(0, 9 - pregnancyMonths)} Months
+                </span>
+              </div>
+
+              {/* Month 1-9 Progress bar */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-mono text-zinc-400">
+                  <span>Conception</span>
+                  <span>Month {pregnancyMonths} of 9</span>
+                  <span>Delivery</span>
+                </div>
+                <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden border border-white/5">
+                  <div
+                    className="h-full bg-gradient-to-r from-pink-500 to-rose-400 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round((pregnancyMonths / 9) * 100))}%` }}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-zinc-300 leading-snug">
+                Advance +1 Month (or +1 Year) to progress the pregnancy. When the time arrives, a naming pop-up will appear to name your baby!
+              </p>
+            </div>
+          )}
+
           {/* Player Dynasty Card */}
           <div className="p-4 bg-gradient-to-br from-rose-950/40 via-zinc-900 to-black/60 border border-rose-500/30 rounded-3xl space-y-3 shadow-xl">
             <div className="flex items-start justify-between">
@@ -560,31 +747,71 @@ export const BaseTab: React.FC<Props> = ({
             </div>
 
             {/* Spouse & Dating status */}
-            <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-xs space-y-1">
-              <span className="text-[10px] uppercase font-mono text-zinc-500 block">Marital Status:</span>
+            <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-xs space-y-2">
+              <span className="text-[10px] uppercase font-mono text-zinc-500 block">Marital & Relationship Status:</span>
               {player.romanceStage === 'married' ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Heart className="w-4 h-4 text-amber-400" />
-                    <span className="font-bold text-white">Married to {player.spouseName}</span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Heart className="w-4 h-4 text-rose-400 fill-rose-400" />
+                      <span className="font-bold text-white">Married to {player.spouseName}</span>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => triggerFeedback('Spent a quiet romantic evening with your spouse (+Sanity, +Morale).', onHaveBaby)}
-                    className="py-1 px-3 rounded-xl text-[10px] font-bold bg-rose-500 hover:bg-rose-400 text-white shadow-sm flex items-center gap-1 active:scale-95 transition-all"
-                  >
-                    <Baby className="w-3 h-3" />
-                    <span>Try for Baby</span>
-                  </button>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {/* BUTTON 1: Try for Baby */}
+                    <button
+                      type="button"
+                      disabled={isExpectingBaby}
+                      onClick={() => triggerFeedback(`Conceived a baby with ${player.spouseName}! Due in 9 months (+Morale).`, onTryForBaby)}
+                      className="py-2 px-3 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    >
+                      <Baby className="w-3.5 h-3.5" />
+                      <span>{isExpectingBaby ? 'Currently Expecting' : 'Try for Baby'}</span>
+                    </button>
+
+                    {/* BUTTON 2: Make Love */}
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback(`Spent a passionate, restorative evening with ${player.spouseName} (+Sanity & Morale).`, onMakeLove)}
+                      className="py-2 px-3 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    >
+                      <Flame className="w-3.5 h-3.5" />
+                      <span>Make Love</span>
+                    </button>
+                  </div>
                 </div>
               ) : player.romanceStage === 'dating' ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-300">Dating <span className="font-bold text-pink-300">{player.datingTargetName}</span></span>
-                  <span className="text-[10px] text-zinc-500">Propose marriage in Survivors tab</span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-300">Dating <span className="font-bold text-pink-300">{player.datingTargetName}</span></span>
+                    <span className="text-[10px] text-zinc-500">Propose marriage in Survivors tab</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={isExpectingBaby}
+                      onClick={() => triggerFeedback(`Conceived a baby with ${player.datingTargetName}! Due in 9 months.`, onTryForBaby)}
+                      className="py-2 px-3 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    >
+                      <Baby className="w-3.5 h-3.5" />
+                      <span>{isExpectingBaby ? 'Currently Expecting' : 'Try for Baby'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback(`Spent a passionate evening with ${player.datingTargetName} (+Sanity & Morale).`, onMakeLove)}
+                      className="py-2 px-3 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                    >
+                      <Flame className="w-3.5 h-3.5" />
+                      <span>Make Love</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-zinc-400 text-[11px]">
-                  You are currently single. Spend time courting a companion in the Survivors tab to spark a romance and build a family.
+                  You are currently single. Spend time courting a companion in the Survivors tab or arrange a match to start a family.
                 </p>
               )}
             </div>
@@ -594,9 +821,9 @@ export const BaseTab: React.FC<Props> = ({
               <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block px-1">
                 Your Offspring ({player.children ? player.children.length : 0})
               </span>
-                            {(!player.children || player.children.length === 0) ? (
+              {(!player.children || player.children.length === 0) ? (
                 <div className="p-3 text-center text-zinc-500 bg-black/20 rounded-2xl border border-white/5 text-[11px]">
-                  No children yet. Once married, you can start a family to ensure your lineage continues when you grow old!
+                  No children yet. Try for a baby or make love to start a family and carry your dynasty forward!
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -608,7 +835,7 @@ export const BaseTab: React.FC<Props> = ({
                           <span className="text-[10px] text-zinc-400 ml-2">Age {child.age} • {child.stage}</span>
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          {child.age >= 18 ? 'Adult Heir' : 'Growing Up'}
+                          {child.age >= 16 ? 'Adult Heir (Age 16+)' : 'Growing Up (Family Quarters)'}
                         </span>
                       </div>
 
@@ -638,65 +865,101 @@ export const BaseTab: React.FC<Props> = ({
                         </div>
                       )}
 
-                      {/* Mentorship Training Buttons (age >= 4) */}
-                      {child.age >= 4 && onMentorChild && (
-                        <div className="pt-1 space-y-1">
-                          <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                            <span className="flex items-center gap-1 font-semibold text-zinc-300"><GraduationCap className="w-3 h-3 text-amber-400" /> Train & Mentor:</span>
-                            {child.lastMentoredDay === gameState.day && (
-                              <span className="text-emerald-400 text-[9px] font-mono">Trained Today</span>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-5 gap-1">
+                      {/* Toddler & Mentorship Interactions */}
+                      <div className="pt-1 space-y-1">
+                        {child.age < 16 && (
+                          <div className="grid grid-cols-4 gap-1 pb-1">
                             <button
                               type="button"
-                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.combat >= 10)}
-                              onClick={() => triggerFeedback(`Mentored ${child.name} in Combat tactics (+1 Combat).`, () => onMentorChild(child.id, 'combat'))}
-                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              onClick={() => triggerFeedback(`Cuddled and played with ${child.name} (+Morale & Sanity).`, () => onToddlerInteract && onToddlerInteract(child.id, 'play'))}
+                              className="py-1 px-1 rounded-lg text-[9px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20"
                             >
-                              +Cbt
+                              🧸 Play
                             </button>
                             <button
                               type="button"
-                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.medical >= 10)}
-                              onClick={() => triggerFeedback(`Mentored ${child.name} in Field Medicine (+1 Medical).`, () => onMentorChild(child.id, 'medical'))}
-                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              onClick={() => triggerFeedback(`Taught first words and survival basics to ${child.name} (+Skills).`, () => onToddlerInteract && onToddlerInteract(child.id, 'words'))}
+                              className="py-1 px-1 rounded-lg text-[9px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20"
                             >
-                              +Med
+                              📖 Teach
                             </button>
                             <button
                               type="button"
-                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.crafting >= 10)}
-                              onClick={() => triggerFeedback(`Mentored ${child.name} in Fortification Crafting (+1 Crafting).`, () => onMentorChild(child.id, 'crafting'))}
-                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              onClick={() => triggerFeedback(`Read an evening story to ${child.name} (+Sanity).`, () => onToddlerInteract && onToddlerInteract(child.id, 'story'))}
+                              className="py-1 px-1 rounded-lg text-[9px] font-bold bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/20"
                             >
-                              +Crf
+                              🌙 Story
                             </button>
                             <button
                               type="button"
-                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.stealth >= 10)}
-                              onClick={() => triggerFeedback(`Mentored ${child.name} in Stealth & Concealment (+1 Stealth).`, () => onMentorChild(child.id, 'stealth'))}
-                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              disabled={!hasFood}
+                              onClick={() => triggerFeedback(`Nursed and fed warm meal to ${child.name} (+Health).`, () => onToddlerInteract && onToddlerInteract(child.id, 'feed'))}
+                              className="py-1 px-1 rounded-lg text-[9px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/20 disabled:opacity-30"
                             >
-                              +Stl
-                            </button>
-                            <button
-                              type="button"
-                              disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.fitness >= 10)}
-                              onClick={() => triggerFeedback(`Mentored ${child.name} in Survival Fitness (+1 Fitness).`, () => onMentorChild(child.id, 'fitness'))}
-                              className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                              +Fit
+                              🥣 Nurse
                             </button>
                           </div>
-                        </div>
-                      )}
+                        )}
+
+                        {child.age >= 4 && onMentorChild && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                              <span className="flex items-center gap-1 font-semibold text-zinc-300"><GraduationCap className="w-3 h-3 text-amber-400" /> Train & Mentor:</span>
+                              {child.lastMentoredDay === gameState.day && (
+                                <span className="text-emerald-400 text-[9px] font-mono">Trained Today</span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-5 gap-1">
+                              <button
+                                type="button"
+                                disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.combat >= 10)}
+                                onClick={() => triggerFeedback(`Mentored ${child.name} in Combat tactics (+1 Combat).`, () => onMentorChild(child.id, 'combat'))}
+                                className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/20 disabled:opacity-30"
+                              >
+                                +Cbt
+                              </button>
+                              <button
+                                type="button"
+                                disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.medical >= 10)}
+                                onClick={() => triggerFeedback(`Mentored ${child.name} in Field Medicine (+1 Medical).`, () => onMentorChild(child.id, 'medical'))}
+                                className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/20 disabled:opacity-30"
+                              >
+                                +Med
+                              </button>
+                              <button
+                                type="button"
+                                disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.crafting >= 10)}
+                                onClick={() => triggerFeedback(`Mentored ${child.name} in Fortification Crafting (+1 Crafting).`, () => onMentorChild(child.id, 'crafting'))}
+                                className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20 disabled:opacity-30"
+                              >
+                                +Crf
+                              </button>
+                              <button
+                                type="button"
+                                disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.stealth >= 10)}
+                                onClick={() => triggerFeedback(`Mentored ${child.name} in Stealth & Concealment (+1 Stealth).`, () => onMentorChild(child.id, 'stealth'))}
+                                className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20 disabled:opacity-30"
+                              >
+                                +Stl
+                              </button>
+                              <button
+                                type="button"
+                                disabled={child.lastMentoredDay === gameState.day || (child.skills && child.skills.fitness >= 10)}
+                                onClick={() => triggerFeedback(`Mentored ${child.name} in Survival Fitness (+1 Fitness).`, () => onMentorChild(child.id, 'fitness'))}
+                                className="py-1 px-0.5 rounded-lg text-[9px] font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/20 disabled:opacity-30"
+                              >
+                                +Fit
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Family Heirlooms & Dynasty Relics */}
+              {/* Family Heirlooms */}
               <div className="space-y-1.5 pt-3 border-t border-white/5">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold flex items-center gap-1">
@@ -754,13 +1017,24 @@ export const BaseTab: React.FC<Props> = ({
 
           {/* Colony Marriages & Romance Web */}
           <div className="space-y-2 pt-1">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold block px-1">
-              Colony Marriages & Interpersonal Ties
-            </span>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold block">
+                Colony Marriages & Interpersonal Ties
+              </span>
+              {onMatchmake && (
+                <button
+                  type="button"
+                  onClick={() => setShowMatchmakeModal(true)}
+                  className="text-[10px] font-bold text-rose-300 hover:text-white flex items-center gap-1"
+                >
+                  + Matchmake
+                </button>
+              )}
+            </div>
 
             {marriedColonyCouples.length === 0 ? (
               <div className="p-4 text-center text-zinc-500 bg-white/[0.02] rounded-2xl border border-white/5 text-xs">
-                No colony survivors have tied the knot yet. Survivors sharing rooms or working together will naturally fall in love over time!
+                No colony survivors have tied the knot yet. Pair survivors using Matchmaking or let roommates naturally fall in love!
               </div>
             ) : (
               <div className="space-y-2">
@@ -798,29 +1072,47 @@ export const BaseTab: React.FC<Props> = ({
           <div className="space-y-2.5">
             {rooms.map((room) => {
               const assignedMembers = campMembers.filter(m => room.assignedMemberIds && room.assignedMemberIds.includes(m.id));
+              const isPlayerHere = player.roomId === room.id || (room.assignedMemberIds && room.assignedMemberIds.includes('player'));
+              const totalAssignedCount = assignedMembers.length + (isPlayerHere ? 1 : 0);
+              const isRoomFull = totalAssignedCount >= room.capacity;
+
               return (
-                <div key={room.id} className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5">
+                <div key={room.id} className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                         <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
                         {room.name}
+                        {isPlayerHere && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Your Quarters
+                          </span>
+                        )}
                       </h4>
                       <p className="text-[10px] text-zinc-400 mt-0.5">
-                        Capacity: {assignedMembers.length} / {room.capacity} beds filled â€¢ Comfort {room.comfort}%
+                        Capacity: {totalAssignedCount} / {room.capacity} beds filled • Comfort {room.comfort}%
                       </p>
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                      {room.capacity - assignedMembers.length} Open
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                      isRoomFull ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10'
+                    }`}>
+                      {room.capacity - totalAssignedCount} Open
                     </span>
                   </div>
 
+                  {/* Current Occupants List */}
                   <div className="p-2 rounded-xl bg-black/30 border border-white/5 text-[11px] text-zinc-300 space-y-1">
-                    <span className="text-[9px] uppercase font-mono text-zinc-500 block">Current Roommates:</span>
-                    {assignedMembers.length === 0 ? (
-                      <span className="text-zinc-500 italic text-[10px]">No survivors currently assigned.</span>
+                    <span className="text-[9px] uppercase font-mono text-zinc-500 block">Current Occupants:</span>
+                    {totalAssignedCount === 0 ? (
+                      <span className="text-zinc-500 italic text-[10px]">Vacant quarters.</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
+                        {isPlayerHere && (
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 font-bold text-[10px] flex items-center gap-1">
+                            <Crown className="w-3 h-3 text-amber-400" />
+                            <span>{player.name} (You)</span>
+                          </span>
+                        )}
                         {assignedMembers.map(m => (
                           <span key={m.id} className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-medium text-[10px] flex items-center gap-1">
                             <span>{m.name}</span>
@@ -828,6 +1120,58 @@ export const BaseTab: React.FC<Props> = ({
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  {/* Room Actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-white/5 text-xs">
+                    <div className="flex gap-1 flex-wrap">
+                      {/* Move Player Here Button */}
+                      {!isPlayerHere && onAssignPlayerRoom && (
+                        <button
+                          type="button"
+                          disabled={isRoomFull}
+                          onClick={() => triggerFeedback(`Moved your personal quarters to ${room.name}.`, () => onAssignPlayerRoom(room.id))}
+                          className="py-1 px-2.5 rounded-xl text-[10px] font-bold bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-950 flex items-center gap-1"
+                        >
+                          <Home className="w-3 h-3" />
+                          <span>Move My Quarters Here</span>
+                        </button>
+                      )}
+
+                      {/* Tidy & Clean */}
+                      {onTidyRoom && (
+                        <button
+                          type="button"
+                          onClick={() => triggerFeedback(`Cleaned and tidied ${room.name} (+Comfort & Sanity).`, () => onTidyRoom(room.id))}
+                          className="py-1 px-2 rounded-xl text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 flex items-center gap-1"
+                        >
+                          <Brush className="w-3 h-3 text-cyan-400" />
+                          <span>Tidy</span>
+                        </button>
+                      )}
+
+                      {/* Reinforce */}
+                      {onReinforceRoom && (
+                        <button
+                          type="button"
+                          disabled={woodCount < 1}
+                          onClick={() => triggerFeedback(`Reinforced ${room.name} with timber braces (+Comfort).`, () => onReinforceRoom(room.id))}
+                          className="py-1 px-2 rounded-xl text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-40 flex items-center gap-1"
+                        >
+                          <Hammer className="w-3 h-3 text-amber-400" />
+                          <span>Reinforce (1 Wood)</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isRoomFull}
+                      onClick={() => setRoomAssignModalMember({ id: 'select_survivor', name: 'Survivor' })}
+                      className="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold"
+                    >
+                      + Assign Survivor
+                    </button>
                   </div>
                 </div>
               );
@@ -881,7 +1225,7 @@ export const BaseTab: React.FC<Props> = ({
               <div className="p-3 bg-white/[0.04] border border-white/5 rounded-2xl flex items-center justify-between gap-3">
                 <div>
                   <h5 className="text-xs font-bold text-white">Private Living Cabin</h5>
-                  <p className="text-[10px] text-zinc-400">+2 Beds, +15 Morale Boost for Couples</p>
+                  <p className="text-[10px] text-zinc-400">+2 Beds, +15 Morale Boost for Couples & Overseer</p>
                 </div>
                 <button
                   type="button"
@@ -901,7 +1245,7 @@ export const BaseTab: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 4. SUB-VIEW: FACILITIES & SCHOOLHOUSE */}
+      {/* 4. SUB-VIEW: FACILITIES & EXPANSION */}
       {subView === 'facilities' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
@@ -911,100 +1255,7 @@ export const BaseTab: React.FC<Props> = ({
           </div>
 
           <div className="space-y-2.5">
-            {/* The Schoolhouse */}
-            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-                    Colony Schoolhouse
-                  </h4>
-                  <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.hasSchoolhouse ? 'Operational' : 'Unbuilt'} â€¢ Enrolled children gain +1 to all skills every year
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 4 || nailsCount < 10 || shelter.hasSchoolhouse}
-                  onClick={() => triggerFeedback('Built the Colony Schoolhouse! Enrolled children will gain +1 to all skills annually.', () => onUpgradeFacility('schoolhouse'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    shelter.hasSchoolhouse
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
-                      : woodCount >= 4 && nailsCount >= 10
-                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.hasSchoolhouse ? 'Built' : 'Build (4 Wood, 10 Nails)'}
-                </button>
-              </div>
-              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
-                Converts old chalkboards and books into a sanctuary classroom. Ensures the next generation inherits knowledge.
-              </p>
-            </div>
-
-            {/* The Nursery & Daycare */}
-            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Baby className="w-3.5 h-3.5 text-amber-400" />
-                    Sanctuary Nursery & Daycare
-                  </h4>
-                  <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.hasNursery ? 'Operational' : 'Unbuilt'} â€¢ Safe cribs, +20% Morale, higher baby birth rate
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 3 || shelter.hasNursery}
-                  onClick={() => triggerFeedback('Built Sanctuary Nursery (+20% Colony Hope & Safe Childcare).', () => onUpgradeFacility('nursery'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    shelter.hasNursery
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
-                      : woodCount >= 3
-                      ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.hasNursery ? 'Built' : 'Build (3 Wood)'}
-                </button>
-              </div>
-              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
-                Warm cribs, clean swaddles, and round-the-clock supervision for newborn infants and toddlers.
-              </p>
-            </div>
-
-            {/* The Memorial Garden */}
-            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Flower2 className="w-3.5 h-3.5 text-rose-400" />
-                    Memorial Garden & Cemetery
-                  </h4>
-                  <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.hasMemorialGarden ? 'Dedicated' : 'Unbuilt'} â€¢ Honoring fallen founders and ancestors
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 2 || shelter.hasMemorialGarden}
-                  onClick={() => triggerFeedback('Dedicated Memorial Garden (+Colony Emotional Resolve).', () => onUpgradeFacility('memorial_garden'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    shelter.hasMemorialGarden
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
-                      : woodCount >= 2
-                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.hasMemorialGarden ? 'Dedicated' : 'Build (2 Wood)'}
-                </button>
-              </div>
-            </div>
-
-            {/* Greenhouse */}
+            {/* Rooftop Greenhouse */}
             <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
               <div className="flex items-start justify-between">
                 <div>
@@ -1013,25 +1264,35 @@ export const BaseTab: React.FC<Props> = ({
                     Rooftop Greenhouse
                   </h4>
                   <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.greenhouseLevel ? `Active Farm (Tier ${shelter.greenhouseLevel})` : 'Unbuilt'} â€¢ Fresh crops
+                    {shelter.greenhouseLevel ? `Active Farm (Tier ${shelter.greenhouseLevel})` : 'Unbuilt'} • Produces vegetables
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 3 || waterCount < 2}
-                  onClick={() => triggerFeedback('Built Rooftop Garden Beds (+Passive Food Production).', () => onUpgradeFacility('greenhouse'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    woodCount >= 3 && waterCount >= 2
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.greenhouseLevel ? 'Upgrade' : 'Build (3 Wood, 2 Water)'}
-                </button>
+                <div className="flex gap-1">
+                  {shelter.greenhouseLevel && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Harvested fresh greenhouse vegetables (+Food Rations)!', () => onInteractFacility('greenhouse'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 active:scale-95 transition-all"
+                    >
+                      Harvest Now
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 3 || waterCount < 2}
+                    onClick={() => triggerFeedback('Upgraded Rooftop Garden Beds (+Passive Food Production).', () => onUpgradeFacility('greenhouse'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      woodCount >= 3 && waterCount >= 2
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.greenhouseLevel ? 'Upgrade' : 'Build (3 Wood, 2 Water)'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            
             {/* Chicken Coop & Livestock */}
             <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
               <div className="flex items-start justify-between">
@@ -1041,27 +1302,35 @@ export const BaseTab: React.FC<Props> = ({
                     Sanctuary Chicken Coop
                   </h4>
                   <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.hasChickenCoop ? 'Active Coop' : 'Unbuilt'} • Produces fresh farm eggs daily (reduces canned food need)
+                    {shelter.hasChickenCoop ? 'Active Coop' : 'Unbuilt'} • Produces fresh farm eggs daily
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 3 || nailsCount < 8 || shelter.hasChickenCoop}
-                  onClick={() => triggerFeedback('Constructed Chicken Coop (+Fresh Eggs Daily)!', () => onUpgradeFacility('chicken_coop'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    shelter.hasChickenCoop
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
-                      : woodCount >= 3 && nailsCount >= 8
-                      ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.hasChickenCoop ? 'Built' : 'Build (3 Wood, 8 Nails)'}
-                </button>
+                <div className="flex gap-1">
+                  {shelter.hasChickenCoop && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Collected fresh eggs from the nesting boxes (+Food)!', () => onInteractFacility('chicken_coop'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 active:scale-95 transition-all"
+                    >
+                      Gather Eggs
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 3 || nailsCount < 8 || shelter.hasChickenCoop}
+                    onClick={() => triggerFeedback('Constructed Chicken Coop (+Fresh Eggs Daily)!', () => onUpgradeFacility('chicken_coop'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      shelter.hasChickenCoop
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                        : woodCount >= 3 && nailsCount >= 8
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.hasChickenCoop ? 'Built' : 'Build (3 Wood, 8 Nails)'}
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
-                Houses nesting hens in a reinforced timber coop. Yields fresh eggs every day and lowers food scavenging danger.
-              </p>
             </div>
 
             {/* Sanctuary Aquifer Well */}
@@ -1073,27 +1342,115 @@ export const BaseTab: React.FC<Props> = ({
                     Sanctuary Aquifer Well
                   </h4>
                   <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.hasSanctuaryWell ? 'Active Deep Well' : 'Unbuilt'} • Infinite clean ground water (drought-proof)
+                    {shelter.hasSanctuaryWell ? 'Active Deep Well' : 'Unbuilt'} • Clean drought-proof water daily
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 4 || nailsCount < 12 || shelter.hasSanctuaryWell}
-                  onClick={() => triggerFeedback('Dug and reinforced Sanctuary Well (+Clean Water Daily)!', () => onUpgradeFacility('sanctuary_well'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    shelter.hasSanctuaryWell
-                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
-                      : woodCount >= 4 && nailsCount >= 12
-                      ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.hasSanctuaryWell ? 'Operational' : 'Dig Well (4 Wood, 12 Nails)'}
-                </button>
+                <div className="flex gap-1">
+                  {shelter.hasSanctuaryWell && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Pumped clean drinking water from the well (+Water)!', () => onInteractFacility('sanctuary_well'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 active:scale-95 transition-all"
+                    >
+                      Pump Water
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 4 || nailsCount < 12 || shelter.hasSanctuaryWell}
+                    onClick={() => triggerFeedback('Dug and reinforced Sanctuary Well (+Clean Water Daily)!', () => onUpgradeFacility('sanctuary_well'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      shelter.hasSanctuaryWell
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                        : woodCount >= 4 && nailsCount >= 12
+                        ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.hasSanctuaryWell ? 'Operational' : 'Dig Well (4 Wood, 12 Nails)'}
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] text-zinc-400 bg-black/30 p-2 rounded-xl">
-                Taps into deep subterranean aquifers beneath the haven. Yields clean, uncontaminated water even through scorching heatwaves.
-              </p>
+            </div>
+
+            {/* Schoolhouse */}
+            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
+                    Colony Schoolhouse
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {shelter.hasSchoolhouse ? 'Operational' : 'Unbuilt'} • Enrolled children gain +1 to all skills annually
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {shelter.hasSchoolhouse && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Held a community survival class for all children (+Skills & Sanity)!', () => onInteractFacility('schoolhouse'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 active:scale-95 transition-all"
+                    >
+                      Hold Class
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 4 || nailsCount < 10 || shelter.hasSchoolhouse}
+                    onClick={() => triggerFeedback('Built the Colony Schoolhouse! Enrolled children will gain +1 to all skills annually.', () => onUpgradeFacility('schoolhouse'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      shelter.hasSchoolhouse
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                        : woodCount >= 4 && nailsCount >= 10
+                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.hasSchoolhouse ? 'Built' : 'Build (4 Wood, 10 Nails)'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Sanctuary Nursery & Daycare */}
+            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Baby className="w-3.5 h-3.5 text-amber-400" />
+                    Sanctuary Nursery & Daycare
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {shelter.hasNursery ? 'Operational' : 'Unbuilt'} • Safe cribs, +20% Morale, safe infant growth
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {shelter.hasNursery && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Tucked infants into warm cribs (+Morale & Hope)!', () => onInteractFacility('nursery'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 active:scale-95 transition-all"
+                    >
+                      Check Cribs
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 3 || shelter.hasNursery}
+                    onClick={() => triggerFeedback('Built Sanctuary Nursery (+20% Colony Hope & Safe Childcare).', () => onUpgradeFacility('nursery'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      shelter.hasNursery
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                        : woodCount >= 3
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.hasNursery ? 'Built' : 'Build (3 Wood)'}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Infirmary */}
@@ -1105,28 +1462,79 @@ export const BaseTab: React.FC<Props> = ({
                     Camp Infirmary
                   </h4>
                   <p className="text-[10px] text-zinc-400 mt-0.5">
-                    {shelter.infirmaryLevel ? `Operational (Tier ${shelter.infirmaryLevel})` : 'Unbuilt'}
+                    {shelter.infirmaryLevel ? `Operational (Tier ${shelter.infirmaryLevel})` : 'Unbuilt'} • Sterile recovery
                   </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={woodCount < 2 || medsCount < 2}
-                  onClick={() => triggerFeedback('Established Camp Infirmary (+Medical Care).', () => onUpgradeFacility('infirmary'))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                    woodCount >= 2 && medsCount >= 2
-                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm active:scale-95'
-                      : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
-                  }`}
-                >
-                  {shelter.infirmaryLevel ? 'Upgrade' : 'Build (2 Wood, 2 Meds)'}
-                </button>
+                <div className="flex gap-1">
+                  {shelter.infirmaryLevel && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Rested in sterile triage bed (+15 HP, wounds disinfected)!', () => onInteractFacility('infirmary'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 active:scale-95 transition-all"
+                    >
+                      Rest in Triage
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 2 || medsCount < 2}
+                    onClick={() => triggerFeedback('Established Camp Infirmary (+Medical Care).', () => onUpgradeFacility('infirmary'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      woodCount >= 2 && medsCount >= 2
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.infirmaryLevel ? 'Upgrade' : 'Build (2 Wood, 2 Meds)'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Memorial Garden */}
+            <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Flower2 className="w-3.5 h-3.5 text-rose-400" />
+                    Memorial Garden & Cemetery
+                  </h4>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">
+                    {shelter.hasMemorialGarden ? 'Dedicated' : 'Unbuilt'} • Honoring fallen founders and ancestors
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {shelter.hasMemorialGarden && onInteractFacility && (
+                    <button
+                      type="button"
+                      onClick={() => triggerFeedback('Placed wildflowers at the graves of the fallen (+Sanity & Peace).', () => onInteractFacility('memorial_garden'))}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 active:scale-95 transition-all"
+                    >
+                      Visit Memorial
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={woodCount < 2 || shelter.hasMemorialGarden}
+                    onClick={() => triggerFeedback('Dedicated Memorial Garden (+Colony Emotional Resolve).', () => onUpgradeFacility('memorial_garden'))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      shelter.hasMemorialGarden
+                        ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                        : woodCount >= 2
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm active:scale-95'
+                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
+                    }`}
+                  >
+                    {shelter.hasMemorialGarden ? 'Dedicated' : 'Build (2 Wood)'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 5. SUB-VIEW: DECREES */}
+      {/* 5. SUB-VIEW: DECREES & COLONY LAWS */}
       {subView === 'laws' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
@@ -1135,6 +1543,7 @@ export const BaseTab: React.FC<Props> = ({
             </span>
           </div>
 
+          {/* Daily Food Rationing */}
           <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5">
             <div>
               <h4 className="text-xs font-bold text-white">Daily Food Rationing Policy</h4>
@@ -1192,6 +1601,181 @@ export const BaseTab: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Farming & Irrigation Mandate */}
+          <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5">
+            <div>
+              <h4 className="text-xs font-bold text-white">Farming & Watering Mandate</h4>
+              <p className="text-[10px] text-zinc-400">Controls agricultural irrigation schedule and crop targets.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onSetFarmingDecree && onSetFarmingDecree('intensive');
+                  triggerFeedback('Enacted Intensive Irrigation mandate (+60% Greenhouse Yield, consumes +1 extra water).');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  farmingDecree === 'intensive'
+                    ? 'bg-emerald-500 text-white font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Intensive</div>
+                <div className="text-[9px] opacity-80">+60% Food Yield</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSetFarmingDecree && onSetFarmingDecree('standard');
+                  triggerFeedback('Enacted Standard Farming decree.');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  farmingDecree === 'standard'
+                    ? 'bg-white text-zinc-950 font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Standard</div>
+                <div className="text-[9px] opacity-80">Balanced Harvest</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSetFarmingDecree && onSetFarmingDecree('water_saving');
+                  triggerFeedback('Enacted Drought Conservation mandate (Conserves water, lowers food yield).');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  farmingDecree === 'water_saving'
+                    ? 'bg-cyan-600 text-white font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Water Saving</div>
+                <div className="text-[9px] opacity-80">0 Extra Water</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Scout Resource Quotas */}
+          <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5">
+            <div>
+              <h4 className="text-xs font-bold text-white">Scout Scavenging Quota & Targets</h4>
+              <p className="text-[10px] text-zinc-400">Sets the supply quotas scouts must haul back from expeditions.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onSetScavengeQuotaDecree && onSetScavengeQuotaDecree('aggressive');
+                  triggerFeedback('Enacted Aggressive Scavenging Quota (+50% Resource hauls, higher hazard risk).');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  scavengeQuotaDecree === 'aggressive'
+                    ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">High Quota</div>
+                <div className="text-[9px] opacity-80">+50% Hauls, Risk</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSetScavengeQuotaDecree && onSetScavengeQuotaDecree('balanced');
+                  triggerFeedback('Enacted Balanced Scouting protocol.');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  scavengeQuotaDecree === 'balanced'
+                    ? 'bg-white text-zinc-950 font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Balanced</div>
+                <div className="text-[9px] opacity-80">Standard Haul</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSetScavengeQuotaDecree && onSetScavengeQuotaDecree('conservative');
+                  triggerFeedback('Enacted Safe Recon mandate (-50% ambush risk, lower hauls).');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  scavengeQuotaDecree === 'conservative'
+                    ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Safe Recon</div>
+                <div className="text-[9px] opacity-80">Low Ambush Risk</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Sanctuary Birth Policy */}
+          <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5">
+            <div>
+              <h4 className="text-xs font-bold text-white">Sanctuary Birth & Family Policy</h4>
+              <p className="text-[10px] text-zinc-400">Colony stance on marriages, childbirth, and expanding the settlement.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onSetBirthDecree && onSetBirthDecree('encouraged');
+                  triggerFeedback('Enacted Family Growth decree (+Morale, higher pregnancy rates).');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  birthDecree === 'encouraged'
+                    ? 'bg-pink-500 text-white font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Grow Families</div>
+                <div className="text-[9px] opacity-80">+Births, +Morale</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSetBirthDecree && onSetBirthDecree('normal');
+                  triggerFeedback('Enacted Standard Family policy.');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  birthDecree === 'normal'
+                    ? 'bg-white text-zinc-950 font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Natural</div>
+                <div className="text-[9px] opacity-80">Organic Growth</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSetBirthDecree && onSetBirthDecree('austerity');
+                  triggerFeedback('Enacted Austerity Contraception mandate (Halts new births to conserve food).');
+                }}
+                className={`p-2 rounded-xl text-center transition-all ${
+                  birthDecree === 'austerity'
+                    ? 'bg-rose-500 text-white font-bold shadow-sm'
+                    : 'bg-white/5 text-zinc-300 hover:bg-white/10'
+                }`}
+              >
+                <div className="text-[11px] font-bold">Austerity</div>
+                <div className="text-[9px] opacity-80">Halt Births</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Perimeter & Newcomer Protocol */}
           <div className="p-3.5 bg-white/[0.04] border border-white/5 rounded-2xl space-y-2.5">
             <div>
               <h4 className="text-xs font-bold text-white">Perimeter & Newcomer Protocol</h4>
@@ -1265,7 +1849,7 @@ export const BaseTab: React.FC<Props> = ({
                 onClick={() => setRoomAssignModalMember(null)}
                 className="p-1 rounded-full bg-white/10 text-zinc-400 hover:text-white"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -1273,11 +1857,16 @@ export const BaseTab: React.FC<Props> = ({
               Survivors sharing the same room converse at night, share meals, and naturally develop friendships, romances, or marriage proposals over time!
             </p>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2 pt-1 max-h-60 overflow-y-auto">
               {rooms.map(room => {
                 const assigned = campMembers.filter(m => room.assignedMemberIds && room.assignedMemberIds.includes(m.id));
-                const isAssignedHere = room.assignedMemberIds && room.assignedMemberIds.includes(roomAssignModalMember.id);
-                const isFull = assigned.length >= room.capacity && !isAssignedHere;
+                const isPlayerHere = player.roomId === room.id || (room.assignedMemberIds && room.assignedMemberIds.includes('player'));
+                const isAssignedHere = roomAssignModalMember.id === 'player'
+                  ? isPlayerHere
+                  : room.assignedMemberIds && room.assignedMemberIds.includes(roomAssignModalMember.id);
+                const totalAssigned = assigned.length + (isPlayerHere ? 1 : 0);
+                const isFull = totalAssigned >= room.capacity && !isAssignedHere;
+
                 return (
                   <button
                     key={room.id}
@@ -1285,8 +1874,13 @@ export const BaseTab: React.FC<Props> = ({
                     disabled={isFull}
                     onClick={() => {
                       if (isFull) return;
-                      onAssignRoom(roomAssignModalMember.id, room.id);
-                      triggerFeedback(`Assigned ${roomAssignModalMember.name} to ${room.name}.`);
+                      if (roomAssignModalMember.id === 'player') {
+                        onAssignPlayerRoom && onAssignPlayerRoom(room.id);
+                        triggerFeedback(`Assigned your quarters to ${room.name}.`);
+                      } else {
+                        onAssignRoom(roomAssignModalMember.id, room.id);
+                        triggerFeedback(`Assigned ${roomAssignModalMember.name} to ${room.name}.`);
+                      }
                       setRoomAssignModalMember(null);
                     }}
                     className={`w-full p-2.5 rounded-2xl text-left border transition-all flex items-center justify-between ${
@@ -1303,7 +1897,7 @@ export const BaseTab: React.FC<Props> = ({
                         {isFull && <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">Full</span>}
                       </div>
                       <div className="text-[10px] text-zinc-400">
-                        {assigned.length}/{room.capacity} Beds filled {assigned.length > 0 && `(${assigned.map(a => a.name).join(', ')})`}
+                        {totalAssigned}/{room.capacity} Beds filled {assigned.length > 0 && `(${assigned.map(a => a.name).join(', ')})`}
                       </div>
                     </div>
                     {isAssignedHere && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
@@ -1323,8 +1917,8 @@ export const BaseTab: React.FC<Props> = ({
               <div>
                 <h3 className="text-base font-bold text-white">{selectedMember.name}</h3>
                 <p className="text-xs text-zinc-400">
-                  {selectedMember.profession} â€¢ Age {selectedMember.age}
-                  {selectedMember.datingStage === 'married' && <span className="text-rose-400 font-bold ml-1">â€¢ Married</span>}
+                  {selectedMember.profession} • Age {selectedMember.age}
+                  {selectedMember.datingStage === 'married' && <span className="text-rose-400 font-bold ml-1">• Married</span>}
                 </p>
               </div>
               <button
@@ -1332,7 +1926,7 @@ export const BaseTab: React.FC<Props> = ({
                 onClick={() => setSelectedMember(null)}
                 className="p-1 rounded-full bg-white/10 text-zinc-400 hover:text-white"
               >
-                âœ•
+                ✕
               </button>
             </div>
 
@@ -1388,7 +1982,7 @@ export const BaseTab: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  triggerFeedback(`Talked and shared stories with ${selectedMember.name} (+Trust).`, () => onTalkSurvivor(selectedMember.id));
+                  triggerFeedback(`Talked and shared stories with ${selectedMember.name} (+Trust & Sanity).`, () => onTalkSurvivor(selectedMember.id));
                   setSelectedMember(null);
                 }}
                 className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5"
@@ -1396,6 +1990,50 @@ export const BaseTab: React.FC<Props> = ({
                 <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Have a Heart-to-Heart Chat</span>
               </button>
+
+              {onSparSurvivor && !selectedMember.isChild && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerFeedback(`Sparred with ${selectedMember.name} (+Combat & Fitness).`, () => onSparSurvivor(selectedMember.id));
+                    setSelectedMember(null);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5"
+                >
+                  <Swords className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Spar & Train Combat</span>
+                </button>
+              )}
+
+              {/* Seduce / Flirt */}
+              {onSeduceSurvivor && !selectedMember.isChild && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerFeedback(`Flirted and seduced ${selectedMember.name} (+Attraction).`, () => onSeduceSurvivor(selectedMember.id));
+                    setSelectedMember(null);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 flex items-center justify-center gap-1.5"
+                >
+                  <Flame className="w-3.5 h-3.5 text-pink-400" />
+                  <span>Seduce / Steal a Moment</span>
+                </button>
+              )}
+
+              {/* Hook Up Button */}
+              {onHookupSurvivor && !selectedMember.isChild && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHookupModalMember(selectedMember);
+                    setSelectedMember(null);
+                  }}
+                  className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center gap-1.5"
+                >
+                  <Heart className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Hook Up (Choose Protection)</span>
+                </button>
+              )}
 
               {!selectedMember.isChild && (
                 <>
@@ -1417,12 +2055,12 @@ export const BaseTab: React.FC<Props> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        triggerFeedback(`Proposed marriage to ${selectedMember.name}! They said yes!`, () => onProposeMarriage(selectedMember.id));
+                        triggerFeedback(`Proposed marriage to ${selectedMember.name}! They said yes! Wedding bells ring!`, () => onProposeMarriage(selectedMember.id));
                         setSelectedMember(null);
                       }}
                       className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-amber-500 text-zinc-950 flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/40"
                     >
-                      <Heart className="w-3.5 h-3.5" />
+                      <Crown className="w-3.5 h-3.5" />
                       <span>Propose Marriage</span>
                     </button>
                   )}
@@ -1442,7 +2080,7 @@ export const BaseTab: React.FC<Props> = ({
                 <span>Gift Food Rations</span>
               </button>
 
-              {onPraiseSurvivor && (
+              {onPraiseSurvivor && !selectedMember.isChild && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1458,6 +2096,18 @@ export const BaseTab: React.FC<Props> = ({
 
               <button
                 type="button"
+                onClick={() => {
+                  setRoomAssignModalMember({ id: selectedMember.id, name: selectedMember.name });
+                  setSelectedMember(null);
+                }}
+                className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5"
+              >
+                <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Assign Living Quarters</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setSelectedMember(null)}
                 className="w-full py-2 px-3 rounded-xl text-xs font-medium text-zinc-400 hover:text-white"
               >
@@ -1467,6 +2117,33 @@ export const BaseTab: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      {/* HOOKUP MODAL */}
+      {hookupModalMember && onHookupSurvivor && (
+        <HookupModal
+          member={hookupModalMember}
+          player={player}
+          onConfirm={(useProtection) => {
+            onHookupSurvivor(hookupModalMember.id, useProtection);
+            setHookupModalMember(null);
+          }}
+          onClose={() => setHookupModalMember(null)}
+        />
+      )}
+
+      {/* MATCHMAKE MODAL */}
+      {showMatchmakeModal && onMatchmake && (
+        <MatchmakeModal
+          campMembers={campMembers}
+          onArrangeUnion={(m1, m2) => {
+            onMatchmake(m1, m2);
+            setShowMatchmakeModal(false);
+            triggerFeedback('Blessed the union! They are now married and co-habiting in quarters.');
+          }}
+          onClose={() => setShowMatchmakeModal(false)}
+        />
+      )}
     </div>
   );
 };
+

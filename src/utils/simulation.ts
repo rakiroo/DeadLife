@@ -13,17 +13,17 @@ export function createSuccessionPromptIfEligible(
   campMembers: CampMember[],
   cause: string
 ): GameState['legacySuccessionPrompt'] {
-  const adultChildren = (player.children || []).filter((c: any) => c.age >= 18).map((c: any) => ({
+  const childrenCandidates = (player.children || []).map((c: any) => ({
     id: c.id,
     name: c.name,
-    relation: 'Adult Child',
-    profession: 'Dynasty Heir',
+    relation: c.age >= 16 ? 'Adult Offspring' : c.age >= 10 ? 'Adolescent Heir' : 'Child Heir',
+    profession: c.age >= 16 ? 'Dynasty Heir' : 'Young Colony Heir',
     age: c.age,
     isOffspring: true,
-    skills: c.skills || { combat: 6, medical: 6, crafting: 6, stealth: 6, fitness: 6 }
+    skills: c.skills || { combat: 5, medical: 5, crafting: 5, stealth: 5, fitness: 5 }
   }));
 
-  const companionCandidates = campMembers.filter(m => !m.isChild && m.trust >= 50).map(m => ({
+  const companionCandidates = campMembers.filter(m => !m.isChild && m.trust >= 40).map(m => ({
     id: m.id,
     name: m.name,
     relation: m.relation || 'Trusted Ally',
@@ -39,7 +39,7 @@ export function createSuccessionPromptIfEligible(
     }
   }));
 
-  const candidates = [...adultChildren, ...companionCandidates];
+  const candidates = [...childrenCandidates, ...companionCandidates];
   if (candidates.length > 0) {
     return {
       cause,
@@ -819,82 +819,134 @@ export function advanceOneMonth(state: GameState): GameState {
     }
   }
 
-  // 3. Autonomous Babies & Family Births
-  const marriedCouples = campMembers.filter(m => m.datingStage === 'married' && m.spouseId);
-  const playerMarried = player.romanceStage === 'married';
-  const hasNursery = shelter.hasNursery;
-  const birthChance = hasNursery ? 0.40 : 0.25;
+  // 3. Pregnancy Progress & Delivery
+  let pendingBabyNaming = currentState.pendingBabyNaming || null;
 
-  if ((marriedCouples.length > 0 || playerMarried) && !starvationOccurred && Math.random() < birthChance) {
-    const isPlayerBaby = playerMarried && Math.random() < 0.5;
-    const babyGender = Math.random() < 0.5 ? 'male' : 'female';
-    const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
-    const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
-    const babyName = babyGender === 'male' 
-      ? boyNames[Math.floor(Math.random() * boyNames.length)]
-      : girlNames[Math.floor(Math.random() * girlNames.length)];
+  // Progress player pregnancy if active
+  if (player.isPregnant) {
+    player.pregnancyMonths = (player.pregnancyMonths || 0) + 1;
+    if (player.pregnancyMonths >= 9) {
+      player.isPregnant = false;
+      player.pregnancyMonths = 0;
+      const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+      const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
+      const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
+      const chosenName = babyGender === 'male' ? boyNames[Math.floor(Math.random() * boyNames.length)] : girlNames[Math.floor(Math.random() * girlNames.length)];
+      const surname = player.name.split(' ').slice(-1)[0] || 'Vance';
 
-    if (isPlayerBaby) {
-      if (!player.children) player.children = [];
-      const newChild = {
-        id: 'child_player_' + Date.now(),
-        name: babyName + ' ' + (player.name.split(' ').slice(-1)[0] || 'Vance'),
-        age: 0,
+      pendingBabyNaming = {
+        motherName: player.gender === 'female' ? player.name : (player.spouseName || 'Spouse'),
+        fatherName: player.gender === 'female' ? (player.pregnantWith || 'Unknown Father') : player.name,
         gender: babyGender as 'male' | 'female',
-        stage: 'infant' as const,
-        skills: {
-          combat: Math.floor(player.combatSkill * 0.5) + 1,
-          medical: Math.floor(player.medicalSkill * 0.5) + 1,
-          crafting: Math.floor(player.craftingSkill * 0.5) + 1,
-          stealth: Math.floor(player.stealthSkill * 0.5) + 1,
-          fitness: Math.floor(player.fitnessSkill * 0.5) + 1,
-        }
+        suggestedFirstName: chosenName,
+        suggestedLastName: surname,
+        isPlayerChild: true
       };
-      player.children.push(newChild);
 
       newLogs.push({
         id: 'birth_player_' + Date.now(),
         day: currentDay,
-        text: '🍼 A Miracle Born: Your spouse gave birth to a beautiful baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' named ' + newChild.name + '! You cradled your child as lanterns flickered. The settlement celebrates our future (+25 Morale).',
+        text: '👶 Delivery Day: After 9 months of pregnancy, the labor was successful! A healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' has arrived! Choose their name to welcome them (+25 Morale).',
         type: 'milestone',
         timestamp: 'New Life'
       });
-    } else if (marriedCouples.length > 0) {
-      const parent = marriedCouples[0];
-      const babySurname = parent.name.split(' ').slice(-1)[0] || 'Haven';
-      const babyFullName = babyName + ' ' + babySurname;
-      const babyMember: CampMember = {
-        id: 'baby_' + Date.now(),
-        name: babyFullName,
-        gender: babyGender,
-        age: 0,
-        relation: 'Colony Infant',
-        profession: 'Colony Child',
-        health: 100,
-        trust: 100,
-        isChild: true,
-        stage: 'infant',
-        role: 'idle',
-        statusEffects: [],
-        combatSkill: 1,
-        medicalSkill: 1,
-        craftingSkill: 1,
-        stealthSkill: 1,
-        fitnessSkill: 1,
-        parentNames: [parent.name, parent.spouseName || 'Spouse']
-      };
-      campMembers.push(babyMember);
-      shelter.childrenBornCount = (shelter.childrenBornCount || 0) + 1;
-
+      shelter.morale = Math.min(100, (shelter.morale ?? 75) + 25);
+    } else {
       newLogs.push({
-        id: 'birth_camp_' + Date.now(),
+        id: 'preg_track_' + Date.now(),
         day: currentDay,
-        text: '🍼 New Life in the Apocalypse: ' + parent.name + ' and ' + (parent.spouseName || 'their spouse') + ' welcomed a baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' named ' + babyFullName + '! The entire settlement gathered to celebrate (+20 Morale).',
-        type: 'milestone',
-        timestamp: 'New Life'
+        text: '🤰 Pregnancy Month ' + player.pregnancyMonths + '/9: The pregnancy is progressing smoothly under shelter care. Expected in ' + (9 - player.pregnancyMonths) + ' months.',
+        type: 'camp',
+        timestamp: 'Pregnancy'
       });
     }
-    shelter.morale = Math.min(100, (shelter.morale ?? 75) + 20);
+  }
+
+  // Progress camp members pregnancies
+  campMembers = campMembers.map(m => {
+    if (m.isPregnant) {
+      const months = (m.pregnancyMonths || 0) + 1;
+      if (months >= 9) {
+        const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+        const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
+        const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
+        const chosenName = babyGender === 'male' ? boyNames[Math.floor(Math.random() * boyNames.length)] : girlNames[Math.floor(Math.random() * girlNames.length)];
+        const surname = m.name.split(' ').slice(-1)[0] || 'Haven';
+
+        if (!pendingBabyNaming) {
+          pendingBabyNaming = {
+            motherName: m.name,
+            fatherName: m.partnerName || m.spouseName || (m.pregnantFatherId === 'player' ? player.name : 'Unknown Father'),
+            gender: babyGender as 'male' | 'female',
+            suggestedFirstName: chosenName,
+            suggestedLastName: surname,
+            isPlayerChild: m.pregnantFatherId === 'player',
+            parentMemberId: m.id
+          };
+        }
+
+        newLogs.push({
+          id: 'birth_m_' + m.id + '_' + Date.now(),
+          day: currentDay,
+          text: '👶 New Life in Haven: ' + m.name + ' has delivered a healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' after 9 months of pregnancy! (+20 Morale).',
+          type: 'milestone',
+          timestamp: 'New Life'
+        });
+        shelter.morale = Math.min(100, (shelter.morale ?? 75) + 20);
+
+        return { ...m, isPregnant: false, pregnancyMonths: 0 };
+      } else {
+        return { ...m, pregnancyMonths: months };
+      }
+    }
+    return m;
+  });
+
+  // Autonomous New Conceptions (checks birth decree & starvation)
+  const birthDecree = shelter.birthDecree ?? 'normal';
+  if (birthDecree !== 'austerity' && !starvationOccurred) {
+    const marriedCouples = campMembers.filter(m => m.datingStage === 'married' && m.spouseId);
+    const playerMarried = player.romanceStage === 'married';
+    const hasNursery = shelter.hasNursery;
+    let baseConceptionChance = hasNursery ? 0.35 : 0.20;
+    if (birthDecree === 'encouraged') baseConceptionChance += 0.25;
+
+    if (playerMarried && !player.isPregnant && Math.random() < baseConceptionChance) {
+      if (player.gender === 'female') {
+        player.isPregnant = true;
+        player.pregnancyMonths = 1;
+        player.pregnantWith = player.spouseName;
+      } else {
+        const spouseObj = campMembers.find(m => m.id === player.spouseId);
+        if (spouseObj && !spouseObj.isPregnant) {
+          spouseObj.isPregnant = true;
+          spouseObj.pregnancyMonths = 1;
+          spouseObj.pregnantFatherId = 'player';
+        }
+      }
+      newLogs.push({
+        id: 'conception_player_' + Date.now(),
+        day: currentDay,
+        text: '🌸 Wonder & Hope: You and ' + player.spouseName + ' found out you are expecting a baby! The child will be born in 9 months (+15 Morale).',
+        type: 'camp',
+        timestamp: 'Family'
+      });
+      shelter.morale = Math.min(100, (shelter.morale ?? 75) + 15);
+    } else if (marriedCouples.length > 0 && Math.random() < baseConceptionChance) {
+      const parent = marriedCouples[Math.floor(Math.random() * marriedCouples.length)];
+      if (!parent.isPregnant) {
+        parent.isPregnant = true;
+        parent.pregnancyMonths = 1;
+        newLogs.push({
+          id: 'conception_camp_' + Date.now(),
+          day: currentDay,
+          text: '🌸 Colony Miracle: ' + parent.name + ' and ' + (parent.spouseName || 'their spouse') + ' are expecting a baby in 9 months! (+10 Morale).',
+          type: 'camp',
+          timestamp: 'Family'
+        });
+        shelter.morale = Math.min(100, (shelter.morale ?? 75) + 10);
+      }
+    }
   }
 
   const monthlyRecap: LogEntry = {
@@ -912,6 +964,7 @@ export function advanceOneMonth(state: GameState): GameState {
     campMembers,
     shelter,
     player,
+    pendingBabyNaming,
     logs: [...currentState.logs, ...newLogs, monthlyRecap].slice(-150)
   };
 }
@@ -930,6 +983,35 @@ export function advanceOneYear(state: GameState): GameState {
   // 1. Everyone ages by 1 year!
   player.age += 1;
   const hasSchool = shelter.hasSchoolhouse;
+  let yearPendingBabyNaming: GameState['pendingBabyNaming'] = currentState.pendingBabyNaming || null;
+
+  if (player.isPregnant) {
+    player.isPregnant = false;
+    player.pregnancyMonths = 0;
+    const babyGender = Math.random() < 0.5 ? 'male' : 'female';
+    const boyNames = ['Noah', 'Liam', 'Arthur', 'Leo', 'Lucas', 'Julian', 'Elias', 'Finn'];
+    const girlNames = ['Maya', 'Elena', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria'];
+    const chosenName = babyGender === 'male' ? boyNames[Math.floor(Math.random() * boyNames.length)] : girlNames[Math.floor(Math.random() * girlNames.length)];
+    const surname = player.name.split(' ').slice(-1)[0] || 'Vance';
+
+    yearPendingBabyNaming = {
+      motherName: player.gender === 'female' ? player.name : (player.spouseName || 'Spouse'),
+      fatherName: player.gender === 'female' ? (player.pregnantWith || 'Unknown Father') : player.name,
+      gender: babyGender as 'male' | 'female',
+      suggestedFirstName: chosenName,
+      suggestedLastName: surname,
+      isPlayerChild: true
+    };
+
+    newLogs.push({
+      id: 'birth_player_year_' + Date.now(),
+      day: currentDay,
+      text: '👶 Delivery Day! Over the course of the year, your pregnancy was successfully delivered! A healthy baby ' + (babyGender === 'male' ? 'boy' : 'girl') + ' was born into our sanctuary (+25 Morale).',
+      type: 'milestone',
+      timestamp: 'New Life'
+    });
+    shelter.morale = Math.min(100, (shelter.morale ?? 75) + 25);
+  }
 
   campMembers = campMembers.map(member => {
     const newAge = member.age + 1;
@@ -950,14 +1032,14 @@ export function advanceOneYear(state: GameState): GameState {
       fitnessSkill += 1;
     }
 
-    if (newAge >= 18) {
+    if (newAge >= 16) {
       if (isChild) {
         newLogs.push({
           id: 'grad_' + member.id + '_' + Date.now(),
           day: currentDay,
-          text: '🎓 Coming of Age: ' + member.name + ' has turned 18! Born and raised in our haven, they graduate into a full adult survivor, ready to defend and build our colony.',
+          text: '🎓 Coming of Age (Age 16): ' + member.name + ' has turned 16! They have grown into a full adult survivor, ready to defend the perimeter, take on camp duties, and require their own living quarters.',
           type: 'milestone',
-          timestamp: 'Graduation'
+          timestamp: 'Coming of Age'
         });
       }
       isChild = false;
@@ -993,7 +1075,7 @@ export function advanceOneYear(state: GameState): GameState {
     player.children = player.children.map(c => {
       const newChildAge = c.age + 1;
       let newStage: 'infant' | 'child' | 'teen' | 'adult' = 'infant';
-      if (newChildAge >= 18) newStage = 'adult';
+      if (newChildAge >= 16) newStage = 'adult';
       else if (newChildAge >= 13) newStage = 'teen';
       else if (newChildAge >= 4) newStage = 'child';
 
@@ -1138,6 +1220,7 @@ export function advanceOneYear(state: GameState): GameState {
     campMembers,
     inventory,
     legacySuccessionPrompt: promptSuccession,
+    pendingBabyNaming: yearPendingBabyNaming,
     logs: [...currentState.logs, ...newLogs, yearRecap].slice(-150)
   };
 }
