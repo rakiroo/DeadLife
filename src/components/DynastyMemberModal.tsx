@@ -72,6 +72,13 @@ export const DynastyMemberModal: React.FC<Props> = ({
             <div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h2 className="text-base font-bold text-white tracking-tight">{member.name}</h2>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                  member.gender === 'female' 
+                    ? 'bg-pink-500/15 text-pink-300 border-pink-500/30' 
+                    : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                }`}>
+                  {member.gender === 'female' ? '♀ Female' : '♂ Male'}
+                </span>
                 {member.isPlayerUsed && (
                   <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
                     <Crown className="w-2.5 h-2.5 fill-amber-400" /> Player Controlled
@@ -81,6 +88,17 @@ export const DynastyMemberModal: React.FC<Props> = ({
               <p className="text-xs text-zinc-400 mt-0.5">
                 Gen {member.generation} • {member.relation} • Age {member.age}
               </p>
+              {/* Married / Partner below occupation and age */}
+              {member.spouseName && (
+                <p className="text-[11px] text-rose-300 font-medium flex items-center gap-1 mt-0.5">
+                  <span>💍 Married to {member.spouseName}</span>
+                </p>
+              )}
+              {member.partnerName && !member.spouseName && (
+                <p className="text-[11px] text-pink-300 font-medium flex items-center gap-1 mt-0.5">
+                  <span>❤️ Dating {member.partnerName}</span>
+                </p>
+              )}
             </div>
           </div>
           <button

@@ -414,6 +414,7 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
             const sora: CampMember = {
               id: 'survivor_sora',
               name: 'Sora Takahashi',
+              gender: 'male',
               age: 23,
               profession: 'Botanist & Gardner',
               relation: 'Friend 😊',

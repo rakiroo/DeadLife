@@ -528,8 +528,35 @@ export const BaseTab: React.FC<Props> = ({
                         </div>
                         <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
                           {member.profession} • Age {member.age}
+                          {member.gender && (
+                            <span className="text-zinc-500 ml-1">
+                              • {member.gender === 'female' ? '♀ Female' : '♂ Male'}
+                            </span>
+                          )}
                           {assignedRoom && <span className="text-zinc-500 ml-1">• {assignedRoom.name}</span>}
                         </p>
+
+                        {/* Married / Dating Partner indicator directly below occupation and age */}
+                        {isMarriedToPlayer && (
+                          <p className="text-[10px] text-rose-300 font-medium flex items-center gap-1 mt-0.5">
+                            <span>💍 Married to You ({player.name})</span>
+                          </p>
+                        )}
+                        {member.datingStage === 'married' && !isMarriedToPlayer && (
+                          <p className="text-[10px] text-rose-300 font-medium flex items-center gap-1 mt-0.5">
+                            <span>💍 Married to {member.spouseName || member.partnerName || 'Spouse'}</span>
+                          </p>
+                        )}
+                        {isDatingPlayer && (
+                          <p className="text-[10px] text-pink-300 font-medium flex items-center gap-1 mt-0.5">
+                            <span>❤️ Dating You ({player.name})</span>
+                          </p>
+                        )}
+                        {member.datingStage === 'dating' && !isDatingPlayer && member.partnerName && (
+                          <p className="text-[10px] text-pink-300 font-medium flex items-center gap-1 mt-0.5">
+                            <span>❤️ Dating {member.partnerName}</span>
+                          </p>
+                        )}
 
                         {!isChild && (
                           <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 mt-1 flex-wrap">
@@ -2055,11 +2082,40 @@ export const BaseTab: React.FC<Props> = ({
           <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-4 space-y-3.5 shadow-2xl max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-bold text-white">{selectedMember.name}</h3>
-                <p className="text-xs text-zinc-400">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="text-base font-bold text-white">{selectedMember.name}</h3>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    selectedMember.gender === 'female' 
+                      ? 'bg-pink-500/15 text-pink-300 border-pink-500/30' 
+                      : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                  }`}>
+                    {selectedMember.gender === 'female' ? '♀ Female' : '♂ Male'}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-0.5">
                   {selectedMember.profession} • Age {selectedMember.age}
-                  {selectedMember.datingStage === 'married' && <span className="text-rose-400 font-bold ml-1">• Married</span>}
                 </p>
+                {/* Married to / Dating indicator below occupation and age */}
+                {selectedMember.id === player.spouseId && (
+                  <p className="text-[11px] text-rose-300 font-medium flex items-center gap-1 mt-0.5">
+                    <span>💍 Married to You ({player.name})</span>
+                  </p>
+                )}
+                {selectedMember.datingStage === 'married' && selectedMember.id !== player.spouseId && (
+                  <p className="text-[11px] text-rose-300 font-medium flex items-center gap-1 mt-0.5">
+                    <span>💍 Married to {selectedMember.spouseName || selectedMember.partnerName || 'Spouse'}</span>
+                  </p>
+                )}
+                {selectedMember.id === player.datingTargetId && (
+                  <p className="text-[11px] text-pink-300 font-medium flex items-center gap-1 mt-0.5">
+                    <span>❤️ Dating You ({player.name})</span>
+                  </p>
+                )}
+                {selectedMember.datingStage === 'dating' && selectedMember.id !== player.datingTargetId && selectedMember.partnerName && (
+                  <p className="text-[11px] text-pink-300 font-medium flex items-center gap-1 mt-0.5">
+                    <span>❤️ Dating {selectedMember.partnerName}</span>
+                  </p>
+                )}
               </div>
               <button
                 type="button"

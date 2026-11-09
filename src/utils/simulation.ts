@@ -1288,18 +1288,19 @@ export function advanceOneMonth(state: GameState): GameState {
     let baseConceptionChance = hasNursery ? 0.35 : 0.20;
     if (birthDecree === 'encouraged') baseConceptionChance += 0.25;
 
-    if (playerMarried && !player.isPregnant && Math.random() < baseConceptionChance) {
+    const spouseObj = campMembers.find(m => m.id === player.spouseId);
+    const spouseGender = spouseObj?.gender || (player.gender === 'female' ? 'male' : 'female');
+    const playerOppositeSex = (player.gender === 'female' && spouseGender === 'male') || (player.gender === 'male' && spouseGender === 'female');
+
+    if (playerMarried && playerOppositeSex && !player.isPregnant && Math.random() < baseConceptionChance) {
       if (player.gender === 'female') {
         player.isPregnant = true;
         player.pregnancyMonths = 1;
         player.pregnantWith = player.spouseName;
-      } else {
-        const spouseObj = campMembers.find(m => m.id === player.spouseId);
-        if (spouseObj && !spouseObj.isPregnant) {
-          spouseObj.isPregnant = true;
-          spouseObj.pregnancyMonths = 1;
-          spouseObj.pregnantFatherId = 'player';
-        }
+      } else if (spouseObj && spouseObj.gender === 'female' && !spouseObj.isPregnant) {
+        spouseObj.isPregnant = true;
+        spouseObj.pregnancyMonths = 1;
+        spouseObj.pregnantFatherId = 'player';
       }
       newLogs.push({
         id: 'conception_player_' + Date.now(),
@@ -1311,17 +1312,25 @@ export function advanceOneMonth(state: GameState): GameState {
       shelter.morale = Math.min(100, (shelter.morale ?? 75) + 15);
     } else if (marriedCouples.length > 0 && Math.random() < baseConceptionChance) {
       const parent = marriedCouples[Math.floor(Math.random() * marriedCouples.length)];
-      if (!parent.isPregnant) {
-        parent.isPregnant = true;
-        parent.pregnancyMonths = 1;
-        newLogs.push({
-          id: 'conception_camp_' + Date.now(),
-          day: currentDay,
-          text: '🌸 Colony Miracle: ' + parent.name + ' and ' + (parent.spouseName || 'their spouse') + ' are expecting a baby in 9 months! (+10 Morale).',
-          type: 'camp',
-          timestamp: 'Family'
-        });
-        shelter.morale = Math.min(100, (shelter.morale ?? 75) + 10);
+      const spouseOfParent = campMembers.find(m => m.id === parent.spouseId);
+      const parentGender = parent.gender || 'female';
+      const spouseGender = spouseOfParent?.gender || 'male';
+      const campOppositeSex = (parentGender === 'female' && spouseGender === 'male') || (parentGender === 'male' && spouseGender === 'female');
+
+      if (campOppositeSex) {
+        const femalePartner = parentGender === 'female' ? parent : spouseOfParent;
+        if (femalePartner && !femalePartner.isPregnant) {
+          femalePartner.isPregnant = true;
+          femalePartner.pregnancyMonths = 1;
+          newLogs.push({
+            id: 'conception_camp_' + Date.now(),
+            day: currentDay,
+            text: '🌸 Colony Miracle: ' + parent.name + ' and ' + (parent.spouseName || 'their spouse') + ' are expecting a baby in 9 months! (+10 Morale).',
+            type: 'camp',
+            timestamp: 'Family'
+          });
+          shelter.morale = Math.min(100, (shelter.morale ?? 75) + 10);
+        }
       }
     }
   }
