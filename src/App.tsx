@@ -27,6 +27,7 @@ import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
 import { AmbitionsModal } from './components/AmbitionsModal';
+import { InfectionModal } from './components/InfectionModal';
 import { SettingsScreen } from './components/SettingsScreen';
 import { SandboxAmbition, SANDBOX_AMBITIONS } from './data/ambitions';
 import { getContextualBackstory } from './data/backstories';
@@ -406,6 +407,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('journal');
   const [graveyard, setGraveyard] = useState<CemeteryRecord[]>([]);
   const [showAmbitionsModal, setShowAmbitionsModal] = useState<boolean>(false);
+  const [showInfectionModal, setShowInfectionModal] = useState<boolean>(false);
   const [codexData, setCodexData] = useState<CodexSaveData>(loadCodexData());
   const [showInvestigationBoard, setShowInvestigationBoard] = useState<boolean>(false);
   const [pendingTimeWarning, setPendingTimeWarning] = useState<{ type: 'month' | 'year'; foodNeeded: number; waterNeeded: number; currentFood: number; currentWater: number } | null>(null);
@@ -540,6 +542,64 @@ export function App() {
     setGameState(prev => prev ? advanceOneWeek(prev) : null);
   };
 
+  // Treat viral infection / clinical triage
+  const handleTreatInfection = (treatmentType: 'antibiotics' | 'bandage' | 'cauterize') => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let player = { ...prev.player };
+      let inventory = prev.inventory.map(i => ({ ...i }));
+      let newLogText = '';
+      let logType: LogEntry['type'] = 'medical';
+
+      if (treatmentType === 'antibiotics') {
+        const item = inventory.find(i => i.id.includes('antibiotic') || i.name.toLowerCase().includes('antibiotic'));
+        if (item && item.quantity > 0) {
+          item.quantity -= 1;
+          const oldRisk = player.infectionRisk || 0;
+          player.infectionRisk = Math.max(0, oldRisk - 25);
+          player.health = Math.min(100, player.health + 10);
+          player.statusEffects = player.statusEffects.filter(e => e.id !== 'bacterial_infection');
+          newLogText = `💊 I swallowed a course of Amoxicillin antibiotics. The medication attacked the viral pathogen in my bloodstream (-25% Viral Load, now ${player.infectionRisk}%).`;
+        }
+      } else if (treatmentType === 'bandage') {
+        const item = inventory.find(i => i.id.includes('bandage') || i.id.includes('first_aid') || i.name.toLowerCase().includes('bandage'));
+        if (item && item.quantity > 0) {
+          item.quantity -= 1;
+          player.biteTreated = true;
+          const oldRisk = player.infectionRisk || 0;
+          player.infectionRisk = Math.max(0, oldRisk - 10);
+          player.health = Math.min(100, player.health + 15);
+          player.statusEffects = player.statusEffects.filter(e => e.id !== 'bleeding');
+          newLogText = `🩹 I irrigated and dressed my bite wound with a sterile pressure dressing. Cleaned away necrotic tissue (-10% Viral Load, halving daily spread).`;
+        }
+      } else if (treatmentType === 'cauterize') {
+        player.health = Math.max(5, player.health - 15);
+        const oldRisk = player.infectionRisk || 0;
+        player.infectionRisk = Math.max(0, oldRisk - 20);
+        player.biteTreated = true;
+        newLogText = `🔥 Desperate Triage: I sterilized a hunting blade in fire and pressed it directly into the bite puncture. The agonizing heat burned away necrotic tissue (-20% Viral Load, -15 HP).`;
+      }
+
+      inventory = inventory.filter(i => i.quantity > 0);
+
+      const newLog: LogEntry = {
+        id: 'triage_' + Date.now(),
+        day: prev.day,
+        text: newLogText,
+        type: logType,
+        timestamp: 'Triage'
+      };
+
+      return {
+        ...prev,
+        inventory,
+        player,
+        logs: [...prev.logs, newLog].slice(-150)
+      };
+    });
+  };
+
   // Dilemma resolution
   const handleSelectChoice = (choice: EventChoice) => {
     if (!gameState) return;
@@ -569,7 +629,7 @@ export function App() {
     if (!gameState) return;
     setGameState(prev => {
       if (!prev) return null;
-      let { health, hunger, thirst, statusEffects } = { ...prev.player };
+      let { health, hunger, thirst, statusEffects, infectionRisk, biteTreated } = { ...prev.player };
       let updatedInv = prev.inventory.map(i => i.id === item.id ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
       let itemLogText = '';
       let itemLogType: LogEntry['type'] = 'general';
@@ -618,7 +678,7 @@ export function App() {
       return {
         ...prev,
         inventory: updatedInv,
-        player: { ...prev.player, health, hunger, thirst, statusEffects },
+        player: { ...prev.player, health, hunger, thirst, infectionRisk, biteTreated, statusEffects },
         logs: [...prev.logs, newLog].slice(-150)
       };
     });
@@ -2690,7 +2750,7 @@ export function App() {
     <div className="h-[100dvh] max-h-[100dvh] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden font-sans select-none">
       <div className="w-full max-w-md mx-auto flex flex-col h-full max-h-[100dvh] bg-zinc-950 border-x border-zinc-900 shadow-2xl relative overflow-hidden">
         {/* Top Sticky Vitals */}
-        <HeaderVitals state={gameState} onOpenSettings={() => setScreen('settings')} compact={activeTab !== 'journal'} />
+        <HeaderVitals state={gameState} onOpenSettings={() => setScreen('settings')} onOpenInfection={() => setShowInfectionModal(true)} compact={activeTab !== 'journal'} />
 
         {/* Dynamic Active Tab View - Only this area scrolls! */}
         <main className="flex-1 flex flex-col overflow-y-auto overscroll-contain min-h-0 pb-1">
@@ -2770,6 +2830,15 @@ export function App() {
         />
 
         
+        {/* Viral Infection Diagnosis & Telemetry Modal */}
+        {showInfectionModal && (
+          <InfectionModal
+            state={gameState}
+            onClose={() => setShowInfectionModal(false)}
+            onTreatInfection={handleTreatInfection}
+          />
+        )}
+
         {/* Outbreak Origin Investigation Board Modal */}
         {showInvestigationBoard && gameState.mystery && (
           <InvestigationBoardModal

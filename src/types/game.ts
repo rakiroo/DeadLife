@@ -152,6 +152,11 @@ export interface Survivor {
   hunger: number; // 0 - 100
   thirst: number; // 0 - 100
   infectionRisk: number; // 0 - 100
+  infectionDays?: number; // Days since contracted
+  infectionSource?: string; // Wound origin or encounter description
+  infectionLocation?: string; // e.g. left forearm, right shoulder, airborne
+  isBitten?: boolean;
+  biteTreated?: boolean; // Disinfected / dressed with sterile bandages
   combatSkill: number; // 1 - 10
   medicalSkill: number; // 1 - 10
   stealthSkill: number; // 1 - 10

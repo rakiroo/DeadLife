@@ -73,6 +73,9 @@ export function advanceOneDay(state: GameState): GameState {
   const currentDay = state.day + 1;
   const newLogs: LogEntry[] = [];
   let { health, sanity, hunger, thirst, infectionRisk, statusEffects } = { ...state.player };
+  let infectionDays = state.player.infectionDays || 0;
+  let isBitten = state.player.isBitten || infectionRisk > 0;
+  let biteTreated = state.player.biteTreated || false;
   let { daysWithoutFood, daysWithoutWater } = state;
   let { storedRainwater, barricadeIntegrity } = state.shelter;
   let inventory = [...state.inventory];
@@ -193,6 +196,95 @@ export function advanceOneDay(state: GameState): GameState {
       updatedEffects.push(eff);
     } else {
       updatedEffects.push(eff);
+    }
+  }
+
+  // 5b. Viral Infection Progression (Mutation Strain & Day-by-Day Progression)
+  if (infectionRisk > 0 && !isDead) {
+    infectionDays += 1;
+    let dailyGrowth = 4;
+    const strain = state.mutationStrain;
+
+    // Mutation Strain specific viral transmission & acceleration
+    if (strain) {
+      if (strain.id === 'crimson_rabies') dailyGrowth += 5; // Rabies-Ultra aggressive sprint
+      else if (strain.id === 'toxic_spore_bloom' && (newWeather === 'dense_fog' || newWeather === 'heavy_rain')) dailyGrowth += 3; // Spore miasma
+      else if (strain.id === 'glacial_stasis' && newWeather === 'freezing_cold') dailyGrowth += 3; // Cryo-adapted thrive in freeze
+      else if (strain.id === 'solar_frenzy' && newWeather === 'clear') dailyGrowth += 2; // Photoreactive adrenaline
+      else if (strain.id === 'necrotic_carapace') dailyGrowth -= 1; // Slow calcifying strain
+    }
+
+    // Resistance, Triage & Medical modifiers
+    if (biteTreated) dailyGrowth = Math.max(1, dailyGrowth - 2);
+    const traitIdsForInf = state.player.traits ? state.player.traits.map(t => t.id) : [];
+    if (traitIdsForInf.includes('thick_skinned') || traitIdsForInf.includes('stoic') || traitIdsForInf.includes('antibody_carrier')) {
+      dailyGrowth = Math.max(1, dailyGrowth - 1);
+    }
+    if (state.player.medicalSkill >= 7) dailyGrowth = Math.max(1, dailyGrowth - 1);
+    if (state.campMembers && state.campMembers.some(m => m.role === 'medic')) dailyGrowth = Math.max(1, dailyGrowth - 1);
+
+    infectionRisk = Math.min(100, infectionRisk + dailyGrowth);
+
+    // Symptoms, damage and authentic survivor journal logs
+    if (infectionRisk >= 100) {
+      isDead = true;
+      deathCause = 'succumbed to the ' + (strain?.name || 'viral') + ' infection and turned';
+      newLogs.push({
+        id: 'inf_term_' + Date.now(),
+        day: currentDay,
+        text: '💀 TERMINAL COLLAPSE: The viral load reached 100%. My vision drowned in pitch black as the pathogen seized complete control of my brainstem. My consciousness faded as my body stood back up, lost to the horde.',
+        type: 'death',
+        timestamp: 'Twilight'
+      });
+    } else if (infectionRisk >= 75) {
+      health -= 12;
+      sanity -= 12;
+      newLogs.push({
+        id: 'inf_delirium_' + Date.now(),
+        day: currentDay,
+        text: '☣️ VIRAL DELIRIUM (' + infectionRisk + '%): Violent muscle tremors and fever raging at 41°C. Whispers in the darkness and black veins spiderwebbing across my neck (-12% HP, -12 Sanity).',
+        type: 'medical',
+        timestamp: 'Evening'
+      });
+      if (health <= 0 && !isDead) {
+        isDead = true;
+        deathCause = 'collapsed from terminal viral fever and delirium';
+      }
+    } else if (infectionRisk >= 50) {
+      health -= 6;
+      sanity -= 8;
+      newLogs.push({
+        id: 'inf_sepsis_' + Date.now(),
+        day: currentDay,
+        text: '☣️ VASCULAR SEPSIS (' + infectionRisk + '%): Dark purple veins radiating from the bite. Severe nausea, bone chills, and splitting headaches wracking my body (-6% HP, -8 Sanity).',
+        type: 'medical',
+        timestamp: 'Noon'
+      });
+      if (health <= 0 && !isDead) {
+        isDead = true;
+        deathCause = 'succumbed to septic shock from infected bite wound';
+      }
+    } else if (infectionRisk >= 25) {
+      sanity -= 4;
+      if (currentDay % 2 === 0) {
+        newLogs.push({
+          id: 'inf_inc_' + Date.now(),
+          day: currentDay,
+          text: '☣️ VIRAL SPREAD (' + infectionRisk + '%): The wound margins are burning with sharp, inflamed pain. Chills keep shivering down my spine.',
+          type: 'medical',
+          timestamp: 'Morning'
+        });
+      }
+    } else {
+      if (infectionDays === 1) {
+        newLogs.push({
+          id: 'inf_day1_' + Date.now(),
+          day: currentDay,
+          text: '☣️ WOUND INFLAMMATION (' + infectionRisk + '%): The bite puncture is hot and throbbing. Low-grade fever starting to build in my chest.',
+          type: 'medical',
+          timestamp: 'Dawn'
+        });
+      }
     }
   }
 
@@ -998,6 +1090,56 @@ export function advanceOneMonth(state: GameState): GameState {
     }
   }
 
+  // Monthly Viral Infection Progress (30 Days of Incubation / Sepsis)
+  if (player.infectionRisk && player.infectionRisk > 0 && !player.isDead) {
+    player.infectionDays = (player.infectionDays || 0) + 30;
+    const antibioticItems = inventory.filter(i => i.id.includes('antibiotic') || i.name.toLowerCase().includes('antibiotic'));
+    const totalAntibiotics = antibioticItems.reduce((s, i) => s + i.quantity, 0);
+
+    if (totalAntibiotics >= 2) {
+      let needed = 2;
+      for (const item of inventory) {
+        if ((item.id.includes('antibiotic') || item.name.toLowerCase().includes('antibiotic')) && needed > 0) {
+          const take = Math.min(item.quantity, needed);
+          item.quantity -= take;
+          needed -= take;
+        }
+      }
+      player.infectionRisk = Math.max(5, player.infectionRisk - 20);
+      newLogs.push({
+        id: 'inf_month_med_' + Date.now(),
+        day: currentDay,
+        text: '💊 Monthly Triage Regimen: Consumed 2 courses of Amoxicillin over the past 30 days. Antibiotics aggressively suppressed secondary sepsis and stabilized the viral pathogen (-20% Viral Load, currently ' + player.infectionRisk + '%).',
+        type: 'medical',
+        timestamp: 'Month End'
+      });
+    } else {
+      const surge = 35;
+      player.infectionRisk = Math.min(100, player.infectionRisk + surge);
+      if (player.infectionRisk >= 100) {
+        player.isDead = true;
+        player.deathCause = 'succumbed to untreated ' + (state.mutationStrain?.name || 'viral') + ' infection during the month';
+        newLogs.push({
+          id: 'inf_month_death_' + Date.now(),
+          day: currentDay,
+          text: '💀 TERMINAL TRANSFORMATION: Without antibiotics to hold the virus at bay over the 30 days, the pathogen consumed your central nervous system. The colony found you turned in your quarters.',
+          type: 'death',
+          timestamp: 'Month End'
+        });
+      } else {
+        player.health = Math.max(10, player.health - 25);
+        player.sanity = Math.max(5, player.sanity - 25);
+        newLogs.push({
+          id: 'inf_month_surge_' + Date.now(),
+          day: currentDay,
+          text: '⚠️ MONTHLY VIRAL SURGE (' + player.infectionRisk + '%): Lacking antibiotics over the 30 days, the pathogen spread through your bloodstream. Severe fevers and dark necrotic veins spread across your limbs (-25% HP, -25 Sanity).',
+          type: 'hazard',
+          timestamp: 'Month End'
+        });
+      }
+    }
+  }
+
   const monthlyRecap: LogEntry = {
     id: 'month_recap_' + Date.now(),
     day: currentDay,
@@ -1285,6 +1427,35 @@ export function advanceOneYear(state: GameState): GameState {
       type: 'milestone',
       timestamp: 'In Memoriam'
     });
+  }
+
+  // Annual Viral Infection Progress (365 Days of Chronicity / Dormancy)
+  if (player.infectionRisk && player.infectionRisk > 0 && !player.isDead) {
+    player.infectionDays = (player.infectionDays || 0) + 365;
+    const hasMedic = campMembers.some(m => m.role === 'medic');
+    const hasAntibioticStock = inventory.some(i => (i.id.includes('antibiotic') || i.name.toLowerCase().includes('antibiotic')) && i.quantity >= 3);
+    const hasAntibodyTrait = player.traits && player.traits.some(t => t.id === 'antibody_carrier' || t.id === 'thick_skinned');
+
+    if (hasMedic || hasAntibioticStock || hasAntibodyTrait) {
+      player.infectionRisk = Math.min(25, player.infectionRisk);
+      newLogs.push({
+        id: 'inf_year_dormant_' + Date.now(),
+        day: currentDay,
+        text: '💉 Annual Viral Resilience: Supported by colony medical care, your immune system developed neutralizing antibodies against the ' + (state.mutationStrain?.name || 'pathogen') + ', keeping the virus suppressed in chronic dormancy (' + player.infectionRisk + '%).',
+        type: 'medical',
+        timestamp: 'Annual Chronicle'
+      });
+    } else {
+      player.isDead = true;
+      player.deathCause = 'succumbed to the viral infection over the course of the year';
+      newLogs.push({
+        id: 'inf_year_death_' + Date.now(),
+        day: currentDay,
+        text: '💀 TERMINAL COLLAPSE: 365 days without advanced medical triage proved insurmountable. The viral pathogen gradually broke down cellular immunity, and you turned during the winter.',
+        type: 'death',
+        timestamp: 'Annual Chronicle'
+      });
+    }
   }
 
   const yearRecap: LogEntry = {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Heart, Droplets, Utensils, CloudRain, Sun, CloudFog, Snowflake, 
+  Heart, Droplets, Utensils, Biohazard, CloudRain, Sun, CloudFog, Snowflake, 
   Settings, Shield, HeartPulse, Hammer, EyeOff, Activity, Sparkles
 } from 'lucide-react';
 import { GameState, WeatherType } from '../types/game';
@@ -9,6 +9,7 @@ interface Props {
   state: GameState;
   onOpenMenu?: () => void;
   onOpenSettings?: () => void;
+  onOpenInfection?: () => void;
   compact?: boolean;
 }
 
@@ -21,7 +22,7 @@ const getSeasonInfo = (day: number) => {
   return { name: 'Winter', badge: '❄️ Winter', color: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20' };
 };
 
-export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact = false }) => {
+export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, onOpenInfection, compact = false }) => {
   const { player, weather, temperatureCelsius, day, district, mutationStrain } = state;
   const seasonInfo = getSeasonInfo(day);
   const [showStrainIntel, setShowStrainIntel] = useState(false);
@@ -102,8 +103,19 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact =
                 {/* Status Effects & Infection Risk */}
                 <div className="flex items-center gap-1 shrink-0">
                   {player.infectionRisk > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider animate-pulse">
-                      ☣️ Virus {player.infectionRisk}%
+                    <button
+                      type="button"
+                      onClick={onOpenInfection}
+                      title="Open infection telemetry and triage"
+                      className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider animate-pulse hover:bg-rose-500/30 transition-all flex items-center gap-1 active:scale-95"
+                    >
+                      <Biohazard className="w-2.5 h-2.5 text-rose-400" />
+                      <span>Virus {player.infectionRisk}%</span>
+                    </button>
+                  )}
+                  {player.hunger <= 25 && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider animate-pulse" title="Severe hunger malnutrition">
+                      🍞 Starving {player.hunger}%
                     </span>
                   )}
                   {player.statusEffects.map((eff, idx) => (
@@ -197,19 +209,44 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, compact =
                 </div>
               </div>
 
-              {/* Hunger */}
-              <div className="bg-white/[0.04] border border-white/5 rounded-2xl p-2 flex flex-col justify-between">
+              {/* Virus / Infection Progress */}
+              <button
+                type="button"
+                onClick={onOpenInfection}
+                title="View infection diagnosis, progression and triage"
+                className="bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 rounded-2xl p-2 flex flex-col justify-between text-left transition-all active:scale-[0.98] group cursor-pointer"
+              >
                 <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-                  <span className="flex items-center gap-1"><Utensils className="w-3 h-3 text-amber-400" /> Food</span>
-                  <span className="font-mono font-bold text-zinc-200">{player.hunger}%</span>
+                  <span className="flex items-center gap-1">
+                    <Biohazard className={`w-3 h-3 transition-colors ${
+                      player.infectionRisk === 0 ? 'text-emerald-400' :
+                      player.infectionRisk < 30 ? 'text-amber-400 animate-pulse' :
+                      player.infectionRisk < 70 ? 'text-orange-500 animate-pulse' :
+                      'text-rose-500 animate-pulse'
+                    }`} />
+                    <span className="group-hover:text-zinc-200 transition-colors font-sans">Virus</span>
+                  </span>
+                  <span className={`font-mono font-bold ${
+                    player.infectionRisk === 0 ? 'text-emerald-400' :
+                    player.infectionRisk < 30 ? 'text-amber-400' :
+                    player.infectionRisk < 70 ? 'text-orange-400' :
+                    'text-rose-500 animate-pulse'
+                  }`}>
+                    {player.infectionRisk}%
+                  </span>
                 </div>
                 <div className="w-full bg-white/10 rounded-full h-1.5 mt-1.5 overflow-hidden">
                   <div
-                    className="h-full bg-amber-500 transition-all duration-500"
-                    style={{ width: `${Math.max(0, player.hunger)}%` }}
+                    className={`h-full transition-all duration-500 ${
+                      player.infectionRisk === 0 ? 'bg-emerald-500/40' :
+                      player.infectionRisk < 30 ? 'bg-amber-500' :
+                      player.infectionRisk < 70 ? 'bg-orange-500' :
+                      'bg-rose-500 animate-pulse'
+                    }`}
+                    style={{ width: `${Math.max(player.infectionRisk === 0 ? 0 : 5, player.infectionRisk)}%` }}
                   />
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Tiny Responsive Attributes Row Directly Below Health Bars */}
