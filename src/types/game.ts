@@ -87,6 +87,12 @@ export interface SurvivorBackstory {
   title: string;
   targetName: string;
   relation: string;
+  targetGender?: 'male' | 'female';
+  targetAge?: number;
+  targetSkills?: { combat: number; medical: number; crafting: number; stealth: number; fitness: number };
+  targetCauseOfDeath?: string;
+  targetMemoirFlashback?: string;
+  targetKeepsake?: string;
   hookText: string;
   searchGoal: string;
   targetLocationId: string;
@@ -246,6 +252,7 @@ export interface CampRoom {
   capacity: number;
   comfort: number;
   assignedMemberIds: string[];
+  level?: number;
 }
 
 export interface CampFacility {

@@ -944,6 +944,69 @@ export function App() {
     });
   };
 
+  const handleUpgradeRoom = (roomId: string) => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      let updatedInv = [...prev.inventory];
+      const woodItem = updatedInv.find(i => (i.id.includes('wood') || i.id.includes('plank') || i.id.includes('timber')) && i.quantity >= 2);
+      if (!woodItem) return prev;
+
+      woodItem.quantity -= 2;
+      updatedInv = updatedInv.filter(i => i.quantity > 0);
+
+      const rooms = prev.shelter.rooms ? [...prev.shelter.rooms] : [
+        { id: 'room_cots_1', name: 'Makeshift Cots & Lean-To', type: 'cots' as const, capacity: 2, comfort: 20, assignedMemberIds: [] },
+        { id: 'room_bunk_1', name: 'Main Fortified Bunkhouse', type: 'bunk' as const, capacity: 2, comfort: 45, assignedMemberIds: [] }
+      ];
+
+      let upgradedRoomName = 'Quarters';
+      let newRoomCapacity = 3;
+      const updatedRooms = rooms.map(r => {
+        if (r.id === roomId) {
+          const cap = r.capacity + 1;
+          newRoomCapacity = cap;
+          upgradedRoomName = r.name;
+          return {
+            ...r,
+            capacity: cap,
+            level: (r.level || 1) + 1,
+            comfort: Math.min(100, r.comfort + 10)
+          };
+        }
+        return r;
+      });
+
+      // Accommodate rough sleepers
+      let updatedCamp = [...prev.campMembers];
+      const roughIdx = updatedCamp.findIndex(m => m.isSleepingRough);
+      if (roughIdx !== -1) {
+        updatedCamp[roughIdx] = { ...updatedCamp[roughIdx], isSleepingRough: false };
+      }
+
+      const newMaxSurvivors = (prev.shelter.maxSurvivors || 4) + 1;
+
+      return {
+        ...prev,
+        inventory: updatedInv,
+        campMembers: updatedCamp,
+        shelter: {
+          ...prev.shelter,
+          maxSurvivors: newMaxSurvivors,
+          morale: Math.min(100, (prev.shelter.morale ?? 75) + 6),
+          rooms: updatedRooms
+        },
+        logs: [...prev.logs, {
+          id: 'upgrade_room_' + Date.now(),
+          day: prev.day,
+          text: `🔨 Upgraded ${upgradedRoomName}! Added an additional sturdy bunk bed from salvaged timber (+1 Bed Capacity, now ${newRoomCapacity} beds).`,
+          type: 'milestone' as const,
+          timestamp: 'Construction'
+        }].slice(-150)
+      };
+    });
+  };
+
   const handleAssignRoom = (memberId: string, roomId: string) => {
     if (!gameState) return;
     setGameState(prev => {
@@ -2771,6 +2834,7 @@ export function App() {
               onExileSurvivor={handleExileSurvivor}
               onRepairBarricade={handleRepairBarricade}
               onBuildRoom={handleBuildRoom}
+              onUpgradeRoom={handleUpgradeRoom}
               onAssignRoom={handleAssignRoom}
               onAssignPlayerRoom={handleAssignPlayerRoom}
               onTidyRoom={handleTidyRoom}

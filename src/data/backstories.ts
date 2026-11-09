@@ -375,12 +375,67 @@ export function getContextualBackstory(survivor: Survivor, career: Career): Surv
   const searchGoal = template.searchGoal.replace(/{NAME}/g, firstName);
   const journalThoughts = template.journalThoughts.map(t => t.replace(/{NAME}/g, firstName));
 
+  const isFemale = template.nameKey.includes('female') || template.relation.includes('Mother') || template.relation.includes('Sister') || template.relation.includes('Daughter') || template.relation.includes('Wife');
+  const targetGender: 'male' | 'female' = isFemale ? 'female' : 'male';
+
+  let targetAge = survivor.age + 2;
+  if (template.relation.includes('Father') || template.relation.includes('Mother')) {
+    targetAge = Math.max(38, survivor.age + 20 + Math.floor(Math.random() * 8));
+  } else if (template.relation.includes('Brother') || template.relation.includes('Sister')) {
+    targetAge = template.relation.includes('Younger') || template.relation.includes('Little') 
+      ? Math.max(11, survivor.age - (3 + Math.floor(Math.random() * 4)))
+      : survivor.age + (2 + Math.floor(Math.random() * 4));
+  } else if (template.relation.includes('Son') || template.relation.includes('Daughter')) {
+    targetAge = Math.max(4, survivor.age - 20);
+  } else if (template.relation.includes('Spouse') || template.relation.includes('Wife') || template.relation.includes('Husband')) {
+    targetAge = Math.max(18, survivor.age + (Math.floor(Math.random() * 5) - 2));
+  }
+
+  const targetSkills = {
+    combat: 4 + Math.floor(Math.random() * 4),
+    medical: 4 + Math.floor(Math.random() * 4),
+    crafting: 4 + Math.floor(Math.random() * 4),
+    stealth: 4 + Math.floor(Math.random() * 4),
+    fitness: 4 + Math.floor(Math.random() * 4)
+  };
+
+  const keepsakes = [
+    'Engraved Silver Pocket Compass',
+    'Hand-Knitted Wool Scarf',
+    'Sterling Silver Ring',
+    'Weathered Leather Keychain',
+    'Polished Brass Lighter',
+    'Carved Wooden Animal Figurine'
+  ];
+  const targetKeepsake = keepsakes[Math.floor(Math.random() * keepsakes.length)];
+
+  let targetMemoirFlashback = '';
+  if (template.relation.includes('Brother')) {
+    targetMemoirFlashback = `I still remember the summer we rebuilt the old engine together in the garage, grease on our hands and laughter filling the air. When the emergency sirens began wailing across the city on Day 0, ${firstName} shoved me toward the evacuation line and shouted that he would rendezvous with me at the sanctuary. He kept that promise until his final breath.`;
+  } else if (template.relation.includes('Sister')) {
+    targetMemoirFlashback = `We used to stay up late sharing headphone cords, talking about the places we would see once the world opened up. When the city lockdown sirens began blaring, ${firstName} gave me her knitted scarf and made me swear I would survive. Her memory is the light that keeps me going.`;
+  } else if (template.relation.includes('Father')) {
+    targetMemoirFlashback = `Dad always possessed quiet strength and steady, calloused hands. He taught me to stand firm against every hardship and never abandon our people. His final words to me before the radio static took over were to stay strong and lead with honor. I carry his discipline with me every single day.`;
+  } else if (template.relation.includes('Mother')) {
+    targetMemoirFlashback = `Mom worked tireless shifts so our home would be warm and safe. Even when the sirens echoed down the hospital avenues, her voicemail pleaded with me to stay hidden until she reached me. I hear her gentle voice whenever the silence in the haven grows heavy.`;
+  } else if (template.relation.includes('Spouse') || template.relation.includes('Wife') || template.relation.includes('Husband')) {
+    targetMemoirFlashback = `We exchanged vows on a quiet afternoon, swearing to weather whatever storm life brought us. When the bridges downtown collapsed, we agreed on an emergency rendezvous plan. Finding their ring and honoring their memory gave me peace, and their love remains my steadfast anchor.`;
+  } else {
+    targetMemoirFlashback = `We promised each other we would survive whatever came next. Remembering ${firstName}'s voice gives me the resolve to keep standing when the days grow dark.`;
+  }
+
   return {
     id: template.id + '_' + Date.now(),
     theme: template.theme,
     title,
     targetName: firstName,
     relation: template.relation,
+    targetGender,
+    targetAge,
+    targetSkills,
+    targetKeepsake,
+    targetMemoirFlashback,
+    targetCauseOfDeath: 'Overrun during an evacuation standoff; succumbed to infected bite wounds after protecting civilians.',
     hookText,
     searchGoal,
     targetLocationId: template.targetLocationId,

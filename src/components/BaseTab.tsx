@@ -11,6 +11,7 @@ import { WillAndTestamentModal } from './WillAndTestamentModal';
 import { InscribeRelicModal } from './InscribeRelicModal';
 import { HeirloomDetailModal } from './HeirloomDetailModal';
 import { DynastyTreeModal } from './DynastyTreeModal';
+import { KinMemoirModal } from './KinMemoirModal';
 import { FamilyHeirloom } from '../types/game';
 import { WillAndTestament } from '../types/game';
 import { MatchmakeModal } from './MatchmakeModal';
@@ -30,6 +31,7 @@ interface Props {
   onExileSurvivor: (memberId: string) => void;
   onRepairBarricade: () => void;
   onBuildRoom: (roomType: 'cots' | 'bunk' | 'cabin') => void;
+  onUpgradeRoom?: (roomId: string) => void;
   onAssignRoom: (memberId: string, roomId: string) => void;
   onAssignPlayerRoom?: (roomId: string) => void;
   onTidyRoom?: (roomId: string) => void;
@@ -71,6 +73,7 @@ export const BaseTab: React.FC<Props> = ({
   onExileSurvivor,
   onRepairBarricade,
   onBuildRoom,
+  onUpgradeRoom,
   onAssignRoom,
   onAssignPlayerRoom,
   onTidyRoom,
@@ -1241,6 +1244,25 @@ export const BaseTab: React.FC<Props> = ({
                   {/* Room Actions */}
                   <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-white/5 text-xs">
                     <div className="flex gap-1 flex-wrap">
+                      {/* Upgrade Room (+1 Bed Capacity) */}
+                      {onUpgradeRoom && (
+                        <button
+                          type="button"
+                          disabled={woodCount < 2}
+                          onClick={() => triggerFeedback(`Expanded ${room.name} (+1 Bed Capacity).`, () => onUpgradeRoom(room.id))}
+                          className={`py-1 px-2.5 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all ${
+                            woodCount >= 2
+                              ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 active:scale-95'
+                              : 'bg-white/5 border border-white/5 text-zinc-500 opacity-60 cursor-not-allowed'
+                          }`}
+                          title={woodCount >= 2 ? 'Upgrade with 2 Timber to add +1 Bed' : 'Requires 2 Timber (Have ' + woodCount + ')'}
+                        >
+                          <Hammer className="w-3 h-3 text-emerald-400" />
+                          <span>Upgrade (+1 Bed)</span>
+                          <span className="text-[9px] font-mono text-zinc-400">2 Wood</span>
+                        </button>
+                      )}
+
                       {/* Move Player Here Button */}
                       {!isPlayerHere && onAssignPlayerRoom && (
                         <button

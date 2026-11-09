@@ -620,7 +620,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Carry ' + target + ' to the sanctuary garden, dig a proper grave, and carve a stone memorial marker',
           consequenceSummary: 'Gives eternal peace and emotional closure (+Permanent Resolve, +25 Sanity, inherits heirloom weapon).',
           execute: (state: GameState) => {
-            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Found fallen after heroic stand; laid to rest with dignity' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Found fallen after heroic stand; laid to rest with dignity', targetCauseOfDeath: 'Found fallen at St. Michael Church after a heroic stand holding off the swarm so civilians could evacuate.' };
             const heirloom = { id: 'heirloom_gun', name: target + "\'s Service Revolver", category: 'weapon' as const, quantity: 1, description: 'Heirloom revolver carried by ' + target + '.' };
             let inv = [...state.inventory, heirloom];
 
@@ -646,7 +646,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Collect ' + target + '\'s belongings, seal the shed, and swear an oath to survive until the end of the world',
           consequenceSummary: 'Hardened survivor mindset (+Permanent determination).',
           execute: (state: GameState) => {
-            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Swore survival oath over their memory' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Swore survival oath over their memory', targetCauseOfDeath: 'Overrun while defending the sanctuary gate; laid to rest under the church memorial.' };
             return {
               state: {
                 ...state,
@@ -698,7 +698,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
                 outcomeText: 'I bound the tourniquet and severed the infected tissue before sepsis spread. The fever broke by dawn! ' + (isFather || isMother ? target + ' (' + companion.name + ')' : companion.name) + ' is alive and safe in our camp! (Mind restored to 100%)'
               };
             } else {
-              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Succumbed to infected bite despite triage attempt' };
+              const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Succumbed to infected bite despite triage attempt', targetCauseOfDeath: 'Sustained an infected bite puncture while holding the hospital gate; passed away peacefully before turning.' };
               return {
                 state: {
                   ...state,
@@ -716,7 +716,7 @@ function generateChapterDilemma(s: GameState, bs: any, chapterNum: number, curre
           text: 'Sit beside ' + target + ', hold their hand, and stay together through their final lucid hours',
           consequenceSummary: 'Stay by their side so they never die alone. Deep emotional closure.',
           execute: (state: GameState) => {
-            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Held their hand through their final peaceful hours' };
+            const updatedBs = { ...advanceBackstoryChapter(bs, 5, currentDay, true), outcome: 'deceased', outcomeSummary: 'Held their hand through their final peaceful hours', targetCauseOfDeath: "Fought bravely across the ruins before succumbing to mortal wounds, resting peacefully in their loved one's arms." };
             return {
               state: {
                 ...state,
