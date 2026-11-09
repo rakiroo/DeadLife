@@ -46,6 +46,7 @@ interface Props {
   onMakeLove: () => void;
   onStokeWoodstove?: () => void;
   onSaveWill?: (will: WillAndTestament) => void;
+  onDeclareSpouseFallen?: () => void;
 }
 
 export const BaseTab: React.FC<Props> = ({
@@ -82,7 +83,8 @@ export const BaseTab: React.FC<Props> = ({
   onToddlerInteract,
   onBestowHeirloom,
   onStokeWoodstove,
-  onSaveWill
+  onSaveWill,
+  onDeclareSpouseFallen
 }) => {
   const { shelter, campMembers, inventory, player } = gameState;
   const [subView, setSubView] = useState<'survivors' | 'family' | 'housing' | 'facilities' | 'laws'>('survivors');
@@ -126,6 +128,10 @@ export const BaseTab: React.FC<Props> = ({
   // Pregnancy status check for player or partner
   const spouseMember = campMembers.find(m => m.id === player.spouseId);
   const datingMember = campMembers.find(m => m.id === player.datingTargetId);
+  const isSpouseMissing = Boolean(player.isSpouseMissing || (player.spouseId && player.spouseId.startsWith('missing_')) || (player.backstory?.theme === 'love' && player.backstory?.status !== 'resolved' && (player.backstory?.relation.includes('Spouse') || player.backstory?.relation.includes('Wife') || player.backstory?.relation.includes('Husband'))));
+  const isPartnerMissing = Boolean(player.isPartnerMissing || (player.datingTargetId && player.datingTargetId.startsWith('missing_')) || (player.backstory?.theme === 'love' && player.backstory?.status !== 'resolved' && !player.backstory?.relation.includes('Spouse')));
+  const hasMissingChild = Boolean(player.backstory?.theme === 'family' && (player.backstory.relation.includes('Son') || player.backstory.relation.includes('Daughter')) && player.backstory.status !== 'resolved');
+  const hasMissingKin = Boolean(player.backstory && player.backstory.status !== 'resolved' && (player.backstory.theme === 'pet' || player.backstory.relation.includes('Father') || player.backstory.relation.includes('Mother') || player.backstory.relation.includes('Brother') || player.backstory.relation.includes('Sister')));
   const isExpectingBaby = player.isPregnant || (spouseMember && spouseMember.isPregnant) || (datingMember && datingMember.isPregnant);
   const pregnancyMonths = player.isPregnant ? (player.pregnancyMonths || 1) : (spouseMember?.pregnancyMonths || datingMember?.pregnancyMonths || 1);
   const pregnantMotherName = player.gender === 'female' && player.isPregnant 
@@ -657,7 +663,7 @@ export const BaseTab: React.FC<Props> = ({
                 <h3 className="text-sm font-bold text-white mt-0.5">{player.name} & Family</h3>
               </div>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                {player.romanceStage === 'married' ? 'Married' : player.romanceStage === 'dating' ? 'Dating' : 'Single'}
+                {isSpouseMissing ? 'Married (Missing)' : isPartnerMissing ? (player.romanceStage === 'engaged' ? 'Engaged (Missing)' : 'Dating (Missing)') : player.romanceStage === 'married' ? 'Married' : player.romanceStage === 'dating' ? 'Dating' : 'Single'}
               </span>
             </div>
 
@@ -665,36 +671,88 @@ export const BaseTab: React.FC<Props> = ({
             <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-xs space-y-2">
               <span className="text-[10px] uppercase font-mono text-zinc-500 block">Marital & Relationship Status:</span>
               {player.romanceStage === 'married' ? (
+                isSpouseMissing ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Heart className="w-4 h-4 text-amber-400" />
+                        <span className="font-bold text-white">Married to {player.spouseName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Separated • Missing
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      Your spouse {player.spouseName} was cut off when society collapsed. Search {player.backstory?.searchGoal || 'the district'} to follow their trail and reunite!
+                    </p>
+                    {onDeclareSpouseFallen && (
+                      <div className="pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => triggerFeedback('Declared ' + player.spouseName + ' presumed fallen. You have accepted the loss and are now single.', onDeclareSpouseFallen)}
+                          className="text-[10px] text-zinc-500 hover:text-rose-400 transition-colors font-medium underline"
+                        >
+                          Declare Presumed Fallen (Accept Loss & Move On)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Heart className="w-4 h-4 text-rose-400 fill-rose-400" />
+                        <span className="font-bold text-white">Married to {player.spouseName}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={isExpectingBaby}
+                        onClick={() => triggerFeedback('Conceived a baby with ' + player.spouseName + '! Due in 9 months (+Morale).', onTryForBaby)}
+                        className="py-2 px-3 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <Baby className="w-3.5 h-3.5" />
+                        <span>{isExpectingBaby ? 'Currently Expecting' : 'Try for Baby'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => triggerFeedback('Spent a passionate, restorative evening with ' + player.spouseName + ' (+Sanity & Morale).', onMakeLove)}
+                        className="py-2 px-3 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <Flame className="w-3.5 h-3.5" />
+                        <span>Make Love</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              ) : isPartnerMissing ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <Heart className="w-4 h-4 text-rose-400 fill-rose-400" />
-                      <span className="font-bold text-white">Married to {player.spouseName}</span>
+                      <Heart className="w-4 h-4 text-pink-400" />
+                      <span className="font-bold text-white">{player.romanceStage === 'engaged' ? 'Engaged to' : 'Dating'} {player.datingTargetName}</span>
                     </div>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                      Separated • Missing
+                    </span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    {/* BUTTON 1: Try for Baby */}
-                    <button
-                      type="button"
-                      disabled={isExpectingBaby}
-                      onClick={() => triggerFeedback(`Conceived a baby with ${player.spouseName}! Due in 9 months (+Morale).`, onTryForBaby)}
-                      className="py-2 px-3 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                    >
-                      <Baby className="w-3.5 h-3.5" />
-                      <span>{isExpectingBaby ? 'Currently Expecting' : 'Try for Baby'}</span>
-                    </button>
-
-                    {/* BUTTON 2: Make Love */}
-                    <button
-                      type="button"
-                      onClick={() => triggerFeedback(`Spent a passionate, restorative evening with ${player.spouseName} (+Sanity & Morale).`, onMakeLove)}
-                      className="py-2 px-3 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                    >
-                      <Flame className="w-3.5 h-3.5" />
-                      <span>Make Love</span>
-                    </button>
-                  </div>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    Your partner {player.datingTargetName} was separated during the outbreak. Search {player.backstory?.searchGoal || 'the district'} to find them!
+                  </p>
+                  {onDeclareSpouseFallen && (
+                    <div className="pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => triggerFeedback('Declared ' + player.datingTargetName + ' presumed fallen. You have accepted the loss and are now single.', onDeclareSpouseFallen)}
+                        className="text-[10px] text-zinc-500 hover:text-rose-400 transition-colors font-medium underline"
+                      >
+                        Declare Presumed Fallen (Accept Loss & Move On)
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : player.romanceStage === 'dating' ? (
                 <div className="space-y-2">
@@ -707,7 +765,7 @@ export const BaseTab: React.FC<Props> = ({
                     <button
                       type="button"
                       disabled={isExpectingBaby}
-                      onClick={() => triggerFeedback(`Conceived a baby with ${player.datingTargetName}! Due in 9 months.`, onTryForBaby)}
+                      onClick={() => triggerFeedback('Conceived a baby with ' + player.datingTargetName + '! Due in 9 months.', onTryForBaby)}
                       className="py-2 px-3 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                     >
                       <Baby className="w-3.5 h-3.5" />
@@ -716,7 +774,7 @@ export const BaseTab: React.FC<Props> = ({
 
                     <button
                       type="button"
-                      onClick={() => triggerFeedback(`Spent a passionate evening with ${player.datingTargetName} (+Sanity & Morale).`, onMakeLove)}
+                      onClick={() => triggerFeedback('Spent a passionate evening with ' + player.datingTargetName + ' (+Sanity & Morale).', onMakeLove)}
                       className="py-2 px-3 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                     >
                       <Flame className="w-3.5 h-3.5" />
@@ -730,17 +788,31 @@ export const BaseTab: React.FC<Props> = ({
                 </p>
               )}
             </div>
-
             {/* Children List */}
             <div className="space-y-1.5">
               <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block px-1">
                 Your Offspring ({player.children ? player.children.length : 0})
               </span>
-              {(!player.children || player.children.length === 0) ? (
+              {hasMissingChild && player.backstory && (
+                <div className="p-3 bg-black/40 border border-amber-500/30 rounded-2xl space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">{player.backstory.targetName}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      {player.backstory.relation} • Missing in Ruins
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-300 leading-snug">
+                    Your {player.backstory.relation.toLowerCase()} {player.backstory.targetName} was separated during the initial panic. Follow the trail in {player.backstory.searchGoal} to bring them home!
+                  </p>
+                </div>
+              )}
+              {(!player.children || player.children.length === 0) && !hasMissingChild && (
                 <div className="p-3 text-center text-zinc-500 bg-black/20 rounded-2xl border border-white/5 text-[11px]">
                   No children yet. Try for a baby or make love to start a family and carry your dynasty forward!
                 </div>
-              ) : (
+              )}
+
+              {player.children && player.children.length > 0 && (
                 <div className="space-y-2">
                   {player.children.map(child => (
                     <div key={child.id} className="p-3 bg-black/40 border border-white/5 rounded-2xl space-y-2 text-xs">
@@ -871,6 +943,33 @@ export const BaseTab: React.FC<Props> = ({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              
+              {/* Loved Ones in the Ruins (Parents, Siblings, Pet) */}
+              {hasMissingKin && player.backstory && (
+                <div className="space-y-1.5 pt-2 border-t border-white/5">
+                  <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block px-1">
+                    Loved Ones in the Ruins
+                  </span>
+                  <div className="p-3 bg-black/40 border border-amber-500/20 rounded-2xl space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white">
+                        {player.backstory.theme === 'pet' ? '🐕 ' : '👥 '}
+                        {player.backstory.targetName}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        {player.backstory.relation} • Missing
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-snug">
+                      {player.backstory.hookText}
+                    </p>
+                    <div className="text-[10px] font-mono text-amber-400/90 pt-0.5">
+                      Search Goal: {player.backstory.searchGoal}
+                    </div>
+                  </div>
                 </div>
               )}
 

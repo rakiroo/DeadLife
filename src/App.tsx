@@ -137,6 +137,25 @@ function migrateLegacyGameState(parsed: GameState): GameState {
   if (!parsed.mystery) parsed.mystery = generateProceduralMystery();
   if (!parsed.season) parsed.season = getSeason(parsed.day || 0);
   if (!parsed.player.heirlooms) parsed.player.heirlooms = [];
+  if (parsed.player.backstory?.theme === 'love' && (!parsed.player.spouseName && !parsed.player.datingTargetName)) {
+    const bs = parsed.player.backstory;
+    if (bs.relation.includes('Spouse') || bs.relation.includes('Wife') || bs.relation.includes('Husband')) {
+      parsed.player.romanceStage = 'married';
+      parsed.player.spouseName = bs.targetName;
+      parsed.player.spouseId = 'missing_' + bs.targetName.toLowerCase().replace(/\s+/g, '_');
+      parsed.player.isSpouseMissing = true;
+    } else if (bs.relation.includes('Fianc')) {
+      parsed.player.romanceStage = 'engaged';
+      parsed.player.datingTargetName = bs.targetName;
+      parsed.player.datingTargetId = 'missing_' + bs.targetName.toLowerCase().replace(/\s+/g, '_');
+      parsed.player.isPartnerMissing = true;
+    } else if (bs.relation.includes('Partner') || bs.relation.includes('Girlfriend') || bs.relation.includes('Boyfriend')) {
+      parsed.player.romanceStage = 'dating';
+      parsed.player.datingTargetName = bs.targetName;
+      parsed.player.datingTargetId = 'missing_' + bs.targetName.toLowerCase().replace(/\s+/g, '_');
+      parsed.player.isPartnerMissing = true;
+    }
+  }
   return parsed;
 }
 
@@ -145,6 +164,24 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const spawnStory = getRandomSpawnStory(career.id);
   const backstory = survivor.backstory || getContextualBackstory(survivor, career);
   survivor.backstory = backstory;
+  if (backstory.theme === 'love') {
+    if (backstory.relation.includes('Spouse') || backstory.relation.includes('Wife') || backstory.relation.includes('Husband')) {
+      survivor.romanceStage = 'married';
+      survivor.spouseName = backstory.targetName;
+      survivor.spouseId = 'missing_' + backstory.targetName.toLowerCase().replace(/\s+/g, '_');
+      survivor.isSpouseMissing = true;
+    } else if (backstory.relation.includes('Fianc')) {
+      survivor.romanceStage = 'engaged';
+      survivor.datingTargetName = backstory.targetName;
+      survivor.datingTargetId = 'missing_' + backstory.targetName.toLowerCase().replace(/\s+/g, '_');
+      survivor.isPartnerMissing = true;
+    } else if (backstory.relation.includes('Partner') || backstory.relation.includes('Girlfriend') || backstory.relation.includes('Boyfriend')) {
+      survivor.romanceStage = 'dating';
+      survivor.datingTargetName = backstory.targetName;
+      survivor.datingTargetId = 'missing_' + backstory.targetName.toLowerCase().replace(/\s+/g, '_');
+      survivor.isPartnerMissing = true;
+    }
+  }
 
   // Gather all starting loot from workplace
   const startingLoot: InventoryItem[] = [];
@@ -2178,6 +2215,35 @@ export function App() {
     });
   };
 
+  // Declare missing backstory spouse/partner presumed fallen to allow moving on
+  const handleDeclareSpouseFallen = () => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev) return null;
+      const lostName = prev.player.spouseName || prev.player.datingTargetName || 'my lost partner';
+      return {
+        ...prev,
+        player: {
+          ...prev.player,
+          romanceStage: 'single',
+          spouseId: undefined,
+          spouseName: undefined,
+          datingTargetId: undefined,
+          datingTargetName: undefined,
+          isSpouseMissing: false,
+          isPartnerMissing: false
+        },
+        logs: [...prev.logs, {
+          id: 'declare_fallen_' + Date.now(),
+          day: prev.day,
+          text: '💔 Heavy Acceptance: I finally accepted that ' + lostName + ' is lost to the apocalypse. I have to survive for the living now.',
+          type: 'camp' as const,
+          timestamp: 'Closure'
+        }].slice(-150)
+      };
+    });
+  };
+
   // Formalize Founder's Will & Testament
   const handleSaveWill = (will: WillAndTestament) => {
     if (!gameState) return;
@@ -2519,6 +2585,7 @@ export function App() {
               onBestowHeirloom={handleBestowHeirloom}
               onStokeWoodstove={handleStokeWoodstove}
               onSaveWill={handleSaveWill}
+              onDeclareSpouseFallen={handleDeclareSpouseFallen}
             />
           )}
           {activeTab === 'inventory' && (

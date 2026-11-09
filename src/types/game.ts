@@ -148,7 +148,9 @@ export interface Survivor {
   spouseName?: string;
   datingTargetId?: string;
   datingTargetName?: string;
-  romanceStage?: 'single' | 'crush' | 'dating' | 'engaged' | 'married';
+  romanceStage?: 'single' | 'crush' | 'dating' | 'engaged' | 'married' | 'widowed';
+  isSpouseMissing?: boolean;
+  isPartnerMissing?: boolean;
   children?: SurvivorChild[];
   generation?: number;
   heirlooms?: FamilyHeirloom[];
