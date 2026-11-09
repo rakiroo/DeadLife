@@ -1,4 +1,4 @@
-import { EventDilemma, GameState, CampMember } from '../types/game';
+import { EventDilemma, GameState, CampMember, CampRole } from '../types/game';
 
 export function getCurrentLocationName(state: GameState): string {
   if (!state.startingLocation.hasLeftStartingSpot) {
@@ -578,7 +578,323 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
   });
 }
 
+// ============================================================================
+// PROCEDURAL WANDERING SURVIVOR GENERATOR (NEVER REPEATS)
+// ============================================================================
+
+const PROCEDURAL_FIRST_NAMES_MALE = [
+  'Marcus', 'Julian', 'Liam', 'Noah', 'Caleb', 'Gabriel', 'Darius', 'Lucas', 
+  'Tobias', 'Finn', 'Elias', 'Vance', 'Samuel', 'Nate', 'Owen', 'Ezra', 
+  'Mateo', 'Hector', 'Silas', 'Dominic', 'Rowan', 'Felix', 'Gideon', 'Arthur'
+];
+
+const PROCEDURAL_FIRST_NAMES_FEMALE = [
+  'Elena', 'Maya', 'Nora', 'Chloe', 'Hazel', 'Iris', 'Ivy', 'Aria', 
+  'Naomi', 'Claire', 'Sophia', 'Isla', 'Zoe', 'Aurora', 'Miriam', 'Clara', 
+  'Tessa', 'Rowena', 'Selah', 'Vivian', 'Valeria', 'Fiona', 'Gwen', 'Selena'
+];
+
+const PROCEDURAL_LAST_NAMES = [
+  'Mercer', 'Cross', 'Vance', 'Sterling', 'Reed', 'Walker', 'Hayes', 'Thorne', 
+  'Brooks', 'Stone', 'Silva', 'Chen', 'Miller', 'Diaz', 'Tanaka', 'Rossi', 
+  'Jensen', 'Alvarez', 'Blackwood', 'Sinclair', 'Kowalski', "O'Connor", 'Holt', 'Winter'
+];
+
+interface ProceduralArchetype {
+  profession: string;
+  role: CampRole;
+  baseStats: { combat: number; medical: number; crafting: number; stealth: number; fitness: number };
+  gearPool: { id: string; name: string; category: any; quantity: number; description: string }[];
+  bioHooks: string[];
+}
+
+const PROCEDURAL_ARCHETYPES: ProceduralArchetype[] = [
+  {
+    profession: 'Trauma Physician',
+    role: 'medic',
+    baseStats: { combat: 3, medical: 8, crafting: 4, stealth: 5, fitness: 5 },
+    gearPool: [
+      { id: 'scav_meds_anti', name: 'Sterile Antibiotics', category: 'medical', quantity: 3, description: 'Pharmaceutical antibiotics.' },
+      { id: 'scav_meds_band', name: 'Field Trauma Dressing', category: 'medical', quantity: 2, description: 'Sterile roll bandage.' }
+    ],
+    bioHooks: [
+      'escaped from an overrun downtown surgical triage hospital after the generators failed.',
+      'survived three weeks treating wounded stragglers in an abandoned subway pharmacy.',
+      'walked twelve miles carrying field surgical instruments after their convoy was ambushed.'
+    ]
+  },
+  {
+    profession: 'Framing Carpenter',
+    role: 'craftsman',
+    baseStats: { combat: 5, medical: 3, crafting: 8, stealth: 4, fitness: 7 },
+    gearPool: [
+      { id: 'scav_craft_wood', name: 'Cured Framing Lumber', category: 'resource', quantity: 3, description: 'Dense structural timber.' },
+      { id: 'scav_craft_nails', name: 'Box of Framing Nails', category: 'resource', quantity: 20, description: 'Steel construction nails.' }
+    ],
+    bioHooks: [
+      'fortified a timber yard against infected before supplies ran dry.',
+      'built barricades for an apartment cooperative that eventually disbanded.',
+      'fled a collapsed highway overpass carrying their master toolbelt and framing hammer.'
+    ]
+  },
+  {
+    profession: 'Former Highway Patrol',
+    role: 'guard',
+    baseStats: { combat: 8, medical: 4, crafting: 4, stealth: 6, fitness: 7 },
+    gearPool: [
+      { id: 'scav_guard_ammo', name: 'Box of 9mm Cartridges (12)', category: 'resource', quantity: 12, description: 'Police sidearm ammunition.' },
+      { id: 'scav_guard_mre', name: 'Military Ration Meal', category: 'food', quantity: 2, description: 'Self-heating emergency MRE.' }
+    ],
+    bioHooks: [
+      'held a highway roadblock during the initial outbreak panic before patrolling solitary avenues.',
+      'evacuated stranded motorists into a transit station until nightfall forced them to retreat.',
+      'survived solo perimeter patrols with keen tactical situational awareness.'
+    ]
+  },
+  {
+    profession: 'Wilderness Guide & Hunter',
+    role: 'scavenger',
+    baseStats: { combat: 6, medical: 4, crafting: 5, stealth: 8, fitness: 7 },
+    gearPool: [
+      { id: 'scav_hunt_meat', name: 'Smoked Jerky Rations', category: 'food', quantity: 3, description: 'Cured trail rations.' },
+      { id: 'scav_hunt_water', name: 'Purified Canteen Water', category: 'water', quantity: 2, description: 'Spring water.' }
+    ],
+    bioHooks: [
+      'lived off-grid in the state park foothills before venturing into the city ruins for medicine.',
+      'tracked animal game and evaded zombie clusters through dense river ravines.',
+      'guided a group of survivors across the mountain pass before parting ways.'
+    ]
+  },
+  {
+    profession: 'Commercial Electrician',
+    role: 'craftsman',
+    baseStats: { combat: 4, medical: 4, crafting: 8, stealth: 5, fitness: 6 },
+    gearPool: [
+      { id: 'scav_elec_batt', name: 'Lithium Battery Cells', category: 'resource', quantity: 4, description: 'High-capacity power cells.' },
+      { id: 'scav_elec_tape', name: 'Heavy Gorilla Tape', category: 'tool', quantity: 1, description: 'Reinforced industrial tape.' }
+    ],
+    bioHooks: [
+      'kept a communications relay tower powered until lightning destroyed the battery bank.',
+      'scavenged sub-station parts and wiring harness components from abandoned utility vans.',
+      'helped wire a community water pump before prowlers breached the outer perimeter.'
+    ]
+  },
+  {
+    profession: 'Field Botanist & Forager',
+    role: 'scavenger',
+    baseStats: { combat: 3, medical: 6, crafting: 6, stealth: 6, fitness: 5 },
+    gearPool: [
+      { id: 'scav_bot_seeds', name: 'Heirloom Crop Seed Pack', category: 'resource', quantity: 1, description: 'Heirloom seeds for agriculture.' },
+      { id: 'scav_bot_water', name: 'Bottled Spring Water', category: 'water', quantity: 2, description: 'Fresh drinking water.' }
+    ],
+    bioHooks: [
+      'salvaged viable vegetable seed genetics from an agricultural research conservatory.',
+      'cultivated rooftop potato beds until water shortages forced an emergency evacuation.',
+      'identifies wild edible medicinal herbs, roots, and uncontaminated berries.'
+    ]
+  },
+  {
+    profession: 'Locksmith & Mechanic',
+    role: 'scavenger',
+    baseStats: { combat: 4, medical: 3, crafting: 7, stealth: 8, fitness: 6 },
+    gearPool: [
+      { id: 'scav_lock_picks', name: 'Lockpick & Tension Wrench Set', category: 'tool', quantity: 1, description: 'Pry and bypass tools.' },
+      { id: 'scav_lock_scrap', name: 'Assorted Fasteners & Screws', category: 'resource', quantity: 15, description: 'Hardware metal.' }
+    ],
+    bioHooks: [
+      'bypassed deadbolts on abandoned pharmacies and hardware stores to keep allies supplied.',
+      'repaired small engine carburetors and generators in a commercial garage.',
+      'slips through locked gates and security doors without making sound.'
+    ]
+  },
+  {
+    profession: 'Line Cook & Camp Baker',
+    role: 'idle',
+    baseStats: { combat: 4, medical: 4, crafting: 6, stealth: 4, fitness: 6 },
+    gearPool: [
+      { id: 'scav_chef_spices', name: 'Sealed Pantry Staples', category: 'food', quantity: 3, description: 'Preserved ingredients.' },
+      { id: 'scav_chef_matches', name: 'Box of Stormproof Matches', category: 'tool', quantity: 1, description: 'Fire starters.' }
+    ],
+    bioHooks: [
+      'managed emergency soup kitchens in the church square before supply trucks stopped coming.',
+      'knows how to stretch minimal dry grains into nutritious meals for an entire settlement.',
+      'bartered hot meals for shelter in various transit stations across the metro area.'
+    ]
+  }
+];
+
+export function generateProceduralSurvivorDilemma(state: GameState): EventDilemma {
+  const loc = getCurrentLocationName(state);
+  const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
+  const firstPool = gender === 'male' ? PROCEDURAL_FIRST_NAMES_MALE : PROCEDURAL_FIRST_NAMES_FEMALE;
+  const firstName = firstPool[Math.floor(Math.random() * firstPool.length)];
+  const lastName = PROCEDURAL_LAST_NAMES[Math.floor(Math.random() * PROCEDURAL_LAST_NAMES.length)];
+  const fullName = firstName + ' ' + lastName;
+  const age = 20 + Math.floor(Math.random() * 36);
+
+  const archetype = PROCEDURAL_ARCHETYPES[Math.floor(Math.random() * PROCEDURAL_ARCHETYPES.length)];
+  const bioHook = archetype.bioHooks[Math.floor(Math.random() * archetype.bioHooks.length)];
+
+  // Stats with +/- 1 variance
+  const cbt = Math.min(10, Math.max(1, archetype.baseStats.combat + (Math.floor(Math.random() * 3) - 1)));
+  const med = Math.min(10, Math.max(1, archetype.baseStats.medical + (Math.floor(Math.random() * 3) - 1)));
+  const crf = Math.min(10, Math.max(1, archetype.baseStats.crafting + (Math.floor(Math.random() * 3) - 1)));
+  const stl = Math.min(10, Math.max(1, archetype.baseStats.stealth + (Math.floor(Math.random() * 3) - 1)));
+  const fit = Math.min(10, Math.max(1, archetype.baseStats.fitness + (Math.floor(Math.random() * 3) - 1)));
+
+  const uniqueEventId = 'procedural_survivor_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+
+  const defaultBedCapacity = state.shelter.rooms && state.shelter.rooms.length > 0 
+    ? state.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
+    : (state.shelter.maxSurvivors || (state.shelter.isEstablished ? 4 : 2));
+  const isAtCapacity = (state.campMembers.length + 1) >= defaultBedCapacity;
+
+  return {
+    id: uniqueEventId,
+    title: 'Knocking at the Gate: ' + fullName + ' (' + archetype.profession + ')',
+    category: 'camp_drama',
+    dangerLevel: 'medium',
+    description: 'Loud, rhythmic knocks echo from the entrance of ' + loc + '. Looking through the observation slit, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Clutching their rucksack with watchful, exhausted eyes, they call out: "Hello? I saw lantern light. I have supplies and honest trade skills to offer—just looking for safe walls and good survivors."',
+    choices: [
+      {
+        id: 'welcome_' + uniqueEventId,
+        text: 'Unbolt the gate, welcome ' + fullName + ' inside, and integrate them into camp',
+        consequenceSummary: 'Welcomes ' + fullName + ' into the colony (+Skills, +' + archetype.gearPool.map(g => g.name).join(', ') + ', +Morale).' + (isAtCapacity ? ' (Will sleep rough on floor until beds expand)' : ''),
+        execute: (s: GameState) => {
+          const newMember: CampMember = {
+            id: 'proc_member_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            name: fullName,
+            gender,
+            age,
+            relation: 'Fellow Survivor',
+            profession: archetype.profession,
+            bio: fullName + ' ' + bioHook,
+            health: 90,
+            trust: 70,
+            combatSkill: cbt,
+            medicalSkill: med,
+            craftingSkill: crf,
+            stealthSkill: stl,
+            fitnessSkill: fit,
+            role: archetype.role,
+            isSleepingRough: isAtCapacity,
+            statusEffects: []
+          };
+
+          return {
+            state: {
+              ...s,
+              campMembers: [...s.campMembers, newMember],
+              inventory: [...s.inventory, ...archetype.gearPool.map(g => ({ ...g }))],
+              shelter: {
+                ...s.shelter,
+                morale: Math.min(100, (s.shelter.morale ?? 75) + 15)
+              },
+              player: {
+                ...s.player,
+                sanity: Math.min(100, s.player.sanity + 10)
+              },
+              stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
+            },
+            log: isAtCapacity
+              ? 'I unbolted the gate and welcomed ' + fullName + ' into our haven! With all beds full, they gratefully accepted a sleeping roll on the floor (+15 Morale, +' + archetype.gearPool.map(g => g.name).join(', ') + ').'
+              : 'I unbolted the gate and welcomed ' + fullName + ' (' + archetype.profession + ') into our haven! They contributed their gear and joined our community (+15 Morale).',
+            outcomeTitle: fullName + ' Welcomed into Haven',
+            outcomeText: fullName + ' set down their pack with a long sigh of relief. "Thank you for opening the gate. I will pull my weight every single day."'
+          };
+        }
+      },
+      {
+        id: 'quarantine_' + uniqueEventId,
+        text: 'Enforce 3-Day Quarantine: Inspect thoroughly for bites before granting full admission',
+        consequenceSummary: 'Safe protocol: verifies bite-free status. ' + fullName + ' joins with high trust and appreciation (+Trust: 85).',
+        execute: (s: GameState) => {
+          const newMember: CampMember = {
+            id: 'proc_member_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            name: fullName,
+            gender,
+            age,
+            relation: 'Fellow Survivor',
+            profession: archetype.profession,
+            bio: fullName + ' ' + bioHook,
+            health: 95,
+            trust: 85,
+            combatSkill: cbt,
+            medicalSkill: med,
+            craftingSkill: crf,
+            stealthSkill: stl,
+            fitnessSkill: fit,
+            role: archetype.role,
+            isSleepingRough: isAtCapacity,
+            statusEffects: []
+          };
+
+          return {
+            state: {
+              ...s,
+              campMembers: [...s.campMembers, newMember],
+              inventory: [...s.inventory, ...archetype.gearPool.map(g => ({ ...g }))],
+              shelter: {
+                ...s.shelter,
+                morale: Math.min(100, (s.shelter.morale ?? 75) + 10)
+              },
+              stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
+            },
+            log: 'I admitted ' + fullName + ' under our standard 3-Day Quarantine protocol. They passed the inspection cleanly and joined the colony with deep respect for our security (+Trust: 85).',
+            outcomeTitle: 'Quarantine Protocol Passed',
+            outcomeText: fullName + ' nodded approvingly: "A group that checks for bites is a group that stays alive. I respect the discipline." They are now safe in camp.'
+          };
+        }
+      },
+      {
+        id: 'rations_' + uniqueEventId,
+        text: 'Lower canned food and fresh water over the fence, but decline shelter due to limited space',
+        consequenceSummary: 'Merciful parting: Spares rations without adding an extra mouth to feed (-1 Food, -1 Water, +5 Sanity).',
+        execute: (s: GameState) => {
+          let inv = [...s.inventory];
+          const f = inv.find(i => i.category === 'food' && i.quantity > 0);
+          if (f) f.quantity -= 1;
+          const w = inv.find(i => i.category === 'water' && i.quantity > 0);
+          if (w) w.quantity -= 1;
+          inv = inv.filter(i => i.quantity > 0);
+
+          return {
+            state: {
+              ...s,
+              inventory: inv,
+              player: { ...s.player, sanity: Math.min(100, s.player.sanity + 5) }
+            },
+            log: 'I lowered a basket of rations to ' + fullName + ' and explained our quarters were full. They thanked me warmly for the food and moved safely down the avenue.',
+            outcomeTitle: 'Peaceful Parting',
+            outcomeText: fullName + ' took the provisions with gratitude: "May your walls hold, friend. Thank you for the meal." They vanished safely into the morning fog.'
+          };
+        }
+      },
+      {
+        id: 'deny_' + uniqueEventId,
+        text: 'Keep the heavy iron gates barred and order ' + fullName + ' to move along',
+        consequenceSummary: 'Preserves total perimeter lockdown with zero resource expenditure.',
+        execute: (s: GameState) => {
+          return {
+            state: s,
+            log: 'I told ' + fullName + ' to move along. They nodded in silence, turned on their heels, and departed into the ruins.',
+            outcomeTitle: 'Gates Remained Barred',
+            outcomeText: 'The footsteps receded into the city. The haven perimeter remains quiet.'
+          };
+        }
+      }
+    ]
+  };
+}
+
 export function getRandomSurvivalEvent(state: GameState): EventDilemma | null {
+  const hasShelterOrCamp = state.shelter.isEstablished || state.startingLocation.hasLeftStartingSpot;
+  
+  // 35% chance to roll a freshly generated, never-repeating wandering survivor dilemma when in camp/base!
+  if (hasShelterOrCamp && Math.random() < 0.35) {
+    return generateProceduralSurvivorDilemma(state);
+  }
+
   const events = getSurvivalEvents(state);
   const filtered = events.filter(e => e.id !== state.activeDilemma?.id);
   if (filtered.length === 0) return null;
