@@ -37,6 +37,104 @@ const SAVE_KEY = 'deadlife_save';
 const GRAVEYARD_KEY = 'deadlife_graveyard';
 
 // Migration helper to ensure older saves have districts, strains, mysteries, and seasons
+
+export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, deathCauseOverride?: string): CemeteryRecord {
+  const { player, shelter, stats, day, district, mutationStrain, mystery } = state;
+
+  const ribbon = ribbonOverride || (
+    day >= 100 
+      ? 'Century Survivor' 
+      : stats.zombiesEliminated >= 15 
+      ? 'Slayer of the Dead' 
+      : day <= 2 
+      ? 'Patient Zero' 
+      : 'Fallen Survivor'
+  );
+
+  const deathCause = deathCauseOverride || player.deathCause || 'died fighting in the ruins';
+
+  const districtStory = district 
+    ? 'In the devastated sector of ' + district.name + ' (' + district.type.toUpperCase() + '), amid ' + district.description.toLowerCase() + ' '
+    : 'In the shattered ruins of the city, ';
+
+  const strainStory = mutationStrain
+    ? 'The world was haunted by ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')—' + mutationStrain.tagline.toLowerCase() + ' Every scavenge was a brush with death under their unique predatory instincts. '
+    : '';
+
+  const originStory = player.name + ' took their first steps into the nightmare on Day 0 as a ' + player.profession.toLowerCase() + '. Against overwhelming odds, they endured for ' + day + (day === 1 ? ' day. ' : ' days. ');
+
+  const weaponStory = player.equippedWeapon?.name
+    ? 'They defended the haven with their trusted ' + player.equippedWeapon.name + ' in hand, neutralizing ' + stats.zombiesEliminated + ' infected across ' + stats.scavengeRuns + ' harrowing expeditions. '
+    : 'They neutralized ' + stats.zombiesEliminated + ' infected through ' + stats.scavengeRuns + ' harrowing expeditions. ';
+
+  const shelterStory = shelter.isEstablished
+    ? "They raised and fortified '" + shelter.name + "', providing a beacon of light and guiding " + stats.peopleSaved + " fellow survivors to safety. "
+    : 'They traversed the wasteland without a permanent sanctuary, guiding ' + stats.peopleSaved + ' lost souls when they could. ';
+
+  const loveStory = player.spouseName
+    ? 'They found true love amidst the ash, marrying ' + player.spouseName + '. '
+    : player.datingTargetName
+    ? 'They shared tender moments of romance with ' + player.datingTargetName + '. '
+    : '';
+
+  const kidsCount = player.children ? player.children.length : 0;
+  const familyStory = kidsCount > 0
+    ? 'They raised ' + kidsCount + (kidsCount === 1 ? ' heir' : ' heirs') + ', mentoring the next generation to inherit their survival skills. '
+    : '';
+
+  const willStory = player.will?.creedTitle
+    ? "Living by the dynasty creed of '" + player.will.creedTitle + "', their final testament recorded: \"" + (player.will.personalMessage || "Live for tomorrow.") + "\" "
+    : '';
+
+  const mysteryStory = mystery
+    ? mystery.isSolved
+      ? 'Their crowning achievement was exposing the truth behind ' + mystery.title + ' (' + mystery.codeName + '), successfully breaching ' + mystery.rewardBunkerName + ' to uncover the conspiracy behind the outbreak! '
+      : mystery.discoveredClueIds && mystery.discoveredClueIds.length > 0
+      ? 'They investigated the outbreak origins, uncovering ' + mystery.discoveredClueIds.length + ' classified leads regarding ' + mystery.title + '. '
+      : ''
+    : '';
+
+  const finalStory = 'In the end, they ' + deathCause + '. Generation ' + (player.generation || 1) + ' rests here. Their memory is eternal in the Memorial Hall of the Fallen.';
+
+  const fullBio = (
+    districtStory +
+    originStory +
+    strainStory +
+    weaponStory +
+    shelterStory +
+    loveStory +
+    familyStory +
+    willStory +
+    mysteryStory +
+    finalStory
+  );
+
+  return {
+    id: 'grave_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    name: player.name,
+    age: player.age,
+    profession: player.profession,
+    daysSurvived: day,
+    deathCause,
+    date: new Date().toLocaleDateString(),
+    ribbon,
+    stats,
+    biography: fullBio,
+    spouseName: player.spouseName,
+    childrenCount: kidsCount,
+    generation: player.generation || 1,
+    baseName: shelter.isEstablished ? shelter.name : undefined,
+    districtName: district?.name,
+    districtType: district?.type,
+    mutationStrainName: mutationStrain?.name,
+    mutationStrainCode: mutationStrain?.codeName,
+    mysteryTitle: mystery?.title,
+    mysterySolved: mystery?.isSolved,
+    equippedWeaponName: player.equippedWeapon?.name,
+    founderCreedTitle: player.will?.creedTitle
+  };
+}
+
 function migrateLegacyGameState(parsed: GameState): GameState {
   if (!parsed.district) parsed.district = generateProceduralDistrict();
   if (!parsed.mutationStrain) parsed.mutationStrain = getRandomMutationStrain();
@@ -305,36 +403,7 @@ export function App() {
   // When player dies, record to cemetery and clear active save
   useEffect(() => {
     if (gameState && gameState.player.isDead && !gameState.legacySuccessionPrompt) {
-      const ribbon = gameState.day >= 100 
-        ? 'Century Survivor' 
-        : gameState.stats.zombiesEliminated >= 15 
-        ? 'Slayer of the Dead' 
-        : gameState.day <= 2 
-        ? 'Patient Zero' 
-        : 'Fallen Survivor';
-
-      const bio = `${gameState.player.name} was a ${gameState.player.profession.toLowerCase()} who fought for survival across ${gameState.day} days in the ruins. ` +
-        (gameState.shelter.name ? `They claimed and fortified '${gameState.shelter.name}', providing a beacon of hope. ` : '') +
-        (gameState.player.spouseName ? `They married ${gameState.player.spouseName} and built a loving home. ` : '') +
-        (gameState.player.children && gameState.player.children.length > 0 ? `They raised ${gameState.player.children.length} ${gameState.player.children.length === 1 ? 'child' : 'children'}, passing down survival knowledge to their heirs. ` : '') +
-        `Throughout their journey, they neutralized ${gameState.stats.zombiesEliminated} infected, undertook ${gameState.stats.scavengeRuns} dangerous supply runs, and led ${gameState.stats.peopleSaved} survivors to safety. In the end, they ${gameState.player.deathCause || 'perished in the line of duty'}. Their courage lives on in the Memorial Hall of the Fallen.`;
-
-      const newRecord: CemeteryRecord = {
-        id: `grave_${Date.now()}`,
-        name: gameState.player.name,
-        age: gameState.player.age,
-        profession: gameState.player.profession,
-        daysSurvived: gameState.day,
-        deathCause: gameState.player.deathCause || 'died fighting in the ruins',
-        date: new Date().toLocaleDateString(),
-        ribbon,
-        stats: gameState.stats,
-        biography: bio,
-        spouseName: gameState.player.spouseName,
-        childrenCount: gameState.player.children ? gameState.player.children.length : 0,
-        generation: gameState.player.generation || 1,
-        baseName: gameState.shelter.isEstablished ? gameState.shelter.name : undefined
-      };
+      const newRecord = buildCemeteryRecord(gameState);
       const updated = [newRecord, ...graveyard].slice(0, 50);
       setGraveyard(updated);
       localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updated));
@@ -1789,24 +1858,7 @@ export function App() {
       };
 
       // Record fallen leader into cemetery
-      const ribbon = prev.day >= 100 
-        ? 'Century Survivor' 
-        : prev.stats.zombiesEliminated >= 15 
-        ? 'Slayer of the Dead' 
-        : 'Haven Founder';
-
-      const newRecord: CemeteryRecord = {
-        id: 'grave_' + Date.now(),
-        name: prev.player.name,
-        age: prev.player.age,
-        profession: prev.player.profession,
-        daysSurvived: prev.day,
-        deathCause: prev.player.deathCause || (prompt.cause === 'Old Age' ? 'peacefully passed away of old age at ' + prev.player.age : 'fallen in the line of duty'),
-        date: new Date().toLocaleDateString(),
-        ribbon,
-        stats: prev.stats
-      };
-
+      const newRecord = buildCemeteryRecord(prev, undefined, prompt.cause === 'Old Age' ? 'peacefully passed away of old age at ' + prev.player.age : 'fallen in the line of duty');
       const updatedGrave = [newRecord, ...graveyard].slice(0, 50);
       setGraveyard(updatedGrave);
       localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updatedGrave));
@@ -1833,17 +1885,7 @@ export function App() {
 
   const handleForfeitRun = () => {
     if (!gameState) return;
-    const newRecord: CemeteryRecord = {
-      id: 'grave_forfeit_' + Date.now(),
-      name: gameState.player.name,
-      age: gameState.player.age,
-      profession: gameState.player.profession,
-      daysSurvived: gameState.day,
-      deathCause: 'forfeited the will to survive in the ruins',
-      date: new Date().toLocaleDateString(),
-      ribbon: 'Fallen Survivor',
-      stats: gameState.stats
-    };
+    const newRecord = buildCemeteryRecord(gameState, 'Fallen Survivor', 'forfeited the will to survive in the ruins');
     const updated = [newRecord, ...graveyard].slice(0, 50);
     setGraveyard(updated);
     localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updated));
@@ -1864,18 +1906,7 @@ export function App() {
       timestamp: 'Evac'
     };
 
-    const victoryRecord: CemeteryRecord = {
-      id: 'grave_victory_' + Date.now(),
-      name: gameState.player.name,
-      age: gameState.player.age,
-      profession: gameState.player.profession,
-      daysSurvived: gameState.day,
-      deathCause: 'Escaped the quarantine: ' + ambition.title,
-      date: new Date().toLocaleDateString(),
-      ribbon: ambition.rewardRibbon,
-      stats: gameState.stats
-    };
-
+    const victoryRecord = buildCemeteryRecord(gameState, ambition.rewardRibbon, 'Escaped the quarantine: ' + ambition.title);
     const updatedGrave = [victoryRecord, ...graveyard].slice(0, 50);
     setGraveyard(updatedGrave);
     localStorage.setItem(GRAVEYARD_KEY, JSON.stringify(updatedGrave));

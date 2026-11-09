@@ -1,6 +1,6 @@
 import React from 'react';
 import { CemeteryRecord } from '../types/game';
-import { Skull, Award, Heart, Baby, Home, Calendar, Shield, Swords, Crosshair, X, BookOpen } from 'lucide-react';
+import { Skull, Award, Heart, Baby, Home, Calendar, Shield, Swords, Crosshair, X, BookOpen, MapPin } from 'lucide-react';
 
 interface Props {
   record: CemeteryRecord;
@@ -9,16 +9,20 @@ interface Props {
 
 export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
   const bioText = record.biography || (
-    `${record.name} began their journey in the early hours of the outbreak as a ${record.profession.toLowerCase()}. Against overwhelming odds, they endured for ${record.daysSurvived} days in the ruins. ` +
-    (record.baseName ? `They founded and fortified '${record.baseName}', providing a beacon of light in a shattered world. ` : '') +
-    (record.spouseName ? `They found love amidst despair, marrying ${record.spouseName} and building a family together. ` : '') +
-    (record.childrenCount && record.childrenCount > 0 ? `They raised ${record.childrenCount} ${record.childrenCount === 1 ? 'child' : 'children'}, passing down survival knowledge to the next generation. ` : '') +
-    `Over their lifetime, they completed ${record.stats.scavengeRuns} dangerous expeditions into infected zones, neutralized ${record.stats.zombiesEliminated} hostile infected, and guided ${record.stats.peopleSaved} fellow survivors to safety. In the end, they ${record.deathCause}. Their name will never be forgotten in the Memorial Hall of the Fallen.`
+    record.name + ' began their journey in the early hours of the outbreak as a ' + record.profession.toLowerCase() + '. Against overwhelming odds, they fought for ' + record.daysSurvived + ' days in the ruins. ' +
+    (record.districtName ? 'They struggled through the sector of ' + record.districtName + '. ' : '') +
+    (record.mutationStrainName ? 'The world was terrorized by ' + record.mutationStrainName + '. ' : '') +
+    (record.equippedWeaponName ? 'They defended themselves with a ' + record.equippedWeaponName + '. ' : '') +
+    (record.baseName ? 'They founded and fortified "' + record.baseName + '", providing sanctuary in a broken world. ' : '') +
+    (record.spouseName ? 'They married ' + record.spouseName + ' and built a family together. ' : '') +
+    (record.childrenCount && record.childrenCount > 0 ? 'They raised ' + record.childrenCount + (record.childrenCount === 1 ? ' heir' : ' heirs') + ' to inherit their skills. ' : '') +
+    (record.founderCreedTitle ? 'They followed the dynasty creed of "' + record.founderCreedTitle + '". ' : '') +
+    'They neutralized ' + record.stats.zombiesEliminated + ' infected across ' + record.stats.scavengeRuns + ' expeditions, and guided ' + record.stats.peopleSaved + ' survivors to safety. In the end, they ' + record.deathCause + '. Generation ' + (record.generation || 1) + ' rests here. Their memory is eternal in the Memorial Hall of the Fallen.'
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in font-sans select-none">
-      <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans select-none">
+      <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-5 space-y-3.5 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2.5">
@@ -31,7 +35,7 @@ export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
               </span>
               <h2 className="text-base font-bold text-white tracking-tight">{record.name}</h2>
               <p className="text-xs text-zinc-400">
-                {record.profession} â€¢ Age {record.age}
+                {record.profession} • Age {record.age} • Gen {record.generation || 1}
               </p>
             </div>
           </div>
@@ -59,17 +63,48 @@ export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
           </div>
         </div>
 
-        {/* Life Summary / Memoir */}
+        {/* World Context Badges */}
+        {(record.districtName || record.mutationStrainName || record.mysteryTitle || record.equippedWeaponName || record.founderCreedTitle) && (
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {record.districtName && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-zinc-300 bg-white/5 border border-white/10">
+                📍 {record.districtName}
+              </span>
+            )}
+            {record.mutationStrainName && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-rose-300 bg-rose-500/10 border border-rose-500/20">
+                ☣️ {record.mutationStrainName}
+              </span>
+            )}
+            {record.mysteryTitle && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/20">
+                📌 {record.mysteryTitle} {record.mysterySolved ? '✓ Solved' : ''}
+              </span>
+            )}
+            {record.equippedWeaponName && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/20">
+                ⚔️ {record.equippedWeaponName}
+              </span>
+            )}
+            {record.founderCreedTitle && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/20">
+                📜 {record.founderCreedTitle}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Life Memoir & Story Narrative */}
         <div className="space-y-1.5">
           <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 font-bold flex items-center gap-1 px-1">
-            <BookOpen className="w-3.5 h-3.5 text-cyan-400" /> Life Memoir & Biography
+            <BookOpen className="w-3.5 h-3.5 text-cyan-400" /> Life Memoir & World Chronicle
           </span>
           <div className="p-3 bg-black/40 border border-white/5 rounded-2xl text-xs text-zinc-300 leading-relaxed italic font-sans space-y-2">
             <p>{bioText}</p>
           </div>
         </div>
 
-        {/* Vital Stats Grid */}
+        {/* Lifetime Stats Grid */}
         <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
           <div className="p-2 bg-black/30 border border-white/5 rounded-xl">
             <span className="text-[9px] text-zinc-500 uppercase font-mono block">Days Lived</span>
@@ -87,9 +122,9 @@ export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
           </div>
         </div>
 
-        {/* Dynasty Badges if applicable */}
+        {/* Dynasty Family Details */}
         {(record.spouseName || (record.childrenCount && record.childrenCount > 0) || record.baseName) && (
-          <div className="p-2.5 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-around text-[10px] font-mono text-zinc-400">
+          <div className="p-2.5 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-around text-[10px] font-mono text-zinc-400 flex-wrap gap-1">
             {record.spouseName && (
               <span className="flex items-center gap-1 text-rose-300">
                 <Heart className="w-3 h-3 text-rose-400" /> {record.spouseName}
@@ -111,7 +146,7 @@ export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
         <button
           type="button"
           onClick={onClose}
-          className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white active:scale-95 transition-all"
+          className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white active:scale-95 transition-all text-center"
         >
           Close Memorial
         </button>

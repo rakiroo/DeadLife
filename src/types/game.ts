@@ -342,6 +342,14 @@ export interface CemeteryRecord {
   childrenCount?: number;
   generation?: number;
   baseName?: string;
+  districtName?: string;
+  districtType?: string;
+  mutationStrainName?: string;
+  mutationStrainCode?: string;
+  mysteryTitle?: string;
+  mysterySolved?: boolean;
+  equippedWeaponName?: string;
+  founderCreedTitle?: string;
 }
 
 export interface BabyNamingPrompt {
