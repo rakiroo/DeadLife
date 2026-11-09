@@ -281,7 +281,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const districtLog: LogEntry = {
     id: 'log_district_' + Date.now(),
     day: 0,
-    text: '📍 Starting District: ' + district.name + ' (' + district.type.toUpperCase() + '). ' + district.description + ' Environment: ' + district.environmentalFeature,
+    text: '📍 Day 0: I am holed up in ' + district.name + '. Looking through the cracked windows, all I can see is ' + district.description.toLowerCase() + ' The streets out there are dangerous—' + district.environmentalFeature.toLowerCase() + ' I need to stay sharp and move cautiously.',
     type: 'general',
     timestamp: 'Morning'
   };
@@ -289,7 +289,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const strainLog: LogEntry = {
     id: 'log_strain_' + Date.now(),
     day: 0,
-    text: '☣️ Outbreak Strain: ' + mutationStrain.name + ' (' + mutationStrain.codeName + '). ' + mutationStrain.tagline + ' Active Rule: ' + mutationStrain.ruleSummary,
+    text: '☣️ Day 0: An emergency broadcast was looping on the radio before static took over. The authorities called this infection ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')—' + mutationStrain.tagline.toLowerCase() + ' The announcer warned that ' + mutationStrain.ruleSummary.toLowerCase() + ' I have to keep this in mind if I want to stay alive.',
     type: 'milestone',
     timestamp: 'Morning'
   };
@@ -2197,35 +2197,59 @@ export function App() {
       let logText = '';
       let hpDelta = 0;
 
-      const baseDamage = locationId === 'police_precinct' ? 24 : locationId === 'pharmacy' ? 18 : 12;
+      const landmark = (prev.district?.landmarks || []).find(l => l.id === locationId);
+      const locCategory = landmark ? landmark.category : (
+        locationId === 'pharmacy' ? 'medical' :
+        locationId === 'supermarket' ? 'food' :
+        locationId === 'police_precinct' ? 'weapons' :
+        'materials'
+      );
+      const locTitle = landmark ? landmark.title : (
+        locationId === 'pharmacy' ? 'Mercy Memorial Pharmacy' :
+        locationId === 'supermarket' ? 'Costway Supermarket' :
+        locationId === 'police_precinct' ? '3rd Precinct Station' :
+        'Pioneer Lumber Yard'
+      );
+
+      let baseDamage = 14;
+      if (landmark) {
+        if (landmark.danger === 'Extreme Danger') baseDamage = 26;
+        else if (landmark.danger === 'High Danger') baseDamage = 20;
+        else if (landmark.danger === 'Moderate Risk') baseDamage = 15;
+        else baseDamage = 10;
+      } else if (locationId === 'police_precinct') {
+        baseDamage = 24;
+      } else if (locationId === 'pharmacy' || locationId === 'supermarket') {
+        baseDamage = 18;
+      }
+
       let damageReduction = Math.min(18, Math.floor(prev.player.combatSkill * 1.4) + Math.floor(prev.player.fitnessSkill * 1.0));
 
-      // Trait combat & escape modifiers
-      if (hasTrait('martial_artist')) damageReduction += 8; // Counters grapples
-      if (hasTrait('sprinter')) damageReduction += 6;       // Outruns swarms
+      if (hasTrait('martial_artist')) damageReduction += 8;
+      if (hasTrait('sprinter')) damageReduction += 6;
       if (hasTrait('feeble')) damageReduction = Math.max(0, damageReduction - 6);
       if (hasTrait('knee_injury')) damageReduction = Math.max(0, damageReduction - 5);
 
-      if (prev.player.equippedWeaponId) damageReduction += 4; // Weapon parry & strike
+      if (prev.player.equippedWeaponId) damageReduction += 4;
       let mitigatedDamage = Math.max(2, baseDamage - damageReduction);
       if (hasTrait('thick_skinned')) {
         mitigatedDamage = Math.max(2, Math.floor(mitigatedDamage * 0.75));
       }
       if (compRole === 'medic') {
-        mitigatedDamage = Math.max(1, Math.floor(mitigatedDamage * 0.5)); // Medic field dressing reduces damage
+        mitigatedDamage = Math.max(1, Math.floor(mitigatedDamage * 0.5));
       }
       if (compRole === 'guard') {
-        mitigatedDamage = Math.max(1, mitigatedDamage - 6); // Guard absorbs impact
+        mitigatedDamage = Math.max(1, mitigatedDamage - 6);
       }
 
-      if (locationId === 'pharmacy') {
+      if (locCategory === 'medical') {
         const medBonus = (profession.includes('paramedic') || profession.includes('doctor') || profession.includes('surgeon') || profession.includes('veterinarian')) ? 3 : 0;
         if (isSuccess) {
           newItems = [
             { id: 'bandage_scavenged', name: 'Field Dressing Bandages', category: 'medical', quantity: 2 + (prev.player.medicalSkill >= 6 ? 1 : 0), description: 'Sterile roll bandage.' },
             { id: 'antibiotics_scavenged', name: 'Amoxicillin Antibiotics', category: 'medical', quantity: 4 + medBonus, description: 'Capsules for bacterial infections.' }
           ];
-          logText = `Scavenged Mercy Memorial Pharmacy: Retrieved antibiotics and trauma bandages safely.${medBonus > 0 ? ' (Medical career bonus: found extra antibiotics!)' : ''}`;
+          logText = 'Scavenged ' + locTitle + ': Retrieved antibiotics and trauma bandages safely.' + (medBonus > 0 ? ' (Medical career bonus: found extra antibiotics!)' : '');
           if (hasTrait('diabetic')) {
             newItems.push({ id: 'insulin_scav_' + Date.now(), name: 'Insulin Vial', category: 'medical', quantity: 1, description: 'Medical insulin.' });
           }
@@ -2237,43 +2261,55 @@ export function App() {
           }
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Ambushed at the pharmacy backdoor! My fitness & combat skills reduced the damage (-${mitigatedDamage}% HP).`;
+          logText = 'Ambushed at the backdoor of ' + locTitle + '! My fitness & combat skills reduced the damage (-' + mitigatedDamage + '% HP).';
         }
-      } else if (locationId === 'supermarket') {
+      } else if (locCategory === 'food') {
         const chefBonus = (profession.includes('cook') || profession.includes('chef')) ? 2 : 0;
         if (isSuccess) {
           newItems = [
             { id: 'canned_food_scav', name: 'Canned Food Rations', category: 'food', quantity: 4 + chefBonus, description: 'Sealed canned rations.' },
             { id: 'water_scav', name: 'Bottled Spring Water', category: 'water', quantity: 3, description: '1-Liter bottled water.' }
           ];
-          logText = `Scavenged Costway Supermarket: Hauled back canned meals and clean water.${chefBonus > 0 ? ' (Culinary career bonus: found extra sealed rations!)' : ''}`;
+          logText = 'Scavenged ' + locTitle + ': Hauled back canned meals and clean water.' + (chefBonus > 0 ? ' (Culinary career bonus: found extra sealed rations!)' : '');
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Cornered in aisle 4 by infected! I fought my way free taking (-${mitigatedDamage}% HP).`;
+          logText = 'Cornered by infected inside ' + locTitle + '! I fought my way free taking (-' + mitigatedDamage + '% HP).';
         }
-      } else if (locationId === 'police_precinct') {
+      } else if (locCategory === 'weapons') {
         const copBonus = (profession.includes('police') || profession.includes('security') || profession.includes('firefighter')) ? 1 : 0;
         if (isSuccess) {
           newItems = [
             { id: 'shotgun_shells_scav', name: '12-Gauge Buckshot (8 shells)', category: 'resource', quantity: 8, description: 'Shotgun ammunition.' },
             { id: 'tactical_vest', name: 'Kevlar Duty Vest', category: 'tool', quantity: 1, description: 'Protects torso from bites.' }
           ];
-          logText = `Scavenged 3rd Precinct Station: Cleared the armory locker and recovered shotgun ammunition and a tactical vest!`;
+          logText = 'Scavenged ' + locTitle + ': Cleared the armory locker and recovered shotgun ammunition and tactical armor!';
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `Swarmed by infected in the station sally port! I escaped with injuries (-${mitigatedDamage}% HP).`;
+          logText = 'Swarmed by infected at ' + locTitle + '! I escaped with injuries (-' + mitigatedDamage + '% HP).';
+        }
+      } else if (locCategory === 'research') {
+        if (isSuccess) {
+          newItems = [
+            { id: 'batteries_research', name: 'High-Capacity Lithium Cells (x4)', category: 'resource', quantity: 4, description: 'Power cells.' },
+            { id: 'pure_water_research', name: 'Sealed Canteen Water (x2)', category: 'water', quantity: 2, description: 'Purified water.' }
+          ];
+          logText = 'Scavenged ' + locTitle + ': Recovered specialized electronics, power cells, and emergency provisions.';
+        } else {
+          hpDelta = -mitigatedDamage;
+          logText = 'Trapped inside ' + locTitle + ' by lurkers! I broke through taking (-' + mitigatedDamage + '% HP).';
         }
       } else {
+        // materials / hardware / lumber
         const craftBonus = (profession.includes('carpenter') || profession.includes('mechanic') || profession.includes('electrician')) ? 2 : 0;
         if (isSuccess) {
           newItems = [
             { id: 'wood_scav', name: 'Lumber Studs (2x4)', category: 'resource', quantity: 3 + craftBonus, description: 'Heavy structural timber.' },
             { id: 'nails_scav', name: 'Box of Framing Nails', category: 'resource', quantity: 20, description: 'Construction nails.' }
           ];
-          logText = `Scavenged Pioneer Lumber: Retrieved structural wood planks and nails for defense.${craftBonus > 0 ? ' (Crafting career bonus: gathered extra lumber!)' : ''}`;
+          logText = 'Scavenged ' + locTitle + ': Retrieved structural wood planks and nails for defense.' + (craftBonus > 0 ? ' (Crafting career bonus: gathered extra lumber!)' : '');
         } else {
           hpDelta = -mitigatedDamage;
-          logText = `I fell from the lumber yard fence while evading infected (-${mitigatedDamage}% HP).`;
+          logText = 'I fell while evading infected near ' + locTitle + ' (-' + mitigatedDamage + '% HP).';
         }
       }
 
