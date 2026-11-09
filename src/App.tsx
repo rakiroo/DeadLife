@@ -281,7 +281,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const districtLog: LogEntry = {
     id: 'log_district_' + Date.now(),
     day: 0,
-    text: '📍 Day 0: I am holed up in ' + district.name + '. Looking through the cracked windows, all I can see is ' + district.description.toLowerCase() + ' The streets out there are dangerous—' + district.environmentalFeature.toLowerCase() + ' I need to stay sharp and move cautiously.',
+    text: 'I am holed up in ' + district.name + '. Looking through the cracked windows, all I can see is ' + district.description.toLowerCase() + ' The streets out there are dangerous—' + district.environmentalFeature.toLowerCase() + ' I need to stay sharp and move cautiously.',
     type: 'general',
     timestamp: 'Morning'
   };
@@ -289,7 +289,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const strainLog: LogEntry = {
     id: 'log_strain_' + Date.now(),
     day: 0,
-    text: '☣️ Day 0: An emergency broadcast was looping on the radio before static took over. The authorities called this infection ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')—' + mutationStrain.tagline.toLowerCase() + ' The announcer warned that ' + mutationStrain.ruleSummary.toLowerCase() + ' I have to keep this in mind if I want to stay alive.',
+    text: 'An emergency broadcast was looping on the radio before static took over. The authorities called this infection ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')—' + mutationStrain.tagline.toLowerCase() + ' The announcer warned that ' + mutationStrain.ruleSummary.toLowerCase() + ' I have to keep this in mind if I want to stay alive.',
     type: 'milestone',
     timestamp: 'Morning'
   };
@@ -1986,6 +1986,28 @@ export function App() {
     setShowInvestigationBoard(false);
   };
 
+  // Leave starting workplace and enter open city
+  const handleLeaveStartingSpot = () => {
+    if (!gameState) return;
+    setGameState(prev => {
+      if (!prev || prev.startingLocation.hasLeftStartingSpot) return prev;
+      return {
+        ...prev,
+        startingLocation: {
+          ...prev.startingLocation,
+          hasLeftStartingSpot: true
+        },
+        logs: [...prev.logs, {
+          id: 'leave_start_' + Date.now(),
+          day: prev.day,
+          text: 'I pushed open the heavy security doors of ' + prev.startingLocation.name + ' and stepped out into the open avenues of ' + (prev.district?.name || 'the ruins') + '. There is no turning back.',
+          type: 'milestone' as const,
+          timestamp: 'Action'
+        }].slice(-150)
+      };
+    });
+  };
+
   // Quick Voluntary Activities
   const handleQuickActivity = (activityId: string) => {
     if (!gameState) return;
@@ -2485,6 +2507,7 @@ export function App() {
               onQuickActivity={handleQuickActivity}
               onOpenAmbitions={() => setShowAmbitionsModal(true)}
               onOpenInvestigation={() => setShowInvestigationBoard(true)}
+              onLeaveStartingSpot={handleLeaveStartingSpot}
             />
           )}
         </main>

@@ -14,6 +14,7 @@ interface Props {
   onQuickActivity: (activityId: string) => void;
   onOpenAmbitions: () => void;
   onOpenInvestigation?: () => void;
+  onLeaveStartingSpot?: () => void;
 }
 
 export const ActivitiesTab: React.FC<Props> = ({
@@ -22,7 +23,8 @@ export const ActivitiesTab: React.FC<Props> = ({
   onRepairBarricade,
   onQuickActivity,
   onOpenAmbitions,
-  onOpenInvestigation
+  onOpenInvestigation,
+  onLeaveStartingSpot
 }) => {
   const [view, setView] = useState<'main' | 'landmarks' | 'crafting'>('main');
   const [selectedCompanionId, setSelectedCompanionId] = useState<string>('');
@@ -394,6 +396,29 @@ export const ActivitiesTab: React.FC<Props> = ({
         <h2 className="text-base font-bold text-white tracking-tight">Survival Activities</h2>
         <p className="text-xs text-zinc-400">Proactive actions and routines you can choose to perform today.</p>
       </div>
+
+      
+      {/* Starting Workplace Status Banner */}
+      {!gameState.startingLocation.hasLeftStartingSpot && onLeaveStartingSpot && (
+        <div className="p-3.5 bg-gradient-to-r from-amber-950/40 via-zinc-900 to-black/60 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-fade-in">
+          <div>
+            <span className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold block">
+              Starting Sanctuary
+            </span>
+            <h3 className="text-xs font-bold text-white">Inside {gameState.startingLocation.name}</h3>
+            <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug">
+              You are currently sheltered inside your workplace. Venture outside to explore the city district!
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onLeaveStartingSpot}
+            className="py-1.5 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 shrink-0 shadow-sm active:scale-95 transition-all"
+          >
+            Venture Out
+          </button>
+        </div>
+      )}
 
       {/* Group 1: Exploration & Scavenging */}
       <div className="space-y-1.5">

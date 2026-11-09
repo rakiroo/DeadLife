@@ -749,17 +749,34 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
     : (state.shelter.maxSurvivors || (state.shelter.isEstablished ? 4 : 2));
   const isAtCapacity = (state.campMembers.length + 1) >= defaultBedCapacity;
 
+  const isInWorkplace = !state.startingLocation.hasLeftStartingSpot && !state.shelter.isEstablished;
+  const isInBase = state.shelter.isEstablished;
+
+  let eventTitle = '';
+  let eventDesc = '';
+
+  if (isInBase) {
+    eventTitle = 'Knocking at the Gate: ' + fullName + ' (' + archetype.profession + ')';
+    eventDesc = 'Loud, rhythmic knocks echo from the entrance of ' + loc + '. Looking through the observation slit, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Clutching their rucksack with watchful, exhausted eyes, they call out: "Hello? I saw lantern light. I have supplies and honest trade skills to offer—just looking for safe walls and good survivors."';
+  } else if (isInWorkplace) {
+    eventTitle = 'Surprise Visitor at ' + state.startingLocation.name + ': ' + fullName;
+    eventDesc = 'Hurried knocks rattle the security entrance of ' + state.startingLocation.name + '. Through the blinds, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Sheltering from the chaotic streets outside, they call out: "Please! Is someone in there? I am uninfected, and I have trade skills and gear—can we team up to survive?"';
+  } else {
+    eventTitle = 'Encounter in the Ruins: ' + fullName + ' (' + archetype.profession + ')';
+    eventDesc = 'While moving through the fog along the avenue, you cross paths with another lone survivor: ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Lowering their makeshift weapon with cautious eyes, they call out: "Easy! I am not infected. Just looking for honest survivors to travel and watch each other\'s backs."';
+  }
+
   return {
     id: uniqueEventId,
-    title: 'Knocking at the Gate: ' + fullName + ' (' + archetype.profession + ')',
+    title: eventTitle,
     category: 'camp_drama',
     dangerLevel: 'medium',
-    description: 'Loud, rhythmic knocks echo from the entrance of ' + loc + '. Looking through the observation slit, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Clutching their rucksack with watchful, exhausted eyes, they call out: "Hello? I saw lantern light. I have supplies and honest trade skills to offer—just looking for safe walls and good survivors."',
+    description: eventDesc,
     choices: [
       {
         id: 'welcome_' + uniqueEventId,
-        text: 'Unbolt the gate, welcome ' + fullName + ' inside, and integrate them into camp',
-        consequenceSummary: 'Welcomes ' + fullName + ' into the colony (+Skills, +' + archetype.gearPool.map(g => g.name).join(', ') + ', +Morale).' + (isAtCapacity ? ' (Will sleep rough on floor until beds expand)' : ''),
+        text: isInWorkplace ? ('Open the door, welcome ' + fullName + ' inside, and agree to team up') : isInBase ? ('Unbolt the gate, welcome ' + fullName + ' inside, and integrate them into camp') : ('Lower your weapon and invite ' + fullName + ' to travel and survive together'),
+        consequenceSummary: 'Welcomes ' + fullName + ' as a companion (+Skills, +' + archetype.gearPool.map(g => g.name).join(', ') + ', +Morale).' + (isAtCapacity && isInBase ? ' (Will sleep rough on floor until beds expand)' : ''),
         execute: (s: GameState) => {
           const newMember: CampMember = {
             id: 'proc_member_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
