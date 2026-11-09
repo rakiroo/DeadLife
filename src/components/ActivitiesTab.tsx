@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GameState } from '../types/game';
 import { 
   FileText,
+  Search,
   Cross, ShoppingBag, ShieldAlert, Wrench, Users, ArrowUpRight, 
   ArrowLeft, Compass, Eye, Shield, Hammer, Activity, Sparkles, 
   Radio, Target, ChevronRight, Check, AlertCircle, Flame
@@ -398,25 +399,83 @@ export const ActivitiesTab: React.FC<Props> = ({
       </div>
 
       
-      {/* Starting Workplace Status Banner */}
+      {/* Starting Shelter Hub & Operations */}
       {!gameState.startingLocation.hasLeftStartingSpot && onLeaveStartingSpot && (
-        <div className="p-3.5 bg-gradient-to-r from-amber-950/40 via-zinc-900 to-black/60 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-3 shadow-sm animate-fade-in">
-          <div>
-            <span className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold block">
-              Starting Sanctuary
-            </span>
-            <h3 className="text-xs font-bold text-white">Inside {gameState.startingLocation.name}</h3>
-            <p className="text-[10px] text-zinc-400 mt-0.5 leading-snug">
-              You are currently sheltered inside your workplace. Venture outside to explore the city district!
-            </p>
+        <div className="p-4 bg-gradient-to-r from-amber-950/40 via-zinc-900 to-black/60 border border-amber-500/30 rounded-3xl space-y-3 shadow-sm animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <Compass className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold block">
+                  Starting Shelter
+                </span>
+                <h3 className="text-xs font-bold text-white">Inside {gameState.startingLocation.name}</h3>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onLeaveStartingSpot}
+              className="py-1.5 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm active:scale-95 transition-all"
+            >
+              Venture Outside
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onLeaveStartingSpot}
-            className="py-1.5 px-3 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 shrink-0 shadow-sm active:scale-95 transition-all"
-          >
-            Venture Out
-          </button>
+
+          <p className="text-[11px] text-zinc-300 leading-relaxed">
+            You are currently sheltered inside {gameState.startingLocation.name}. Search the room, reinforce the door, or venture outside into {gameState.district?.name || 'the city district'}!
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => onQuickActivity('search_starting_spot')}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left flex items-start gap-2 active:scale-95 transition-all"
+            >
+              <Search className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-white">Search Desks</div>
+                <div className="text-[9px] text-zinc-400">Rummage lockers & bins</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onQuickActivity('barricade_starting_spot')}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left flex items-start gap-2 active:scale-95 transition-all"
+            >
+              <Hammer className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-white">Brace Doors</div>
+                <div className="text-[9px] text-zinc-400">Push desks to entry (+Def)</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onQuickActivity('peek_blinds_starting_spot')}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left flex items-start gap-2 active:scale-95 transition-all"
+            >
+              <Eye className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-white">Peer Outside</div>
+                <div className="text-[9px] text-zinc-400">Scout avenue & strain</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onQuickActivity('calm_nerves_starting_spot')}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-left flex items-start gap-2 active:scale-95 transition-all"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-xs font-bold text-white">Calm Nerves</div>
+                <div className="text-[9px] text-zinc-400">Rest in shadows (+Sanity)</div>
+              </div>
+            </button>
+          </div>
         </div>
       )}
 

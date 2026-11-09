@@ -318,11 +318,7 @@ export const BaseTab: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setSubView('survivors')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ${
-            subView === 'survivors'
-              ? 'bg-white text-zinc-950 font-bold shadow-sm'
-              : 'bg-white/5 text-zinc-400 hover:text-white'
-          }`}
+          className={'px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ' + (subView === 'survivors' ? 'bg-white text-zinc-950 font-bold shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white')}
         >
           <Users className="w-3.5 h-3.5" />
           <span>{!shelter.isEstablished ? 'Party' : 'Survivors'} ({totalSurvivorsCount})</span>
@@ -331,54 +327,42 @@ export const BaseTab: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setSubView('family')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ${
-            subView === 'family'
-              ? 'bg-rose-500 text-white font-bold shadow-sm'
-              : 'bg-white/5 text-zinc-400 hover:text-rose-300'
-          }`}
+          className={'px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ' + (subView === 'family' ? 'bg-rose-500 text-white font-bold shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-rose-300')}
         >
           <Heart className="w-3.5 h-3.5" />
           <span>Family & Romance</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setSubView('housing')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ${
-            subView === 'housing'
-              ? 'bg-white text-zinc-950 font-bold shadow-sm'
-              : 'bg-white/5 text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Bed className="w-3.5 h-3.5" />
-          <span>Housing ({rooms.length})</span>
-        </button>
+        {shelter.isEstablished && (
+          <>
+            <button
+              type="button"
+              onClick={() => setSubView('housing')}
+              className={'px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ' + (subView === 'housing' ? 'bg-white text-zinc-950 font-bold shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white')}
+            >
+              <Bed className="w-3.5 h-3.5" />
+              <span>Housing ({rooms.length})</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setSubView('facilities')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ${
-            subView === 'facilities'
-              ? 'bg-white text-zinc-950 font-bold shadow-sm'
-              : 'bg-white/5 text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Hammer className="w-3.5 h-3.5" />
-          <span>Facilities</span>
-        </button>
+            <button
+              type="button"
+              onClick={() => setSubView('facilities')}
+              className={'px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ' + (subView === 'facilities' ? 'bg-white text-zinc-950 font-bold shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white')}
+            >
+              <Hammer className="w-3.5 h-3.5" />
+              <span>Facilities</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setSubView('laws')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ${
-            subView === 'laws'
-              ? 'bg-white text-zinc-950 font-bold shadow-sm'
-              : 'bg-white/5 text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Scroll className="w-3.5 h-3.5" />
-          <span>Decrees</span>
-        </button>
+            <button
+              type="button"
+              onClick={() => setSubView('laws')}
+              className={'px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ' + (subView === 'laws' ? 'bg-white text-zinc-950 font-bold shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-white')}
+            >
+              <Scroll className="w-3.5 h-3.5" />
+              <span>Decrees</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* 1. SUB-VIEW: SURVIVORS ROSTER */}
@@ -2118,7 +2102,8 @@ export const BaseTab: React.FC<Props> = ({
                 </button>
               )}
 
-              <button
+              {shelter.isEstablished && (
+  <button
                 type="button"
                 onClick={() => {
                   setRoomAssignModalMember({ id: selectedMember.id, name: selectedMember.name });
@@ -2129,6 +2114,7 @@ export const BaseTab: React.FC<Props> = ({
                 <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Assign Room</span>
               </button>
+)}
 
               <button
                 type="button"

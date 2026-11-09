@@ -194,7 +194,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   // Interactive Day 0 Opening Dilemma
   const dayZeroDilemma: EventDilemma = {
     id: 'spawn_dilemma_' + Date.now(),
-    title: spawnStory.title || 'Day 0: The Outbreak Begins',
+    title: spawnStory.title || 'The Outbreak Begins',
     category: 'discovery',
     dangerLevel: 'low',
     description: spawnStory.fullStory,
@@ -209,8 +209,8 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
               ...s,
               inventory: startingLoot.map(i => ({ ...i }))
             },
-            log: 'Day 0: I searched ' + career.startingLocation.name + ' and secured starting supplies: ' + itemsSummary + '.',
-            outcomeTitle: 'Workplace Supplies Secured',
+            log: 'I searched ' + career.startingLocation.name + ' and secured starting supplies: ' + itemsSummary + '.',
+            outcomeTitle: 'Starting Supplies Secured',
             outcomeText: 'You swept through ' + career.startingLocation.name + ' before locking down. All starting tools, weapons, and provisions have been packed into your supplies.'
           };
         }
@@ -229,7 +229,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
                 barricadeIntegrity: 40
               }
             },
-            log: 'Day 0: I reinforced the doors of ' + career.startingLocation.name + ' and collected gear (+40% Barricade).',
+            log: 'I reinforced the doors of ' + career.startingLocation.name + ' and collected gear (+40% Barricade).',
             outcomeTitle: 'Entryways Fortified',
             outcomeText: 'You nailed structural braces across the doors. The barricades hold firm against the street horde outside (+40% Integrity).'
           };
@@ -249,7 +249,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
                 sanity: Math.min(100, s.player.sanity + 15)
               }
             },
-            log: 'Day 0: I locked down ' + career.startingLocation.name + ' quietly, securing provisions and steadying your nerves (+15 Sanity).',
+            log: 'I locked down ' + career.startingLocation.name + ' quietly, securing provisions and steadying your nerves (+15 Sanity).',
             outcomeTitle: 'Quiet Composure Maintained',
             outcomeText: 'You avoided making any noise. The infected shuffled past outside, completely unaware of your presence (+15 Sanity).'
           };
@@ -2024,7 +2024,36 @@ export function App() {
         return { ...prev, activeDilemma: vehicleDilemma };
       }
 
-      if (activityId === 'search_vehicles') {
+            if (activityId === 'search_starting_spot') {
+        const locName = prev.startingLocation.name;
+        const isStudent = prev.player.profession.toLowerCase().includes('student');
+        const foundItem = isStudent 
+          ? { id: 'science_antiseptic', name: 'Lab Antiseptic Bottle', category: 'medical' as const, quantity: 1, description: 'Medical disinfectant from the classroom shelves.' }
+          : { id: 'spare_crackers', name: 'Breakroom Crackers', category: 'food' as const, quantity: 2, description: 'Dry crackers from the breakroom counter.' };
+        const ex = updatedInv.find(i => i.id === foundItem.id);
+        if (ex) ex.quantity += foundItem.quantity;
+        else updatedInv.push(foundItem);
+        sanity = Math.min(100, sanity + 5);
+        logText = 'I rummaged through the drawers and lockers inside ' + locName + ' and secured ' + foundItem.name + ' (+5 Sanity).';
+        logType = 'loot';
+      } else if (activityId === 'barricade_starting_spot') {
+        const locName = prev.startingLocation.name;
+        prev.shelter.barricadeIntegrity = Math.min(100, prev.shelter.barricadeIntegrity + 20);
+        sanity = Math.min(100, sanity + 5);
+        logText = 'I dragged heavy desks and furniture against the doors of ' + locName + ' (+20% Barricade).';
+        logType = 'general';
+      } else if (activityId === 'peek_blinds_starting_spot') {
+        const locName = prev.startingLocation.name;
+        sanity = Math.min(100, sanity + 10);
+        const strainName = prev.mutationStrain ? prev.mutationStrain.name : 'infected';
+        logText = 'I cracked the blinds of ' + locName + ' and observed the avenue. ' + strainName + ' are roaming outside. I mapped out the immediate street layout (+10 Sanity).';
+        logType = 'general';
+      } else if (activityId === 'calm_nerves_starting_spot') {
+        const locName = prev.startingLocation.name;
+        sanity = Math.min(100, sanity + 15);
+        logText = 'I sat quietly in the dark inside ' + locName + ', breathing slowly until my heartbeat steadied (+15 Sanity).';
+        logType = 'general';
+      } else if (activityId === 'search_vehicles') {
         const isHazard = Math.random() < 0.25;
         if (isHazard) {
           health = Math.max(10, health - 6);
