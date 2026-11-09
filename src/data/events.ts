@@ -253,112 +253,6 @@ export function getSurvivalEvents(state: GameState): EventDilemma[] {
       ]
     },
     {
-      id: 'feverish_survivor_gate',
-      title: 'Knocking in the Rain at ' + loc,
-      category: 'camp_drama',
-      dangerLevel: 'medium',
-      description: 'During cold rain, a shivering woman in a wet jacket knocks weakly on the door of ' + loc + ', begging for dry shelter and clean water.',
-      choices: [
-        {
-          id: 'thorough_strip_check',
-          text: 'Check her carefully for bite marks or scratches before letting her in',
-          requiredSkill: { skill: 'medical', minLevel: 3 },
-          consequenceSummary: 'Identify any bites before risking your safety.',
-          execute: (s: GameState) => {
-            const isInfected = Math.random() < 0.25;
-            if (isInfected) {
-              return {
-                state: {
-                  ...s,
-                  player: { ...s.player, sanity: Math.max(10, s.player.sanity - 10) }
-                },
-                log: 'Under her wet jacket, I found fresh bite marks wrapped in cloth. I refused entry to keep ' + loc + ' safe.',
-                outcomeTitle: 'Infection Detected',
-                outcomeText: 'She admitted she was bitten hours ago. You turned her away to protect ' + loc + '.'
-              };
-            } else {
-              const newMember = {
-                id: 'member_' + Date.now(),
-                name: 'Dr. Rebecca Young',
-                age: 26,
-                relation: 'Rescued Medic',
-                profession: 'Physician',
-                health: 65,
-                trust: 75,
-                role: 'medic' as const,
-                statusEffects: []
-              };
-              return {
-                state: {
-                  ...s,
-                  campMembers: s.campMembers.some(m => m.name.includes('Rebecca')) ? s.campMembers : [...s.campMembers, newMember],
-                  isCampEstablished: true,
-                  stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-                },
-                log: 'I found no bites on her. Dr. Rebecca Young has joined me at ' + loc + '! The Camp tab is now open.',
-                outcomeTitle: 'Survivor Recruited',
-                outcomeText: 'She passed the health check and joined your group. Her medical training will speed up recovery from wounds!'
-              };
-            }
-          }
-        },
-        {
-          id: 'turn_away_safely',
-          text: 'Leave a can of food outside and tell her to keep moving',
-          consequenceSummary: 'Zero risk to yourself, slight hit to player morale.',
-          execute: (s: GameState) => {
-            const foodItem = s.inventory.find(i => i.category === 'food' && i.quantity > 0);
-            const updatedInv = s.inventory.map(i => i === foodItem ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
-            return {
-              state: {
-                ...s,
-                inventory: updatedInv,
-                player: { ...s.player, sanity: Math.max(10, s.player.sanity - 8) }
-              },
-              log: 'I slid a can of food outside the entrance of ' + loc + ' and told her to keep moving.',
-              outcomeTitle: 'Safety First',
-              outcomeText: 'She took the food, thanked you through tears, and vanished into the rain. A tough choice, but ' + loc + ' remains secure.'
-            };
-          }
-        },
-        {
-          id: 'blind_trust',
-          text: 'Pull her inside immediately into the warmth without checking',
-          consequenceSummary: 'High compassion, but a dangerous gamble.',
-          execute: (s: GameState) => {
-            const catastrophe = Math.random() < 0.35;
-            if (catastrophe) {
-              return {
-                state: {
-                  ...s,
-                  player: {
-                    ...s.player,
-                    health: Math.max(20, s.player.health - 35),
-                    sanity: Math.max(10, s.player.sanity - 30)
-                  },
-                  shelter: { ...s.shelter, barricadeIntegrity: Math.max(10, s.shelter.barricadeIntegrity - 30) }
-                },
-                log: 'Disaster! She reanimated at 4 AM inside ' + loc + ' and attacked before I could react.',
-                outcomeTitle: 'Nightmare Turn',
-                outcomeText: 'She had hidden a lethal bite under her scarf. You put her down with a hammer, but took injuries during the struggle.'
-              };
-            } else {
-              return {
-                state: {
-                  ...s,
-                  player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) },
-                  stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-                },
-                log: 'She was genuinely starved and exhausted. She cried tears of relief inside ' + loc + '.',
-                outcomeTitle: 'Gamble Paid Off',
-                outcomeText: 'A warm meal stabilized her. She swore eternal loyalty to you.'
-              };
-            }
-          }
-        }
-      ]
-    },
-    {
       id: 'abandoned_van_street',
       title: 'Abandoned Delivery Van Outside ' + loc,
       category: 'discovery',
@@ -723,7 +617,11 @@ const PROCEDURAL_ARCHETYPES: ProceduralArchetype[] = [
   }
 ];
 
-export function generateProceduralSurvivorDilemma(state: GameState): EventDilemma {
+export function generateProceduralSurvivorDilemma(
+  state: GameState, 
+  contextType: 'standard' | 'loot_spot' | 'outpost' = 'standard',
+  spotName?: string
+): EventDilemma {
   const loc = getCurrentLocationName(state);
   const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
   const firstPool = gender === 'male' ? PROCEDURAL_FIRST_NAMES_MALE : PROCEDURAL_FIRST_NAMES_FEMALE;
@@ -742,7 +640,7 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
   const stl = Math.min(10, Math.max(1, archetype.baseStats.stealth + (Math.floor(Math.random() * 3) - 1)));
   const fit = Math.min(10, Math.max(1, archetype.baseStats.fitness + (Math.floor(Math.random() * 3) - 1)));
 
-  const uniqueEventId = 'procedural_survivor_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  const uniqueEventId = 'proc_survivor_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
 
   const defaultBedCapacity = state.shelter.rooms && state.shelter.rooms.length > 0 
     ? state.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
@@ -754,16 +652,28 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
 
   let eventTitle = '';
   let eventDesc = '';
+  let welcomeText = '';
 
-  if (isInBase) {
+  if (contextType === 'loot_spot') {
+    eventTitle = 'Survivor in the Shadows: ' + fullName + ' (' + archetype.profession + ')';
+    eventDesc = 'While searching ' + (spotName || 'the ruins') + ' inside ' + loc + ', your flashlight catches a lone survivor crouching in the dark. They freeze, lowering a makeshift blade: "Hold on... I am not here to fight. Just searching for food and clean water." It is ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook;
+    welcomeText = 'Lower weapon, share water, and invite ' + fullName + ' to team up';
+  } else if (contextType === 'outpost') {
+    eventTitle = 'St. Michael Church: ' + fullName + ' (' + archetype.profession + ')';
+    eventDesc = 'You step through the reinforced oak doors of St. Michael Church. A group of survivors have built barricades around the altar. Sitting by the fellowship fire is ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' They wave you over: "Sit down, friend. If you are looking for capable survivors to watch each other\'s backs, we should team up."';
+    welcomeText = 'Discuss defense plans and invite ' + fullName + ' to team up';
+  } else if (isInBase) {
     eventTitle = 'Knocking at the Gate: ' + fullName + ' (' + archetype.profession + ')';
-    eventDesc = 'Loud, rhythmic knocks echo from the entrance of ' + loc + '. Looking through the observation slit, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Clutching their rucksack with watchful, exhausted eyes, they call out: "Hello? I saw lantern light. I have supplies and honest trade skills to offer—just looking for safe walls and good survivors."';
+    eventDesc = 'Loud, rhythmic knocks echo from the perimeter entrance of ' + loc + '. Looking through the observation slit, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Clutching their rucksack with watchful, exhausted eyes, they call out: "Hello? I saw lantern light. I have supplies and honest trade skills to offer—just looking for safe walls and good survivors."';
+    welcomeText = 'Unbolt the gate, welcome ' + fullName + ' inside, and integrate them into camp';
   } else if (isInWorkplace) {
     eventTitle = 'Surprise Visitor at ' + state.startingLocation.name + ': ' + fullName;
     eventDesc = 'Hurried knocks rattle the security entrance of ' + state.startingLocation.name + '. Through the blinds, you spot ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Sheltering from the chaotic streets outside, they call out: "Please! Is someone in there? I am uninfected, and I have trade skills and gear—can we team up to survive?"';
+    welcomeText = 'Open the door, welcome ' + fullName + ' inside, and agree to team up';
   } else {
     eventTitle = 'Encounter in the Ruins: ' + fullName + ' (' + archetype.profession + ')';
-    eventDesc = 'While moving through the fog along the avenue, you cross paths with another lone survivor: ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Lowering their makeshift weapon with cautious eyes, they call out: "Easy! I am not infected. Just looking for honest survivors to travel and watch each other\'s backs."';
+    eventDesc = 'While moving through the fog along the avenue, you cross paths with another lone survivor: ' + fullName + ' (Age ' + age + ', ' + archetype.profession + '). They ' + bioHook + ' Lowering their makeshift weapon with cautious eyes, they call out: "Easy! I am not infected. Just looking for an honest survivor to travel with and watch each other\'s backs."';
+    welcomeText = 'Lower your weapon and invite ' + fullName + ' to travel and survive together';
   }
 
   return {
@@ -775,7 +685,7 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
     choices: [
       {
         id: 'welcome_' + uniqueEventId,
-        text: isInWorkplace ? ('Open the door, welcome ' + fullName + ' inside, and agree to team up') : isInBase ? ('Unbolt the gate, welcome ' + fullName + ' inside, and integrate them into camp') : ('Lower your weapon and invite ' + fullName + ' to travel and survive together'),
+        text: welcomeText,
         consequenceSummary: 'Welcomes ' + fullName + ' as a companion (+Skills, +' + archetype.gearPool.map(g => g.name).join(', ') + ', +Morale).' + (isAtCapacity && isInBase ? ' (Will sleep rough on floor until beds expand)' : ''),
         execute: (s: GameState) => {
           const newMember: CampMember = {
@@ -794,7 +704,7 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
             stealthSkill: stl,
             fitnessSkill: fit,
             role: archetype.role,
-            isSleepingRough: isAtCapacity,
+            isSleepingRough: isAtCapacity && s.shelter.isEstablished,
             statusEffects: []
           };
 
@@ -813,18 +723,18 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
               },
               stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
             },
-            log: isAtCapacity
-              ? 'I unbolted the gate and welcomed ' + fullName + ' into our haven! With all beds full, they gratefully accepted a sleeping roll on the floor (+15 Morale, +' + archetype.gearPool.map(g => g.name).join(', ') + ').'
-              : 'I unbolted the gate and welcomed ' + fullName + ' (' + archetype.profession + ') into our haven! They contributed their gear and joined our community (+15 Morale).',
-            outcomeTitle: fullName + ' Welcomed into Haven',
-            outcomeText: fullName + ' set down their pack with a long sigh of relief. "Thank you for opening the gate. I will pull my weight every single day."'
+            log: (isAtCapacity && s.shelter.isEstablished)
+              ? 'I welcomed ' + fullName + ' into our haven! With all beds full, they gratefully accepted a sleeping roll on the floor (+15 Morale, +' + archetype.gearPool.map(g => g.name).join(', ') + ').'
+              : 'I welcomed ' + fullName + ' (' + archetype.profession + ') into our group! They contributed their gear and joined our journey (+15 Morale).',
+            outcomeTitle: fullName + ' Joined Your Group',
+            outcomeText: fullName + ' set down their pack with a long sigh of relief. "Thank you for trusting me. I will pull my weight every single day."'
           };
         }
       },
       {
         id: 'quarantine_' + uniqueEventId,
-        text: 'Enforce 3-Day Quarantine: Inspect thoroughly for bites before granting full admission',
-        consequenceSummary: 'Safe protocol: verifies bite-free status. ' + fullName + ' joins with high trust and appreciation (+Trust: 85).',
+        text: 'Cautious Safety Check: Inspect carefully for hidden bites before teaming up',
+        consequenceSummary: 'Safe protocol: verifies bite-free status. ' + fullName + ' joins with high trust (+Trust: 85).',
         execute: (s: GameState) => {
           const newMember: CampMember = {
             id: 'proc_member_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -842,7 +752,7 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
             stealthSkill: stl,
             fitnessSkill: fit,
             role: archetype.role,
-            isSleepingRough: isAtCapacity,
+            isSleepingRough: isAtCapacity && s.shelter.isEstablished,
             statusEffects: []
           };
 
@@ -857,16 +767,16 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
               },
               stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
             },
-            log: 'I admitted ' + fullName + ' under our standard 3-Day Quarantine protocol. They passed the inspection cleanly and joined the colony with deep respect for our security (+Trust: 85).',
-            outcomeTitle: 'Quarantine Protocol Passed',
-            outcomeText: fullName + ' nodded approvingly: "A group that checks for bites is a group that stays alive. I respect the discipline." They are now safe in camp.'
+            log: 'I checked ' + fullName + ' carefully for bites. They passed cleanly and appreciated the safety caution (+Trust: 85).',
+            outcomeTitle: 'Health Check Passed',
+            outcomeText: fullName + ' nodded approvingly: "A survivor who checks for bites is a survivor who stays alive. I respect the discipline." They are now safe with your group.'
           };
         }
       },
       {
         id: 'rations_' + uniqueEventId,
-        text: 'Lower canned food and fresh water over the fence, but decline shelter due to limited space',
-        consequenceSummary: 'Merciful parting: Spares rations without adding an extra mouth to feed (-1 Food, -1 Water, +5 Sanity).',
+        text: 'Offer food and water from your pack, but decline to team up',
+        consequenceSummary: 'Merciful parting: Shares supplies without adding an extra mouth to feed (-1 Food, -1 Water, +5 Sanity).',
         execute: (s: GameState) => {
           let inv = [...s.inventory];
           const f = inv.find(i => i.category === 'food' && i.quantity > 0);
@@ -881,28 +791,29 @@ export function generateProceduralSurvivorDilemma(state: GameState): EventDilemm
               inventory: inv,
               player: { ...s.player, sanity: Math.min(100, s.player.sanity + 5) }
             },
-            log: 'I lowered a basket of rations to ' + fullName + ' and explained our quarters were full. They thanked me warmly for the food and moved safely down the avenue.',
+            log: 'I shared rations with ' + fullName + ' and explained our group could not take on new members. They thanked me warmly and moved along safely.',
             outcomeTitle: 'Peaceful Parting',
-            outcomeText: fullName + ' took the provisions with gratitude: "May your walls hold, friend. Thank you for the meal." They vanished safely into the morning fog.'
+            outcomeText: fullName + ' took the provisions with gratitude: "May your luck hold, friend. Thank you for the meal." They vanished safely into the morning fog.'
           };
         }
       },
       {
         id: 'deny_' + uniqueEventId,
-        text: 'Keep the heavy iron gates barred and order ' + fullName + ' to move along',
-        consequenceSummary: 'Preserves total perimeter lockdown with zero resource expenditure.',
+        text: 'Keep your weapon raised and order ' + fullName + ' to move along',
+        consequenceSummary: 'Preserves total security with zero resource expenditure.',
         execute: (s: GameState) => {
           return {
             state: s,
-            log: 'I told ' + fullName + ' to move along. They nodded in silence, turned on their heels, and departed into the ruins.',
-            outcomeTitle: 'Gates Remained Barred',
-            outcomeText: 'The footsteps receded into the city. The haven perimeter remains quiet.'
+            log: 'I ordered ' + fullName + ' to move along. They nodded in silence, turned on their heels, and departed into the ruins.',
+            outcomeTitle: 'Stranger Turned Away',
+            outcomeText: 'The footsteps receded into the city. The area remains quiet.'
           };
         }
       }
     ]
   };
 }
+
 
 export function getRandomSurvivalEvent(state: GameState): EventDilemma | null {
   const hasShelterOrCamp = state.shelter.isEstablished || state.startingLocation.hasLeftStartingSpot;
@@ -918,261 +829,15 @@ export function getRandomSurvivalEvent(state: GameState): EventDilemma | null {
   return filtered[Math.floor(Math.random() * filtered.length)];
 }
 
-// Looting Encounter: Meet a survivor while looting a spot
+// Looting Encounter: Meet a procedurally generated survivor while looting a spot
 export function getLootSpotSurvivorDilemma(state: GameState, spotName: string): EventDilemma | null {
-  if (state.campMembers.length >= 3) return null;
-  const loc = getCurrentLocationName(state);
-
-  const candidates = [
-    {
-      id: 'survivor_liam',
-      name: 'Liam Walker',
-      gender: 'male' as const,
-      age: 26,
-      profession: 'Ex-Army Mechanic',
-      bio: 'Disciplined and tough. Experienced in barricade defense and weapon maintenance.',
-      role: 'guard' as const,
-      health: 90,
-      trust: 60
-    },
-    {
-      id: 'survivor_elena',
-      name: 'Elena Frost',
-      gender: 'female' as const,
-      age: 27,
-      profession: 'Field Paramedic',
-      bio: 'Calm under fire. Skilled in trauma dressing, wound treatment, and sterilization.',
-      role: 'medic' as const,
-      health: 85,
-      trust: 65
-    },
-    {
-      id: 'survivor_lucas',
-      name: 'Lucas Reed',
-      gender: 'male' as const,
-      age: 24,
-      profession: 'Carpenter & Roofer',
-      bio: 'Practical builder with high physical stamina and fortification knowledge.',
-      role: 'craftsman' as const,
-      health: 88,
-      trust: 60
-    },
-    {
-      id: 'survivor_maya',
-      name: 'Maya Lin',
-      gender: 'female' as const,
-      age: 25,
-      profession: 'Locksmith & Scout',
-      bio: 'Quiet and observant scavenger capable of bypassing door deadbolts silently.',
-      role: 'scavenger' as const,
-      health: 92,
-      trust: 65
-    }
-  ];
-
-  const candidate = candidates.find(c => !state.campMembers.some(m => m.id === c.id));
-  if (!candidate) return null;
-
-  return {
-    id: 'loot_encounter_' + candidate.id + '_' + Date.now(),
-    title: 'A Survivor in the Shadows!',
-    category: 'discovery',
-    dangerLevel: 'low',
-    description: 'While searching ' + spotName + ' inside ' + loc + ', your flashlight catches a lone survivor crouching in the dark holding a makeshift blade. They freeze, then slowly lower the weapon seeing you: "Hold on... I am not here to fight. Just searching for food and clean water." It is ' + candidate.name + ' (' + candidate.profession + ').',
-    choices: [
-      {
-        id: 'recruit_' + candidate.id,
-        text: 'Lower your weapon, share clean water, and invite them to join your camp',
-        consequenceSummary: 'Calms them down. They agree to join as a reliable companion.',
-        execute: (s: GameState) => {
-          const totalBeds = s.shelter.rooms && s.shelter.rooms.length > 0
-            ? s.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
-            : (s.shelter.maxSurvivors || 4);
-          const totalResidents = s.campMembers.length + 1;
-          const isAtCapacity = totalResidents >= totalBeds;
-
-          const newMember: CampMember = {
-            id: candidate.id,
-            name: candidate.name,
-            gender: candidate.gender,
-            age: candidate.age,
-            profession: candidate.profession,
-            relation: 'Companion',
-            bio: candidate.bio,
-            health: candidate.health,
-            trust: isAtCapacity ? 40 : candidate.trust,
-            isSleepingRough: isAtCapacity,
-            daysTogether: 1,
-            role: candidate.role,
-            statusEffects: []
-          };
-          return {
-            state: {
-              ...s,
-              campMembers: [...s.campMembers, newMember],
-              isCampEstablished: true,
-              shelter: {
-                ...s.shelter,
-                morale: isAtCapacity ? Math.max(10, (s.shelter.morale ?? 75) - 6) : s.shelter.morale
-              },
-              stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-            },
-            log: isAtCapacity
-              ? 'While searching ' + spotName + ', I met ' + candidate.name + '. With no empty beds left, they agreed to sleep rough on the floor until we build a cabin.'
-              : 'While searching ' + spotName + ', I met ' + candidate.name + '. I shared supplies and they joined my camp as an ally!',
-            outcomeTitle: isAtCapacity ? candidate.name + ' Joined (Sleeping on Floor)' : candidate.name + ' Joined Your Camp',
-            outcomeText: isAtCapacity
-              ? candidate.name + ' shook your hand with tired relief: "Sleeping on the cold concrete floor beats getting ripped apart by walkers out here. But please, build a proper bunk soon." They joined your haven as an unhoused companion.'
-              : candidate.name + ' sheathed their weapon and shook your hand. "Appreciate you not pulling the trigger. I will pull my weight." The Camp tab is unlocked!'
-          };
-        }
-      },
-      {
-        id: 'trade_' + candidate.id,
-        text: 'Keep a safe distance, trade spare food rations for scavenged components',
-        consequenceSummary: 'Trades surplus food for useful mechanical parts and tools.',
-        execute: (s: GameState) => {
-          const tradeItems = [
-            { id: 'duct_tape_scav', name: 'Roll of Heavy Duct Tape', category: 'tool' as const, quantity: 1, description: 'Reinforced adhesive repair tape.' },
-            { id: 'nails_scav', name: 'Box of Framing Nails', category: 'resource' as const, quantity: 15, description: 'Galvanized nails for fortifications.' }
-          ];
-          let inv = [...s.inventory];
-          for (const item of tradeItems) {
-            const ex = inv.find(i => i.id === item.id);
-            if (ex) inv = inv.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
-            else inv.push(item);
-          }
-          return {
-            state: {
-              ...s,
-              inventory: inv,
-              player: { ...s.player, sanity: Math.min(100, s.player.sanity + 10) }
-            },
-            log: 'I traded calmly with ' + candidate.name + ' at ' + spotName + '. Exchanged surplus supplies peacefully (+10 Sanity).',
-            outcomeTitle: 'Peaceful Trade Concluded',
-            outcomeText: 'You exchanged items without hostility. ' + candidate.name + ' nodded respectfully and moved down the hall.'
-          };
-        }
-      },
-      {
-        id: 'dismiss_' + candidate.id,
-        text: 'Keep your weapon aimed: "Keep moving. This building is occupied."',
-        consequenceSummary: 'Avoids all risk. They back away quietly into the ruins.',
-        execute: (s: GameState) => {
-          return {
-            state: { ...s },
-            log: 'I ordered ' + candidate.name + ' to leave ' + spotName + '. They backed away with their hands raised.',
-            outcomeTitle: 'Survivor Backed Off',
-            outcomeText: 'Taking no chances, you held your ground until they retreated into the alley. Your perimeter remains secure.'
-          };
-        }
-      }
-    ]
-  };
+  if (state.campMembers.length >= 8) return null;
+  return generateProceduralSurvivorDilemma(state, 'loot_spot', spotName);
 }
 
-// Survivor Outpost Meeting Dilemma (St. Michael Church Sanctuary)
+// Outpost Encounter: Meet a procedurally generated survivor at church fellowship fire
 export function getSurvivorOutpostDilemma(state: GameState): EventDilemma {
-  const isFemale = state.player.gender === 'female';
-  const candidateName = isFemale ? 'Liam Walker' : 'Chloe Evans';
-  const candidateId = isFemale ? 'survivor_liam' : 'survivor_chloe';
-  const hasCandidate = state.campMembers.some(m => m.id === candidateId);
-
-  return {
-    id: 'outpost_church_visit_' + Date.now(),
-    title: 'St. Michael Church Sanctuary',
-    category: 'encounter',
-    dangerLevel: 'low',
-    description: 'You step through the reinforced oak doors of St. Michael Church. Warm candlelight flickers across stained glass. A group of survivors have built barricades around the altar. ' + candidateName + ' waves you over to the fellowship fire.',
-    choices: [
-      {
-        id: 'recruit_church_ally',
-        text: 'Discuss your camp defense plans with ' + candidateName + ' and invite them to team up',
-        consequenceSummary: 'Gain a dependable survivor ally with guard skills.',
-        execute: (s: GameState) => {
-          if (!hasCandidate) {
-            const totalBeds = s.shelter.rooms && s.shelter.rooms.length > 0
-              ? s.shelter.rooms.reduce((sum, r) => sum + r.capacity, 0)
-              : (s.shelter.maxSurvivors || 4);
-            const totalResidents = s.campMembers.length + 1;
-            const isAtCapacity = totalResidents >= totalBeds;
-
-            const member: CampMember = {
-              id: candidateId,
-              name: candidateName,
-              gender: isFemale ? 'male' : 'female',
-              age: isFemale ? 26 : 23,
-              profession: isFemale ? 'Ex-Army Hunter' : 'Athletic Student & Builder',
-              relation: 'Camp Member',
-              bio: isFemale ? 'Rugged veteran. Brave, protective, and disciplined.' : 'Former collegiate runner. Energetic, alert, and dependable.',
-              health: 95,
-              trust: isAtCapacity ? 45 : 70,
-              isSleepingRough: isAtCapacity,
-              daysTogether: 1,
-              role: 'guard',
-              statusEffects: []
-            };
-            return {
-              state: {
-                ...s,
-                campMembers: [...s.campMembers, member],
-                isCampEstablished: true,
-                shelter: {
-                  ...s.shelter,
-                  morale: isAtCapacity ? Math.max(10, (s.shelter.morale ?? 75) - 5) : s.shelter.morale
-                },
-                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) },
-                stats: { ...s.stats, peopleSaved: s.stats.peopleSaved + 1 }
-              },
-              log: isAtCapacity
-                ? 'I met ' + candidateName + ' at the Church Outpost and brought them to camp. With no empty beds, they agreed to sleep rough on the floor until we expand our rooms.'
-                : 'I met ' + candidateName + ' at the Church Outpost. They agreed to team up and joined my camp as a guard!',
-              outcomeTitle: isAtCapacity ? candidateName + ' Joined (Sleeping on Floor)' : candidateName + ' Joined Your Camp',
-              outcomeText: isAtCapacity
-                ? 'You convinced ' + candidateName + ' to join, warning them they would have to sleep on the floor for now. "As long as there is a wall between me and the dead, I can manage. But do not keep me on concrete forever."'
-                : 'By the sanctuary fire, you and ' + candidateName + ' discussed defense tactics. Convinced your group has a real survival plan, ' + candidateName + ' agreed to join your camp. (+20 Sanity)'
-            };
-          } else {
-            return {
-              state: {
-                ...s,
-                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 20) }
-              },
-              log: 'I spent an evening resting by the fire at the Church Outpost, lifting my morale (+20 Sanity).',
-              outcomeTitle: 'Peaceful Evening by the Fire',
-              outcomeText: 'Warm food and friendly conversation restored your spirit (+20 Sanity).'
-            };
-          }
-        }
-      },
-      {
-        id: 'barter_church_goods',
-        text: 'Barter with the outpost quartermaster for vital food and medical supplies',
-        consequenceSummary: 'Trades spare gear for canned rations and clean water.',
-        execute: (s: GameState) => {
-          const tradeLoot = [
-            { id: 'canned_peaches_outpost', name: 'Canned Peaches', category: 'food' as const, quantity: 2, description: 'Sweet canned fruit rations.' },
-            { id: 'water_gallon_outpost', name: 'Purified Water Jug', category: 'water' as const, quantity: 2, description: 'Clean fresh drinking water.' }
-          ];
-          let inv = [...s.inventory];
-          for (const item of tradeLoot) {
-            const ex = inv.find(i => i.id === item.id);
-            if (ex) inv = inv.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i);
-            else inv.push(item);
-          }
-          return {
-            state: {
-              ...s,
-              inventory: inv
-            },
-            log: 'I bartered at the Church Outpost: Traded surplus items for 2 cans of peaches and 2 purified water jugs.',
-            outcomeTitle: 'Fair Barter Concluded',
-            outcomeText: 'The outpost quartermaster shook your hand and traded clean water and canned fruit. The community welcomes you back anytime.'
-          };
-        }
-      }
-    ]
-  };
+  return generateProceduralSurvivorDilemma(state, 'outpost');
 }
 
 // Fallback constant for legacy imports

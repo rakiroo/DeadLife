@@ -165,35 +165,6 @@ export const BaseTab: React.FC<Props> = ({
     }
   ];
 
-  if (!shelter.isEstablished && campMembers.length === 0) {
-    return (
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-w-md mx-auto w-full font-sans select-none">
-        <div className="p-5 bg-white/[0.04] border border-white/10 rounded-3xl space-y-3.5 text-center shadow-xl">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-            <Home className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white tracking-tight">No Base Sanctuary Established</h2>
-            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-              You are currently wandering exposed ruins. Establish a permanent sanctuary to welcome survivors, allocate housing, marry, raise children, construct cabins, and build a lasting dynasty.
-            </p>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => onEstablishBase(gameState.startingLocation.name || 'Sanctuary Haven', 'Fortified Haven')}
-              className="w-full py-3 px-4 rounded-2xl font-bold text-xs bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 active:scale-[0.98] transition-all"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Establish Haven</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3.5 space-y-4 max-w-md mx-auto w-full font-sans select-none pb-24">
       {/* ACTION TOAST */}
@@ -203,110 +174,144 @@ export const BaseTab: React.FC<Props> = ({
         </div>
       )}
 
-      {/* BASE SANCTUARY HERO CARD */}
-      <div className="p-4 bg-white/[0.04] border border-white/10 rounded-3xl space-y-3 shadow-xl">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1">
-            {isRenaming ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={newBaseName}
-                  onChange={(e) => setNewBaseName(e.target.value)}
-                  className="bg-black/50 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white font-bold w-full focus:outline-none focus:border-emerald-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRenameBase(newBaseName.trim() || 'Sanctuary Haven');
-                    setIsRenaming(false);
-                  }}
-                  className="px-2.5 py-1 rounded-xl bg-emerald-500 text-white text-xs font-bold"
-                >
-                  Save
-                </button>
+      {/* 1. HERO HEADER: ROAMING PARTY BANNER OR ESTABLISHED BASE CARD */}
+      {!shelter.isEstablished ? (
+        <div className="p-4 bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-black/60 border border-emerald-500/30 rounded-3xl space-y-3 shadow-xl animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Home className="w-6 h-6" />
               </div>
-            ) : (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-base font-bold text-white tracking-tight truncate">
-                  {shelter.name || 'Sanctuary Haven'}
-                </h1>
-                <button
-                  type="button"
-                  onClick={() => setIsRenaming(true)}
-                  className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white"
-                  title="Rename Base"
-                >
-                  <Edit3 className="w-3 h-3" />
-                </button>
+              <div>
+                <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-bold block">
+                  No Base Established
+                </span>
+                <h3 className="text-base font-bold text-white">Roaming Survivor Party ({totalSurvivorsCount})</h3>
               </div>
-            )}
-            <p className="text-[11px] text-zinc-400 mt-0.5">
-              Settlement Overseer: <span className="text-zinc-200 font-medium">{player.name}</span> (Age {player.age})
-              {player.romanceStage === 'married' && (
-                <span className="text-rose-400 font-semibold ml-1">• Married to {player.spouseName || 'Spouse'}</span>
-              )}
-            </p>
-          </div>
-
-          <div className="text-right shrink-0">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              <Sparkles className="w-3 h-3" />
-              Morale {campMorale}%
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-white/5 border border-white/10 px-2.5 py-1 rounded-full text-zinc-300">
+              On the Road
             </span>
           </div>
-        </div>
 
-        {/* Vital Settlement Badges */}
-        <div className="grid grid-cols-4 gap-1.5 text-center text-xs pt-1">
-          <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
-            <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Bed className="w-3 h-3 text-cyan-400" /> Adult Beds
-            </div>
-            <div className="font-mono text-xs font-bold text-white mt-0.5">
-              {occupiedBeds}/{defaultBedCapacity}
-            </div>
-          </div>
+          <p className="text-xs text-zinc-300 leading-relaxed">
+            You and your companions are currently surviving exposed in the ruins. Claim a permanent sanctuary base to unlock housing cabins, facilities, and settlement decrees!
+          </p>
 
-          <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
-            <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Users className="w-3 h-3 text-emerald-400" /> Total Souls
-            </div>
-            <div className="font-mono text-xs font-bold text-emerald-300 mt-0.5">
-              {totalSurvivorsCount}
-            </div>
-          </div>
-
-          <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
-            <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Baby className="w-3 h-3 text-amber-400" /> Kids
-            </div>
-            <div className="font-mono text-xs font-bold text-amber-300 mt-0.5">
-              {totalChildrenCount}
-            </div>
-          </div>
-
-          <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
-            <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
-              <Shield className="w-3 h-3 text-emerald-400" /> Def
-            </div>
-            <div className="font-mono text-xs font-bold text-emerald-400 mt-0.5">
-              {shelter.defenseRating || 35}%
-            </div>
-          </div>
-        </div>
-
-        {shelter.barricadeIntegrity < 100 && (
           <button
             type="button"
-            onClick={() => triggerFeedback('Reinforced perimeter barricades (+25% integrity).', onRepairBarricade)}
-            className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+            onClick={() => onEstablishBase(gameState.district?.name || gameState.startingLocation.name || 'Sanctuary Haven', 'Fortified Haven')}
+            className="w-full py-3 px-4 rounded-2xl font-bold text-xs bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 active:scale-[0.98] transition-all"
           >
-            <Hammer className="w-3.5 h-3.5 text-amber-400" />
-            <span>Reinforce Barricades</span>
+            <Sparkles className="w-4 h-4" />
+            <span>Claim & Establish Sanctuary Base</span>
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="p-4 bg-white/[0.04] border border-white/10 rounded-3xl space-y-3 shadow-xl">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              {isRenaming ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newBaseName}
+                    onChange={(e) => setNewBaseName(e.target.value)}
+                    className="bg-black/50 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white font-bold w-full focus:outline-none focus:border-emerald-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRenameBase(newBaseName.trim() || 'Sanctuary Haven');
+                      setIsRenaming(false);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-500 text-white text-xs font-bold"
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h1 className="text-base font-bold text-white tracking-tight truncate">
+                    {shelter.name || 'Sanctuary Haven'}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => setIsRenaming(true)}
+                    className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white"
+                    title="Rename Base"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Settlement Overseer: <span className="text-zinc-200 font-medium">{player.name}</span> (Age {player.age})
+                {player.romanceStage === 'married' && (
+                  <span className="text-rose-400 font-semibold ml-1">• Married to {player.spouseName || 'Spouse'}</span>
+                )}
+              </p>
+            </div>
+
+            <div className="text-right shrink-0">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <Sparkles className="w-3 h-3" />
+                Morale {campMorale}%
+              </span>
+            </div>
+          </div>
+
+          {/* Vital Settlement Badges */}
+          <div className="grid grid-cols-4 gap-1.5 text-center text-xs pt-1">
+            <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
+              <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
+                <Bed className="w-3 h-3 text-cyan-400" /> Adult Beds
+              </div>
+              <div className="font-mono text-xs font-bold text-white mt-0.5">
+                {occupiedBeds}/{defaultBedCapacity}
+              </div>
+            </div>
+
+            <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
+              <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
+                <Users className="w-3 h-3 text-emerald-400" /> Total Souls
+              </div>
+              <div className="font-mono text-xs font-bold text-emerald-300 mt-0.5">
+                {totalSurvivorsCount}
+              </div>
+            </div>
+
+            <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
+              <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
+                <Baby className="w-3 h-3 text-amber-400" /> Kids
+              </div>
+              <div className="font-mono text-xs font-bold text-amber-300 mt-0.5">
+                {totalChildrenCount}
+              </div>
+            </div>
+
+            <div className="p-2 bg-black/30 border border-white/5 rounded-2xl">
+              <div className="text-[9px] text-zinc-400 uppercase font-mono flex items-center justify-center gap-1">
+                <Shield className="w-3 h-3 text-emerald-400" /> Def
+              </div>
+              <div className="font-mono text-xs font-bold text-emerald-400 mt-0.5">
+                {shelter.defenseRating || 35}%
+              </div>
+            </div>
+          </div>
+
+          {shelter.barricadeIntegrity < 100 && (
+            <button
+              type="button"
+              onClick={() => triggerFeedback('Reinforced perimeter barricades (+25% integrity).', onRepairBarricade)}
+              className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+            >
+              <Hammer className="w-3.5 h-3.5 text-amber-400" />
+              <span>Reinforce Barricades</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* SUB-VIEW PILL TABS */}
       <div className="flex gap-1 overflow-x-auto py-0.5 no-scrollbar text-[11px] font-medium border-b border-white/5 pb-2">
@@ -320,7 +325,7 @@ export const BaseTab: React.FC<Props> = ({
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>Survivors ({totalSurvivorsCount})</span>
+          <span>{!shelter.isEstablished ? 'Party' : 'Survivors'} ({totalSurvivorsCount})</span>
         </button>
 
         <button
@@ -1016,7 +1021,17 @@ export const BaseTab: React.FC<Props> = ({
       )}
 
       {/* 3. SUB-VIEW: HOUSING & ROOMS */}
-      {subView === 'housing' && (
+      {subView === 'housing' && !shelter.isEstablished && (
+        <div className="p-8 text-center bg-white/[0.02] rounded-3xl border border-white/5 space-y-2">
+          <Home className="w-8 h-8 text-zinc-600 mx-auto" />
+          <h3 className="text-sm font-bold text-white">Base Sanctuary Required</h3>
+          <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            You are currently roaming as an exposed party. Claim and establish a sanctuary base above to build cabins and allocate living quarters.
+          </p>
+        </div>
+      )}
+
+      {subView === 'housing' && shelter.isEstablished && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold flex items-center gap-1.5">
@@ -1204,7 +1219,17 @@ export const BaseTab: React.FC<Props> = ({
       )}
 
       {/* 4. SUB-VIEW: FACILITIES & EXPANSION */}
-      {subView === 'facilities' && (
+      {subView === 'facilities' && !shelter.isEstablished && (
+        <div className="p-8 text-center bg-white/[0.02] rounded-3xl border border-white/5 space-y-2">
+          <Hammer className="w-8 h-8 text-zinc-600 mx-auto" />
+          <h3 className="text-sm font-bold text-white">Base Sanctuary Required</h3>
+          <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            You are currently roaming as an exposed party. Claim and establish a sanctuary base above to build greenhouses, wells, and community infirmaries.
+          </p>
+        </div>
+      )}
+
+      {subView === 'facilities' && shelter.isEstablished && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold flex items-center gap-1.5">
@@ -1524,7 +1549,17 @@ export const BaseTab: React.FC<Props> = ({
       )}
 
       {/* 5. SUB-VIEW: DECREES & COLONY LAWS */}
-      {subView === 'laws' && (
+      {subView === 'laws' && !shelter.isEstablished && (
+        <div className="p-8 text-center bg-white/[0.02] rounded-3xl border border-white/5 space-y-2">
+          <Scroll className="w-8 h-8 text-zinc-600 mx-auto" />
+          <h3 className="text-sm font-bold text-white">Base Sanctuary Required</h3>
+          <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            You are currently roaming as an exposed party. Claim and establish a sanctuary base above to enact community laws, rationing decrees, and security protocols.
+          </p>
+        </div>
+      )}
+
+      {subView === 'laws' && shelter.isEstablished && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] uppercase font-mono tracking-wider text-zinc-300 font-bold flex items-center gap-1.5">
