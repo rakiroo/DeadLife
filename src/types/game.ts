@@ -350,6 +350,8 @@ export interface CemeteryRecord {
   mysterySolved?: boolean;
   equippedWeaponName?: string;
   founderCreedTitle?: string;
+  ribbonDesc?: string;
+  secondaryRibbons?: { title: string; desc: string; icon: string }[];
 }
 
 export interface BabyNamingPrompt {

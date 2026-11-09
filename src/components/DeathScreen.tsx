@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameState } from '../types/game';
-import { Skull, RefreshCw, Award } from 'lucide-react';
+import { Skull, RefreshCw, Award, Star } from 'lucide-react';
+import { calculateSurvivorRibbons } from '../data/ribbons';
 
 interface Props {
   gameState: GameState;
@@ -10,16 +11,7 @@ interface Props {
 export const DeathScreen: React.FC<Props> = ({ gameState, onRestart }) => {
   const { player, day, stats } = gameState;
 
-  const getRibbon = () => {
-    if (day >= 100) return { title: 'Century Survivor', desc: 'Lived over 100 days in the ruins of civilization.' };
-    if (stats.zombiesEliminated >= 20) return { title: 'Slayer of the Dead', desc: 'Dispatched scores of infected with deadly efficiency.' };
-    if (stats.peopleSaved >= 3) return { title: 'Sanctuary Founder', desc: 'Kept hope alive by taking in desperate wanderers.' };
-    if (day <= 3) return { title: 'Patient Zero', desc: 'Barely lasted past the initial sirens.' };
-    if (gameState.daysWithoutWater >= 3) return { title: 'The Parched', desc: 'The thirst claimed you before the monsters could.' };
-    return { title: 'Unsung Survivor', desc: 'Fought silently for every breath in the new dark age.' };
-  };
-
-  const ribbon = getRibbon();
+  const { primary: ribbon, achievements } = calculateSurvivorRibbons(gameState, player.deathCause);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-in fade-in duration-300 select-none font-sans">
@@ -50,6 +42,15 @@ export const DeathScreen: React.FC<Props> = ({ gameState, onRestart }) => {
             <span>{ribbon.title}</span>
           </div>
           <p className="text-[11px] text-zinc-400">{ribbon.desc}</p>
+          {achievements.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1 pt-1 border-t border-white/5">
+              {achievements.map((a, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-white/5 border border-white/10 text-zinc-300">
+                  ★ {a.title}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Lifetime Stats */}

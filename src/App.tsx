@@ -4,6 +4,7 @@ import { BabyNamingModal } from './components/BabyNamingModal';
 import { generateProceduralDistrict } from './data/districts';
 import { getRandomMutationStrain } from './data/mutationStrains';
 import { generateProceduralMystery } from './data/mysteries';
+import { calculateSurvivorRibbons } from './data/ribbons';
 import { loadCodexData, saveCodexData, calculateRunLegacyMarks } from './data/codex';
 import { CodexScreen } from './components/CodexScreen';
 import { InvestigationBoardModal } from './components/InvestigationBoardModal';
@@ -40,18 +41,11 @@ const GRAVEYARD_KEY = 'deadlife_graveyard';
 
 export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, deathCauseOverride?: string): CemeteryRecord {
   const { player, shelter, stats, day, district, mutationStrain, mystery } = state;
-
-  const ribbon = ribbonOverride || (
-    day >= 100 
-      ? 'Century Survivor' 
-      : stats.zombiesEliminated >= 15 
-      ? 'Slayer of the Dead' 
-      : day <= 2 
-      ? 'Patient Zero' 
-      : 'Fallen Survivor'
-  );
-
   const deathCause = deathCauseOverride || player.deathCause || 'died fighting in the ruins';
+  const { primary, achievements } = calculateSurvivorRibbons(state, deathCause);
+
+  const ribbon = ribbonOverride || primary.title;
+  const ribbonDesc = primary.desc;
 
   const districtStory = district 
     ? 'In the devastated sector of ' + district.name + ' (' + district.type.toUpperCase() + '), amid ' + district.description.toLowerCase() + ' '
@@ -118,6 +112,8 @@ export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, d
     deathCause,
     date: new Date().toLocaleDateString(),
     ribbon,
+    ribbonDesc,
+    secondaryRibbons: achievements,
     stats,
     biography: fullBio,
     spouseName: player.spouseName,

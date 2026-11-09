@@ -63,6 +63,24 @@ export const BiographyModal: React.FC<Props> = ({ record, onClose }) => {
           </div>
         </div>
 
+
+        {/* Earned Lifetime Achievement Badges */}
+        {record.secondaryRibbons && record.secondaryRibbons.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold flex items-center gap-1 px-1">
+              <Award className="w-3.5 h-3.5" /> Lifetime Achievement Ribbons ({record.secondaryRibbons.length})
+            </span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {record.secondaryRibbons.map((a, i) => (
+                <div key={i} className="p-2 rounded-xl bg-white/[0.03] border border-white/5 text-[10px]">
+                  <span className="font-bold text-amber-300 block">★ {a.title}</span>
+                  <p className="text-zinc-400 text-[9px] leading-snug mt-0.5">{a.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* World Context Badges */}
         {(record.districtName || record.mutationStrainName || record.mysteryTitle || record.equippedWeaponName || record.founderCreedTitle) && (
           <div className="flex flex-wrap gap-1.5 pt-0.5">
