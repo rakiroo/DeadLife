@@ -2,6 +2,160 @@ import { Career } from '../types/game';
 
 export const CAREERS: Career[] = [
   {
+    id: 'career_combat_medic',
+    title: 'Combat Trauma Surgeon',
+    icon: '🩺',
+    description: 'Elite battlefield physician. Masters high-stress surgical triage, infections, and combat defense.',
+    startingLocation: {
+      name: 'Forward Surgical Outpost',
+      type: 'Field Hospital',
+      description: 'Sterile surgical lamps flicker over stainless steel trays. Outside, heavy caliber gunfire echoes.',
+      lootSpots: [
+        {
+          id: 'medic_triage_rig',
+          name: 'Combat Trauma Rucksack',
+          description: 'Military grade emergency dressings and surgical instruments.',
+          loot: [
+            { id: 'combat_trauma_kit', name: 'Combat Trauma Dressing (x2)', category: 'medical', quantity: 2, description: 'Sterile pressure dressing.' },
+            { id: 'antibiotics_elite', name: 'Amoxicillin Antibiotic Capsules (x4)', category: 'medical', quantity: 4, description: 'Capsules for infection sepsis.' }
+          ]
+        },
+        {
+          id: 'medic_sidearm_desk',
+          name: 'Watch Desk Locker',
+          description: 'Security sidearm and emergency provisions.',
+          loot: [
+            { id: 'sidearm_9mm_starter', name: 'Duty 9mm Handgun', category: 'weapon', quantity: 1, description: 'Police sidearm.' },
+            { id: 'ammo_9mm_starter', name: 'Box of 9mm Cartridges (12)', category: 'resource', quantity: 12, description: 'Handgun ammunition.' },
+            { id: 'mre_pack', name: 'Military Ration Meal', category: 'food', quantity: 2, description: 'Self-heating meal.' }
+          ]
+        }
+      ]
+    },
+    stats: {
+      combat: 6,
+      medical: 9,
+      crafting: 4,
+      stealth: 5,
+      fitness: 6
+    }
+  },
+  {
+    id: 'career_master_blacksmith',
+    title: 'Master Foundry Blacksmith',
+    icon: '⚒️',
+    description: 'Heavy forge blacksmith and fabricator. Specializes in demolition bludgeons and reinforced steel fortifications.',
+    startingLocation: {
+      name: 'Blackstone Foundry Works',
+      type: 'Industrial Forge',
+      description: 'The forge furnace glows with dying embers. Heavy anvil blocks and steel rebar racks stand ready.',
+      lootSpots: [
+        {
+          id: 'forge_anvil_bench',
+          name: 'Blacksmith Anvil & Tool Chest',
+          description: 'Forged blunt demolition tools.',
+          loot: [
+            { id: 'heavy_sledge', name: 'Forged Steel Sledgehammer', category: 'weapon', quantity: 1, description: 'Heavy two-handed demolition hammer.' },
+            { id: 'framing_nails_starter', name: 'Box of Framing Nails (x30)', category: 'resource', quantity: 30, description: 'Hardened construction nails.' }
+          ]
+        },
+        {
+          id: 'forge_storage_closet',
+          name: 'Dry Timber & Fuel Locker',
+          description: 'Cured timber studs and firestarter.',
+          loot: [
+            { id: 'cured_timber_starter', name: 'Cured Hardwood Studs (x4)', category: 'resource', quantity: 4, description: 'Dense structural timber.' },
+            { id: 'canned_stew', name: 'Hearty Beef Stew Rations (x2)', category: 'food', quantity: 2, description: 'Sealed canned meal.' }
+          ]
+        }
+      ]
+    },
+    stats: {
+      combat: 7,
+      medical: 3,
+      crafting: 9,
+      stealth: 4,
+      fitness: 8
+    }
+  },
+  {
+    id: 'career_bounty_hunter',
+    title: 'Wasteland Bounty Hunter',
+    icon: '🎯',
+    description: 'Relentless urban tracker and marksman. Specializes in lethal stealth ambushes and tracking high-value bounties.',
+    startingLocation: {
+      name: 'Bounty Dispatch Safehouse',
+      type: 'Urban Hideout',
+      description: 'Maps pinned with surveillance photos line the walls. Ammunition boxes sit beside an armored vest.',
+      lootSpots: [
+        {
+          id: 'bounty_weapon_case',
+          name: 'Tactical Weapon Case',
+          description: 'Silenced tactical sidearm and ammunition.',
+          loot: [
+            { id: 'tactical_pistol', name: 'Silenced 9mm Tactical Sidearm', category: 'weapon', quantity: 1, description: 'Match-grade silenced handgun.' },
+            { id: 'ammo_9mm_bounty', name: '9mm Match Ammunition (x20)', category: 'resource', quantity: 20, description: 'High-velocity cartridges.' },
+            { id: 'kevlar_vest_bounty', name: 'Tactical Kevlar Vest', category: 'tool', quantity: 1, description: 'Torso body armor.' }
+          ]
+        },
+        {
+          id: 'bounty_supplies',
+          name: 'Go-Bag Lockbox',
+          description: 'Dried provisions and spring water.',
+          loot: [
+            { id: 'smoked_jerky_bounty', name: 'Smoked Venison Jerky (x3)', category: 'food', quantity: 3, description: 'High-protein rations.' },
+            { id: 'canteen_bounty', name: 'Purified Canteen Water (x2)', category: 'water', quantity: 2, description: 'Fresh drinking water.' }
+          ]
+        }
+      ]
+    },
+    stats: {
+      combat: 9,
+      medical: 4,
+      crafting: 4,
+      stealth: 8,
+      fitness: 8
+    }
+  },
+  {
+    id: 'career_hazmat_chemist',
+    title: 'Hazmat Decon Chemist',
+    icon: '☣️',
+    description: 'Hazardous materials scientist. Skilled in viral decontamination, incendiary firebombs, and biohazard survival.',
+    startingLocation: {
+      name: 'Hazardous Decon Station',
+      type: 'Bio-Safety Outpost',
+      description: 'Yellow decontamination showers and chemical drums line the tiled walls.',
+      lootSpots: [
+        {
+          id: 'hazmat_locker',
+          name: 'Decontamination Locker',
+          description: 'Incendiary fuel and chemical supplies.',
+          loot: [
+            { id: 'molotov_starter', name: 'Molotov Firebomb (x2)', category: 'weapon', quantity: 2, description: 'Incendiary glass fuel bomb.' },
+            { id: 'antiseptic_alcohol', name: 'Medical Antiseptic Alcohol (x2)', category: 'medical', quantity: 2, description: 'Disinfectant solution.' }
+          ]
+        },
+        {
+          id: 'hazmat_ration_box',
+          name: 'Civil Defense Pantry',
+          description: 'Water purification and rations.',
+          loot: [
+            { id: 'water_purification_tablets', name: 'Water Purification Tablets (x10)', category: 'tool', quantity: 10, description: 'Cleans contaminated water.' },
+            { id: 'canned_vegetables', name: 'Canned Mixed Vegetables (x3)', category: 'food', quantity: 3, description: 'Sealed canned rations.' }
+          ]
+        }
+      ]
+    },
+    stats: {
+      combat: 4,
+      medical: 8,
+      crafting: 7,
+      stealth: 5,
+      fitness: 5
+    }
+  },
+  {
     id: 'carpenter',
     title: 'Carpenter / Contractor',
     icon: '🪚',

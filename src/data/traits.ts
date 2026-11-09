@@ -75,6 +75,34 @@ export const NEGATIVE_TRAITS: Trait[] = [
 
 export const POSITIVE_TRAITS: Trait[] = [
   {
+    id: 'natural_immunity',
+    name: 'Natural Pathogen Immunity',
+    type: 'positive',
+    cost: -5,
+    description: 'Rare genetic antibody mutation. Immune to minor infection scratches and bacterial sepsis.'
+  },
+  {
+    id: 'iron_metabolism',
+    name: 'Iron Metabolism',
+    type: 'positive',
+    cost: -4,
+    description: 'Ultra-efficient caloric burn. Consumes 50% less food daily without starvation penalties.'
+  },
+  {
+    id: 'predator_vision',
+    name: 'Predator Night Vision',
+    type: 'positive',
+    cost: -4,
+    description: 'Hyper-sensitive tapetum lucidum. Eliminates all night scavenging penalties and darkness accuracy debuffs.'
+  },
+  {
+    id: 'dynasty_bloodline',
+    name: 'Noble Dynasty Bloodline',
+    type: 'positive',
+    cost: -5,
+    description: 'Dominant generational genes. All children born in the haven inherit +2 to all survival attributes.'
+  },
+  {
     id: 'thick_skinned',
     name: 'Thick Skinned',
     type: 'positive',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Career, Trait, Survivor } from '../types/game';
+import { Career, Trait, Survivor, CodexSaveData } from '../types/game';
 import { CAREERS } from '../data/careers';
 import { NEGATIVE_TRAITS, POSITIVE_TRAITS } from '../data/traits';
 import { 
@@ -103,9 +103,10 @@ const STAT_CONFIG: Record<StatKey, { name: string; icon: React.ReactNode; desc: 
 interface Props {
   onBack: () => void;
   onStartGame: (survivor: Survivor, career: Career) => void;
+  codexData?: CodexSaveData;
 }
 
-export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame }) => {
+export const CharacterCreator: React.FC<Props> = ({ onBack, onStartGame, codexData }) => {
   // Navigation
   const [activeTab, setActiveTab] = useState<CreatorTab>('identity');
   const [traitCategory, setTraitCategory] = useState<TraitCategory>('all');

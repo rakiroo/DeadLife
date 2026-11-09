@@ -9,7 +9,7 @@ import { CodexScreen } from './components/CodexScreen';
 import { InvestigationBoardModal } from './components/InvestigationBoardModal';
 import { CodexSaveData } from './types/game';
 import { DAY_ONE_EVENT, getLootSpotSurvivorDilemma, getSurvivorOutpostDilemma } from './data/events';
-import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear } from './utils/simulation';
+import { advanceOneDay, advanceOneWeek, advanceOneMonth, advanceOneYear, getSeason } from './utils/simulation';
 import { LegacySuccessionModal } from './components/LegacySuccessionModal';
 import { TimeAdvanceWarningModal } from './components/TimeAdvanceWarningModal';
 import { HeaderVitals } from './components/HeaderVitals';
@@ -35,6 +35,17 @@ type ScreenState = 'title' | 'creator' | 'game' | 'graveyard' | 'settings' | 'co
 
 const SAVE_KEY = 'deadlife_save';
 const GRAVEYARD_KEY = 'deadlife_graveyard';
+
+// Migration helper to ensure older saves have districts, strains, mysteries, and seasons
+function migrateLegacyGameState(parsed: GameState): GameState {
+  if (!parsed.district) parsed.district = generateProceduralDistrict();
+  if (!parsed.mutationStrain) parsed.mutationStrain = getRandomMutationStrain();
+  if (!parsed.mystery) parsed.mystery = generateProceduralMystery();
+  if (!parsed.season) parsed.season = getSeason(parsed.day || 0);
+  if (!parsed.player.heirlooms) parsed.player.heirlooms = [];
+  return parsed;
+}
+
 
 export function createNewGameWithSurvivor(survivor: Survivor, career: Career): GameState {
   const spawnStory = getRandomSpawnStory(career.id);
@@ -271,7 +282,7 @@ export function App() {
             parsed.logs = [...parsed.logs].reverse();
           }
         }
-        setGameState(parsed);
+        setGameState(migrateLegacyGameState(parsed));
       }
     } catch (e) {
       console.error('Failed to parse saved state', e);
@@ -343,7 +354,7 @@ export function App() {
   const handleLoadSavedGame = () => {
     const saved = localStorage.getItem(SAVE_KEY);
     if (saved) {
-      setGameState(JSON.parse(saved));
+      setGameState(migrateLegacyGameState(JSON.parse(saved)));
       setScreen('game');
     }
   };
