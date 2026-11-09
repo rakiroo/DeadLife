@@ -113,11 +113,7 @@ export const HeaderVitals: React.FC<Props> = ({ state, onOpenSettings, onOpenInf
                       <span>Virus {player.infectionRisk}%</span>
                     </button>
                   )}
-                  {player.hunger <= 25 && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider animate-pulse" title="Severe hunger malnutrition">
-                      🍞 Starving {player.hunger}%
-                    </span>
-                  )}
+
                   {player.statusEffects.map((eff, idx) => (
                     <span
                       key={idx}

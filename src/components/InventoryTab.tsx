@@ -99,13 +99,8 @@ export const InventoryTab: React.FC<Props> = ({
               {daysOfFood}d left
             </span>
           </div>
-          <div className="flex items-baseline justify-between">
-            <div className="font-mono text-base font-bold text-amber-300">
-              {totalFood} <span className="text-[10px] font-normal text-zinc-500">rations</span>
-            </div>
-            <span className="text-[10px] font-mono font-semibold text-zinc-400" title="Player Nourishment">
-              Hunger {player.hunger}%
-            </span>
+          <div className="font-mono text-base font-bold text-amber-300">
+            {totalFood} <span className="text-[10px] font-normal text-zinc-500">rations</span>
           </div>
         </div>
 

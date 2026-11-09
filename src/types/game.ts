@@ -149,7 +149,7 @@ export interface Survivor {
   bio: string;
   health: number; // 0 - 100
   sanity: number; // 0 - 100
-  hunger: number; // 0 - 100
+  hunger?: number; // 0 - 100
   thirst: number; // 0 - 100
   infectionRisk: number; // 0 - 100
   infectionDays?: number; // Days since contracted

@@ -367,7 +367,7 @@ export function getRandomMicroDilemma(state: GameState): EventDilemma | null {
               else inv.push(meat);
 
               return {
-                state: { ...s, inventory: inv, player: { ...s.player, hunger: Math.min(100, s.player.hunger + 30) } },
+                state: { ...s, inventory: inv, player: { ...s.player, health: Math.min(100, s.player.health + 20) } },
                 log: 'I dashed into the alley, snatched the roasted game from the fire, and slipped away undetected (+30 Hunger).',
                 outcomeTitle: 'Clean Theft',
                 outcomeText: 'Hot cooked meat filled my pack. Whoever built the fire had not returned yet.'

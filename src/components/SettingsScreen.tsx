@@ -3,7 +3,7 @@ import { GameState } from '../types/game';
 import { 
   ArrowLeft, Volume2, VolumeX, Smartphone, Zap, 
   HelpCircle, ChevronDown, ChevronUp, Save, LogOut, 
-  Play, Check, Heart, Sparkles, Droplets, Utensils
+  Play, Check, Heart, Sparkles, Droplets, Biohazard
 } from 'lucide-react';
 
 interface Props {
@@ -114,8 +114,8 @@ export const SettingsScreen: React.FC<Props> = ({
                 <span className="font-bold text-cyan-300 text-xs">{player.thirst}%</span>
               </div>
               <div className="p-1.5 rounded-xl bg-black/30">
-                <span className="text-zinc-500 block flex items-center justify-center gap-0.5"><Utensils className="w-2.5 h-2.5 text-amber-400" /> Food</span>
-                <span className="font-bold text-amber-300 text-xs">{player.hunger}%</span>
+                <span className="text-zinc-500 block flex items-center justify-center gap-0.5"><Biohazard className="w-2.5 h-2.5 text-rose-400" /> Virus</span>
+                <span className="font-bold text-rose-400 text-xs">{player.infectionRisk || 0}%</span>
               </div>
             </div>
 

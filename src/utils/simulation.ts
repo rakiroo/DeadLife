@@ -121,30 +121,28 @@ export function advanceOneDay(state: GameState): GameState {
     }
   }
 
-  // 3. Food consumption
+  // 3. Food consumption (directly impacts HP)
   const foodItem = inventory.find(i => i.category === 'food' && i.quantity > 0);
   if (foodItem) {
     inventory = inventory.map(i => i === foodItem ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0);
-    hunger = Math.min(100, hunger + 20);
     daysWithoutFood = 0;
+    // Eating daily food stabilizes and restores HP directly
+    health = Math.min(100, health + 6);
   } else {
     daysWithoutFood += 1;
-    hunger = Math.max(0, hunger - 25);
-    if (daysWithoutFood >= 2) {
-      const starvationDamage = (daysWithoutFood - 1) * 8;
-      health -= starvationDamage;
-      sanity -= 8;
-      newLogs.push({
-        id: `log_hunger_${Date.now()}_${Math.random()}`,
-        day: currentDay,
-        text: `⚠️ STARVATION (Day ${daysWithoutFood}): Stomach cramps and weakness setting in (-${starvationDamage}% HP).`,
-        type: 'hazard',
-        timestamp: 'Morning'
-      });
-      if (health <= 0 && !isDead) {
-        isDead = true;
-        deathCause = 'starved to death in shelter';
-      }
+    const starvationDamage = daysWithoutFood * 14;
+    health -= starvationDamage;
+    sanity -= 8;
+    newLogs.push({
+      id: `log_hunger_${Date.now()}_${Math.random()}`,
+      day: currentDay,
+      text: `⚠️ STARVATION (Day ${daysWithoutFood}): No food rations available. Starvation damages my body directly (-${starvationDamage}% HP).`,
+      type: 'hazard',
+      timestamp: 'Morning'
+    });
+    if (health <= 0 && !isDead) {
+      isDead = true;
+      deathCause = 'starved to death from lack of food';
     }
   }
 
@@ -693,7 +691,7 @@ export function advanceOneDay(state: GameState): GameState {
       ...state.player,
       health: Math.max(0, health),
       sanity: Math.max(0, Math.min(100, sanity)),
-      hunger: Math.max(0, Math.min(100, hunger)),
+      hunger: Math.max(0, Math.min(100, hunger || 100)),
       thirst: Math.max(0, Math.min(100, thirst)),
       infectionRisk,
       statusEffects: updatedEffects,

@@ -635,8 +635,8 @@ export function App() {
       let itemLogType: LogEntry['type'] = 'general';
 
       if (item.category === 'food') {
-        hunger = Math.min(100, hunger + 25);
-        itemLogText = `I consumed ${item.name} (+25 hunger).`;
+        health = Math.min(100, health + 20);
+        itemLogText = `I ate ${item.name} (+20 HP).`;
       } else if (item.category === 'water') {
         thirst = Math.min(100, thirst + 25);
         itemLogText = `I drank clean water from ${item.name} (+25 hydration).`;
