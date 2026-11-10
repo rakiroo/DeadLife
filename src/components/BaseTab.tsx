@@ -354,7 +354,7 @@ export const BaseTab: React.FC<Props> = ({
             className={'py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ' + (subView === 'family' ? 'bg-rose-500 text-white font-bold shadow-sm' : 'text-zinc-400 hover:text-rose-300')}
           >
             <Heart className="w-3.5 h-3.5" />
-            <span>Family & Romance</span>
+            <span>Relationship</span>
           </button>
         </div>
       ) : (
@@ -374,7 +374,7 @@ export const BaseTab: React.FC<Props> = ({
             className={'px-3 py-1.5 rounded-xl whitespace-nowrap flex items-center gap-1.5 transition-all ' + (subView === 'family' ? 'bg-rose-500 text-white font-bold shadow-sm' : 'bg-white/5 text-zinc-400 hover:text-rose-300')}
           >
             <Heart className="w-3.5 h-3.5" />
-            <span>Family & Romance</span>
+            <span>Relationship</span>
           </button>
 
           <button
@@ -714,9 +714,11 @@ export const BaseTab: React.FC<Props> = ({
                 >
                   <span>🌳 Dynasty Tree</span>
                 </button>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                {isSpouseMissing ? 'Married (Missing)' : isPartnerMissing ? (player.romanceStage === 'engaged' ? 'Engaged (Missing)' : 'Dating (Missing)') : player.romanceStage === 'married' ? 'Married' : player.romanceStage === 'dating' ? 'Dating' : 'Single'}
-                </span>
+                {(isSpouseMissing || isPartnerMissing || player.romanceStage === 'married' || player.romanceStage === 'dating') && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    {isSpouseMissing ? 'Married (Missing)' : isPartnerMissing ? (player.romanceStage === 'engaged' ? 'Engaged (Missing)' : 'Dating (Missing)') : player.romanceStage === 'married' ? 'Married' : 'Dating'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1007,7 +1009,7 @@ export const BaseTab: React.FC<Props> = ({
                     <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block">
                       Loved Ones & Family Kin
                     </span>
-                    <span className="text-[9px] font-mono text-zinc-500">Tap to inspect memoir</span>
+                    
                   </div>
                   {(() => {
                     const isDeceased = player.backstory.status === 'resolved' && (player.backstory.outcome === 'deceased' || player.backstory.outcome === 'mercy' || Boolean((player as any).isSpousePresumedDead));
@@ -1057,7 +1059,7 @@ export const BaseTab: React.FC<Props> = ({
                         )}
                         <div className="flex items-center justify-between pt-1 text-[10px] font-mono">
                           <span className="text-zinc-500">Age {player.backstory.targetAge || 24}</span>
-                          <span className="text-amber-400 group-hover:underline">View Flashback & Skills →</span>
+                          
                         </div>
                       </div>
                     );
@@ -2543,6 +2545,15 @@ export const BaseTab: React.FC<Props> = ({
             triggerFeedback("Child officially legitimized in the colony registry!");
           }}
           onClose={() => setShowTreeModal(false)}
+        />
+      )}
+
+      {/* KIN MEMOIR MODAL */}
+      {selectedKinForMemoir && (
+        <KinMemoirModal
+          backstory={selectedKinForMemoir}
+          playerName={player.name}
+          onClose={() => setSelectedKinForMemoir(null)}
         />
       )}
 
