@@ -1,6 +1,6 @@
 import React from 'react';
 import { EventDilemma, EventChoice, GameState } from '../types/game';
-import { AlertCircle, ChevronRight, Lock } from 'lucide-react';
+import { ChevronRight, Lock } from 'lucide-react';
 
 interface Props {
   dilemma: EventDilemma;
@@ -9,48 +9,11 @@ interface Props {
 }
 
 export const DilemmaModal: React.FC<Props> = ({ dilemma, gameState, onSelectChoice }) => {
-  const getDangerBadge = (lvl: EventDilemma['dangerLevel']) => {
-    switch (lvl) {
-      case 'critical':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            Critical
-          </span>
-        );
-      case 'high':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/20">
-            Danger
-          </span>
-        );
-      case 'medium':
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/20">
-            Caution
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/20">
-            Event
-          </span>
-        );
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
       <div className="bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden flex flex-col max-h-[82vh] text-zinc-100 font-sans">
-        {/* Header Bar */}
-        <div className="px-4 py-2.5 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
-          <span className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 text-zinc-400" /> Event
-          </span>
-          {getDangerBadge(dilemma.dangerLevel)}
-        </div>
-
         {/* Content Body */}
-        <div className="p-4 overflow-y-auto space-y-3">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3">
           <h2 className="text-base font-bold tracking-tight text-white leading-snug">
             {dilemma.title}
           </h2>
@@ -92,8 +55,6 @@ export const DilemmaModal: React.FC<Props> = ({ dilemma, gameState, onSelectChoi
                     <span className="text-xs font-semibold text-white leading-tight block">
                       {choice.text}
                     </span>
-
-
 
                     {choice.requiredSkill && (
                       <span className="inline-block text-[9px] font-mono font-medium px-1.5 py-0.2 rounded-full bg-white/10 text-zinc-300 border border-white/10 capitalize mt-0.5">

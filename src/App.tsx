@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, EventChoice, EventDilemma, InventoryItem, CampRole, CampMember, LogEntry, Survivor, CemeteryRecord, Career, FamilyHeirloom, BabyNamingPrompt, WillAndTestament } from './types/game';
 import { BabyNamingModal } from './components/BabyNamingModal';
+import { addItemToInventory, consolidateInventory } from './utils/inventory';
 import { generateProceduralDistrict } from './data/districts';
 import { getRandomMutationStrain } from './data/mutationStrains';
 import { generateProceduralMystery } from './data/mysteries';
@@ -54,7 +55,7 @@ export function buildCemeteryRecord(state: GameState, ribbonOverride?: string, d
     : 'In the shattered ruins of the city, ';
 
   const strainStory = mutationStrain
-    ? 'The world was haunted by ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')—' + mutationStrain.tagline.toLowerCase() + ' Every scavenge was a brush with death under their unique predatory instincts. '
+    ? 'The world was haunted by ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')â€”' + mutationStrain.tagline.toLowerCase() + ' Every scavenge was a brush with death under their unique predatory instincts. '
     : '';
 
   const originStory = player.name + ' took their first steps into the nightmare on Day 0 as a ' + player.profession.toLowerCase() + '. Against overwhelming odds, they endured for ' + day + (day === 1 ? ' day. ' : ' days. ');
@@ -168,6 +169,9 @@ function migrateLegacyGameState(parsed: GameState): GameState {
       parsed.player.datingTargetId = 'missing_' + bs.targetName.toLowerCase().replace(/\s+/g, '_');
       parsed.player.isPartnerMissing = true;
     }
+  }
+  if (parsed.inventory) {
+    parsed.inventory = consolidateInventory(parsed.inventory);
   }
   return parsed;
 }
@@ -332,7 +336,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const districtLog: LogEntry = {
     id: 'log_district_' + Date.now(),
     day: 0,
-    text: 'I am holed up in ' + district.name + '. Looking through the cracked windows, all I can see is ' + district.description.toLowerCase() + ' The streets out there are dangerous—' + district.environmentalFeature.toLowerCase() + ' I need to stay sharp and move cautiously.',
+    text: 'I am holed up in ' + district.name + '. Looking through the cracked windows, all I can see is ' + district.description.toLowerCase() + ' The streets out there are dangerousâ€”' + district.environmentalFeature.toLowerCase() + ' I need to stay sharp and move cautiously.',
     type: 'general',
     timestamp: 'Morning'
   };
@@ -340,7 +344,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
   const strainLog: LogEntry = {
     id: 'log_strain_' + Date.now(),
     day: 0,
-    text: 'An emergency broadcast was looping on the radio before static took over. The authorities called this infection ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')—' + mutationStrain.tagline.toLowerCase() + ' The announcer warned that ' + mutationStrain.ruleSummary.toLowerCase() + ' I have to keep this in mind if I want to stay alive.',
+    text: 'An emergency broadcast was looping on the radio before static took over. The authorities called this infection ' + mutationStrain.name + ' (' + mutationStrain.codeName + ')â€”' + mutationStrain.tagline.toLowerCase() + ' The announcer warned that ' + mutationStrain.ruleSummary.toLowerCase() + ' I have to keep this in mind if I want to stay alive.',
     type: 'milestone',
     timestamp: 'Morning'
   };
@@ -562,7 +566,7 @@ export function App() {
           player.infectionRisk = Math.max(0, oldRisk - 25);
           player.health = Math.min(100, player.health + 10);
           player.statusEffects = player.statusEffects.filter(e => e.id !== 'bacterial_infection');
-          newLogText = `💊 I swallowed a course of Amoxicillin antibiotics. The medication attacked the viral pathogen in my bloodstream (-25% Viral Load, now ${player.infectionRisk}%).`;
+          newLogText = `ðŸ’Š I swallowed a course of Amoxicillin antibiotics. The medication attacked the viral pathogen in my bloodstream (-25% Viral Load, now ${player.infectionRisk}%).`;
         }
       } else if (treatmentType === 'bandage') {
         const item = inventory.find(i => i.id.includes('bandage') || i.id.includes('first_aid') || i.name.toLowerCase().includes('bandage'));
@@ -573,14 +577,14 @@ export function App() {
           player.infectionRisk = Math.max(0, oldRisk - 10);
           player.health = Math.min(100, player.health + 15);
           player.statusEffects = player.statusEffects.filter(e => e.id !== 'bleeding');
-          newLogText = `🩹 I irrigated and dressed my bite wound with a sterile pressure dressing. Cleaned away necrotic tissue (-10% Viral Load, halving daily spread).`;
+          newLogText = `ðŸ©¹ I irrigated and dressed my bite wound with a sterile pressure dressing. Cleaned away necrotic tissue (-10% Viral Load, halving daily spread).`;
         }
       } else if (treatmentType === 'cauterize') {
         player.health = Math.max(5, player.health - 15);
         const oldRisk = player.infectionRisk || 0;
         player.infectionRisk = Math.max(0, oldRisk - 20);
         player.biteTreated = true;
-        newLogText = `🔥 Desperate Triage: I sterilized a hunting blade in fire and pressed it directly into the bite puncture. The agonizing heat burned away necrotic tissue (-20% Viral Load, -15 HP).`;
+        newLogText = `ðŸ”¥ Desperate Triage: I sterilized a hunting blade in fire and pressed it directly into the bite puncture. The agonizing heat burned away necrotic tissue (-20% Viral Load, -15 HP).`;
       }
 
       inventory = inventory.filter(i => i.quantity > 0);
@@ -700,7 +704,7 @@ export function App() {
 
       const logText = isCurrentlyEquipped
         ? 'I unequipped ' + item.name + ' and stowed it back into the backpack.'
-        : '⚔️ Weapon Equipped: Equipped ' + item.name + ' as primary weapon! Ready for perimeter defense and expeditions.';
+        : 'âš”ï¸ Weapon Equipped: Equipped ' + item.name + ' as primary weapon! Ready for perimeter defense and expeditions.';
 
       return {
         ...prev,
@@ -1001,7 +1005,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'upgrade_room_' + Date.now(),
           day: prev.day,
-          text: `🔨 Upgraded ${upgradedRoomName}! Added an additional sturdy bunk bed from salvaged timber (+1 Bed Capacity, now ${newRoomCapacity} beds).`,
+          text: `ðŸ”¨ Upgraded ${upgradedRoomName}! Added an additional sturdy bunk bed from salvaged timber (+1 Bed Capacity, now ${newRoomCapacity} beds).`,
           type: 'milestone' as const,
           timestamp: 'Construction'
         }].slice(-150)
@@ -1324,7 +1328,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'try_baby_' + Date.now(),
           day: prev.day,
-          text: `👶 Trying for a Baby: You and ${prev.player.spouseName || prev.player.datingTargetName || 'your partner'} dedicated an evening to family planning. ${motherName} is now expecting! The baby will arrive in 9 months (or after a year advance).`,
+          text: `ðŸ‘¶ Trying for a Baby: You and ${prev.player.spouseName || prev.player.datingTargetName || 'your partner'} dedicated an evening to family planning. ${motherName} is now expecting! The baby will arrive in 9 months (or after a year advance).`,
           type: 'milestone' as const,
           timestamp: 'Family'
         }].slice(-150)
@@ -1343,7 +1347,7 @@ export function App() {
       const isAlreadyPregnant = prev.player.isPregnant || updatedCamp.some(m => (m.id === prev.player.spouseId || m.id === prev.player.datingTargetId) && m.isPregnant);
       
       const conceives = !isAlreadyPregnant && Math.random() < 0.35;
-      let logMsg = `🔥 Intimate Evening: You and ${partnerName} spent a quiet, restorative evening in each other's arms (+15 Sanity, +10 Morale).`;
+      let logMsg = `ðŸ”¥ Intimate Evening: You and ${partnerName} spent a quiet, restorative evening in each other's arms (+15 Sanity, +10 Morale).`;
 
       if (conceives) {
         let motherName = '';
@@ -1364,7 +1368,7 @@ export function App() {
             motherName = partnerName;
           }
         }
-        logMsg = `🔥 Intimate Passion & Conception: You and ${partnerName} spent an unforgettable evening together (+15 Sanity). Joyful news followed: ${motherName} is expecting a baby! Due in 9 months.`;
+        logMsg = `ðŸ”¥ Intimate Passion & Conception: You and ${partnerName} spent an unforgettable evening together (+15 Sanity). Joyful news followed: ${motherName} is expecting a baby! Due in 9 months.`;
       }
 
       return {
@@ -1402,7 +1406,7 @@ export function App() {
       const isAffair = (prev.player.romanceStage === 'married' && prev.player.spouseId !== member.id) || (member.datingStage === 'married' && member.spouseId !== 'player');
 
       if (useProtection) {
-        logMsg = `🔥 Secret Encounter: You and ${member.name} shared an intimate, stolen hour together behind closed doors (Using protection: zero risk of pregnancy, +15 Sanity).`;
+        logMsg = `ðŸ”¥ Secret Encounter: You and ${member.name} shared an intimate, stolen hour together behind closed doors (Using protection: zero risk of pregnancy, +15 Sanity).`;
       } else {
         const conceives = Math.random() < 0.35;
         if (conceives) {
@@ -1419,9 +1423,9 @@ export function App() {
               mObj.pregnantFatherId = 'player';
             }
           }
-          logMsg = `🔥 Wild Passion (Unprotected): You and ${member.name} surrendered to raw desire without protection (+20 Sanity)! Later, signs indicate a pregnancy has begun! Expected in 9 months.`;
+          logMsg = `ðŸ”¥ Wild Passion (Unprotected): You and ${member.name} surrendered to raw desire without protection (+20 Sanity)! Later, signs indicate a pregnancy has begun! Expected in 9 months.`;
         } else {
-          logMsg = `🔥 Passionate Risk: You and ${member.name} hooked up without protection (+20 Sanity). Fortunately, no pregnancy occurred this time.`;
+          logMsg = `ðŸ”¥ Passionate Risk: You and ${member.name} hooked up without protection (+20 Sanity). Fortunately, no pregnancy occurred this time.`;
         }
       }
 
@@ -1461,8 +1465,8 @@ export function App() {
       );
 
       const logMsg = isAffair
-        ? `🔥 Forbidden Seduction: You shared intimate touches and whispering glances with ${member.name} by the watchtower. A spark was lit despite your commitments (+Affection & Danger).`
-        : `🔥 Seduction: You spent an electric evening teasing and flirting with ${member.name}. Mutual attraction flared (+Affection).`;
+        ? `ðŸ”¥ Forbidden Seduction: You shared intimate touches and whispering glances with ${member.name} by the watchtower. A spark was lit despite your commitments (+Affection & Danger).`
+        : `ðŸ”¥ Seduction: You spent an electric evening teasing and flirting with ${member.name}. Mutual attraction flared (+Affection).`;
 
       return {
         ...prev,
@@ -1508,7 +1512,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'spar_' + Date.now(),
           day: prev.day,
-          text: `⚔️ Sparring Session: You and ${member.name} spent hours drilling hand-to-hand disarms and melee evasion in the courtyard (+Combat & Fitness for both).`,
+          text: `âš”ï¸ Sparring Session: You and ${member.name} spent hours drilling hand-to-hand disarms and melee evasion in the courtyard (+Combat & Fitness for both).`,
           type: 'general' as const,
           timestamp: 'Training'
         }].slice(-150)
@@ -1553,7 +1557,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'matchmake_' + Date.now(),
           day: prev.day,
-          text: `💍 Colony Marriage Arranged: As leader, you blessed the union between ${m1.name} and ${m2.name}! The colony cheered and celebrated their new life together (+15 Morale).`,
+          text: `ðŸ’ Colony Marriage Arranged: As leader, you blessed the union between ${m1.name} and ${m2.name}! The colony cheered and celebrated their new life together (+15 Morale).`,
           type: 'milestone' as const,
           timestamp: 'Wedding'
         }].slice(-150)
@@ -1585,7 +1589,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'player_room_' + Date.now(),
           day: prev.day,
-          text: `🏡 Relocated Quarters: You moved your personal living space into ${roomName}! (+Sanity & Comfort).`,
+          text: `ðŸ¡ Relocated Quarters: You moved your personal living space into ${roomName}! (+Sanity & Comfort).`,
           type: 'camp' as const,
           timestamp: 'Housing'
         }].slice(-150)
@@ -1646,37 +1650,37 @@ export function App() {
       let moraleDelta = 0;
 
       if (facilityType === 'greenhouse') {
-        const veg = { id: 'harvest_veg_' + Date.now(), name: 'Fresh Harvest Vegetables', category: 'food' as const, quantity: 2, description: 'Fresh vegetables.' };
-        updatedInv.push(veg);
-        logText = '🌱 Tended rooftop raised beds: Harvested +2 fresh vegetable rations (+10 Sanity).';
+        const veg = { id: 'harvest_veg', name: 'Fresh Harvest Vegetables', category: 'food' as const, quantity: 2, description: 'Fresh crisp vegetables.' };
+        updatedInv = addItemToInventory(updatedInv, veg);
+        logText = 'ðŸŒ± Tended rooftop raised beds and harvested 2 baskets of fresh crisp vegetables.';
         sanityDelta = 10;
       } else if (facilityType === 'chicken_coop') {
-        const eggs = { id: 'eggs_' + Date.now(), name: 'Fresh Farm Eggs', category: 'food' as const, quantity: 4, description: 'Fresh eggs.' };
-        updatedInv.push(eggs);
-        logText = '🥚 Tended chicken coop: Collected +4 farm eggs (+5 Morale).';
+        const eggs = { id: 'eggs_farm', name: 'Fresh Farm Eggs', category: 'food' as const, quantity: 4, description: 'Fresh eggs.' };
+        updatedInv = addItemToInventory(updatedInv, eggs);
+        logText = 'ðŸ¥š Tended the chicken coop, collected 4 fresh farm eggs, and shared the morning bounty.';
         moraleDelta = 5;
       } else if (facilityType === 'sanctuary_well') {
-        const water = { id: 'well_water_' + Date.now(), name: 'Purified Aquifer Water', category: 'water' as const, quantity: 3, description: 'Clean drinking water.' };
-        updatedInv.push(water);
-        logText = '💧 Drew clean, drought-proof aquifer drinking water (+3 Water).';
+        const water = { id: 'well_water_aquifer', name: 'Purified Aquifer Water', category: 'water' as const, quantity: 3, description: 'Clean drinking water.' };
+        updatedInv = addItemToInventory(updatedInv, water);
+        logText = 'ðŸ’§ Drew 3 buckets of clean, drought-proof aquifer drinking water.';
       } else if (facilityType === 'infirmary') {
         hpDelta = 15;
-        logText = '🩺 Rested in clean triage cot: Wounds sterilized and dressed (+15 HP).';
+        logText = 'ðŸ©º Rested in clean triage cot while wounds were gently cleaned and dressed.';
       } else if (facilityType === 'nursery') {
         moraleDelta = 10;
         sanityDelta = 10;
-        logText = '🧸 Checked in on the nursery: Ensured swaddles and cribs were warm (+10 Morale & Sanity).';
+        logText = 'ðŸ§¸ Checked in on the nursery, ensuring swaddles and cribs were warm and safe.';
       } else if (facilityType === 'schoolhouse') {
         sanityDelta = 10;
-        logText = '🎓 Held an afternoon sanctuary class: Taught history and survival mathematics (+10 Sanity).';
+        logText = 'ðŸŽ“ Held an afternoon sanctuary class, teaching history and essential survival mathematics.';
       } else if (facilityType === 'memorial_garden') {
         sanityDelta = 15;
-        logText = '🌸 Placed fresh wildflowers at the Memorial Garden: Paid respects to fallen pioneers (+15 Sanity).';
+        logText = 'ðŸŒ¸ Placed fresh wildflowers at the Memorial Garden in remembrance of fallen pioneers.';
       }
 
       return {
         ...prev,
-        inventory: updatedInv,
+        inventory: consolidateInventory(updatedInv),
         player: {
           ...prev.player,
           health: Math.min(100, prev.player.health + hpDelta),
@@ -1729,21 +1733,21 @@ export function App() {
       });
 
       if (actionType === 'play') {
-        logText = `🧸 Cuddled and played games with little ${childName} (+15 Sanity, +10 Colony Morale).`;
+        logText = `ðŸ§¸ Cuddled and played games with little ${childName}, filling the room with smiles and warmth.`;
       } else if (actionType === 'words') {
-        logText = `📖 Taught first words, numbers, and basic survival tools to ${childName} (+Skill).`;
+        logText = `ðŸ“– Taught first words, numbers, and basic survival tools to ${childName}.`;
       } else if (actionType === 'story') {
-        logText = `🌙 Read a soothing bedtime story to ${childName} by the candle (+10 Sanity).`;
+        logText = `ðŸŒ™ Read a soothing bedtime story to ${childName} by candlelight.`;
       } else if (actionType === 'feed') {
         const food = updatedInv.find(i => i.category === 'food' && i.quantity > 0);
         if (food) food.quantity -= 1;
         updatedInv = updatedInv.filter(i => i.quantity > 0);
-        logText = `🥣 Fed warm vegetable broth to little ${childName}. They are well-nourished and happy (+Health).`;
+        logText = `ðŸ¥£ Fed warm vegetable broth to little ${childName}. They ate happily and smiled warmly.`;
       }
 
       return {
         ...prev,
-        inventory: updatedInv,
+        inventory: consolidateInventory(updatedInv),
         player: {
           ...prev.player,
           children: updatedPlayerKids,
@@ -1850,7 +1854,7 @@ export function App() {
         updatedCamp.push(newBabyMember);
       }
 
-      const logText = `👶 A Child Born in the Ruins: ${fullName} was officially named and recorded in the colony registry! Lanterns glowed as the entire sanctuary toasted to our future (+25 Morale).`;
+      const logText = `ðŸ‘¶ A Child Born in the Ruins: ${fullName} was officially named and recorded in the colony registry! Lanterns glowed as the entire sanctuary toasted to our future (+25 Morale).`;
 
       return {
         ...prev,
@@ -1898,7 +1902,7 @@ export function App() {
         return c;
       });
 
-      const logText = '�<ߓ Mentorship Passed Down: I spent the day training ' + childName + ' in ' + skillName + ' (+1 ' + skillName + '). Our survival knowledge will outlive the apocalypse!';
+      const logText = 'ï¿½<ß“ Mentorship Passed Down: I spent the day training ' + childName + ' in ' + skillName + ' (+1 ' + skillName + '). Our survival knowledge will outlive the apocalypse!';
 
       return {
         ...prev,
@@ -1952,7 +1956,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'heirloom_' + Date.now(),
           day: prev.day,
-          text: '✨ Generational Heirloom Inscribed: Dedicated "' + name + '" as a family relic (+1 ' + bonusSkill + '). It will be passed down to our descendants.',
+          text: 'âœ¨ Generational Heirloom Inscribed: Dedicated "' + name + '" as a family relic (+1 ' + bonusSkill + '). It will be passed down to our descendants.',
           type: 'milestone' as const,
           timestamp: 'Dynasty'
         }].slice(-150)
@@ -2099,7 +2103,7 @@ export function App() {
       saveCodexData(updatedCodex);
       setCodexData(updatedCodex);
 
-      const logText = '🏆 MILESTONE ACHIEVED: ' + ambition.title + '! ' + ambition.biographySnippet + ' The colony celebrates our endurance (+' + ambition.milestoneBonus.morale + '% Morale, +' + ambition.milestoneBonus.sanity + ' Sanity, +' + ambition.milestoneBonus.marks + ' Legacy Marks)!';
+      const logText = 'ðŸ† MILESTONE ACHIEVED: ' + ambition.title + '! ' + ambition.biographySnippet + ' The colony celebrates our endurance (+' + ambition.milestoneBonus.morale + '% Morale, +' + ambition.milestoneBonus.sanity + ' Sanity, +' + ambition.milestoneBonus.marks + ' Legacy Marks)!';
 
       return {
         ...prev,
@@ -2178,7 +2182,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'mystery_solved_' + Date.now(),
           day: prev.day,
-          text: '🏛️ VAULT BREACHED: Classified coordinates decrypted! We breached ' + mystery.rewardBunkerName + ' and secured military armaments, surgical rigs, and emergency rations (+60 Legacy Marks, +30 Sanity)!',
+          text: 'ðŸ›ï¸ VAULT BREACHED: Classified coordinates decrypted! We breached ' + mystery.rewardBunkerName + ' and secured military armaments, surgical rigs, and emergency rations (+60 Legacy Marks, +30 Sanity)!',
           type: 'milestone' as const,
           timestamp: 'Breakthrough'
         }].slice(-150)
@@ -2371,7 +2375,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'stove_' + Date.now(),
           day: prev.day,
-          text: '🔥 Stoked Woodstove: Loaded cured timber into the central stove (+7 Days Haven Heat, +Warmth & Morale).',
+          text: 'ðŸ”¥ Stoked Woodstove: Loaded cured timber into the central stove (+7 Days Haven Heat, +Warmth & Morale).',
           type: 'camp' as const,
           timestamp: 'Sanctuary'
         }].slice(-150)
@@ -2400,7 +2404,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'declare_fallen_' + Date.now(),
           day: prev.day,
-          text: '💔 Heavy Acceptance: I finally accepted that ' + lostName + ' is lost to the apocalypse. I have to survive for the living now.',
+          text: 'ðŸ’” Heavy Acceptance: I finally accepted that ' + lostName + ' is lost to the apocalypse. I have to survive for the living now.',
           type: 'camp' as const,
           timestamp: 'Closure'
         }].slice(-150)
@@ -2438,7 +2442,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'legitimize_' + Date.now(),
           day: prev.day,
-          text: '📜 Decree of Legitimation: Founder ' + prev.player.name + ' formally legitimized ' + childName + ' in the haven registry! They are now recognized as a full dynasty heir with complete inheritance rights.',
+          text: 'ðŸ“œ Decree of Legitimation: Founder ' + prev.player.name + ' formally legitimized ' + childName + ' in the haven registry! They are now recognized as a full dynasty heir with complete inheritance rights.',
           type: 'milestone' as const,
           timestamp: 'Dynasty'
         }].slice(-150)
@@ -2476,7 +2480,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'heirloom_' + Date.now(),
           day: prev.day,
-          text: '✨ Relic Consecrated: Dedicated "' + heirloom.name + '" (+1 ' + heirloom.bonusSkill.toUpperCase() + '). Motto: "' + (heirloom.engravedMotto || 'Never surrender') + '". It will be passed down through our dynasty.',
+          text: 'âœ¨ Relic Consecrated: Dedicated "' + heirloom.name + '" (+1 ' + heirloom.bonusSkill.toUpperCase() + '). Motto: "' + (heirloom.engravedMotto || 'Never surrender') + '". It will be passed down through our dynasty.',
           type: 'milestone' as const,
           timestamp: 'Dynasty'
         }].slice(-150)
@@ -2507,7 +2511,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'repair_heir_' + Date.now(),
           day: prev.day,
-          text: '🛠️ Relic Restored: Polished and repaired "' + relicName + '" back to 100% pristine condition.',
+          text: 'ðŸ› ï¸ Relic Restored: Polished and repaired "' + relicName + '" back to 100% pristine condition.',
           type: 'general' as const,
           timestamp: 'Maintenance'
         }].slice(-150)
@@ -2526,7 +2530,7 @@ export function App() {
         logs: [...prev.logs, {
           id: 'will_' + Date.now(),
           day: prev.day,
-          text: '📜 Dynasty Will & Testament Sealed: Overseer ' + prev.player.name + ' named ' + will.designatedHeirName + ' as designated successor under the creed of "' + will.creedTitle + '".',
+          text: 'ðŸ“œ Dynasty Will & Testament Sealed: Overseer ' + prev.player.name + ' named ' + will.designatedHeirName + ' as designated successor under the creed of "' + will.creedTitle + '".',
           type: 'milestone' as const,
           timestamp: 'Dynasty'
         }].slice(-150)

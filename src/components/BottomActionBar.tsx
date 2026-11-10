@@ -50,13 +50,8 @@ export const BottomActionBar: React.FC<Props> = ({
       {/* Evolving Time Progression Action Buttons - ONLY RENDERED ON JOURNAL SCREEN */}
       {activeTab === 'journal' && (
         <div className="mb-2 space-y-1">
-          {/* Phase Badge & Micro/Macro Mode Switcher */}
-          <div className="flex items-center justify-between px-1 text-[10px] font-mono text-zinc-400">
-            <span className="flex items-center gap-1 font-semibold text-emerald-400">
-              {currentPhase === 1 && '🌱 Phase 1: Early Survival'}
-              {currentPhase === 2 && '🏡 Phase 2: Established Haven'}
-              {currentPhase === 3 && '👑 Phase 3: Generational Dynasty'}
-            </span>
+          {/* Micro/Macro Mode Switcher */}
+          <div className="flex items-center justify-end px-1 text-[10px] font-mono text-zinc-400">
             <div className="flex gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5">
               <button
                 type="button"
