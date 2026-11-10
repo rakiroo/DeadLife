@@ -27,6 +27,7 @@ import { TitleScreen } from './components/TitleScreen';
 import { CharacterCreator } from './components/CharacterCreator';
 import { GraveyardScreen } from './components/GraveyardScreen';
 import { AmbitionsModal } from './components/AmbitionsModal';
+import { InscribeRelicModal } from './components/InscribeRelicModal';
 import { InfectionModal } from './components/InfectionModal';
 import { SettingsScreen } from './components/SettingsScreen';
 import { SandboxAmbition, SANDBOX_AMBITIONS } from './data/ambitions';
@@ -204,7 +205,7 @@ export function createNewGameWithSurvivor(survivor: Survivor, career: Career): G
       if (existing) {
         existing.quantity += item.quantity;
       } else {
-        startingLoot.push({ ...item });
+        startingLoot.push({ ...item, origin: 'day_0' });
       }
     }
   }
@@ -406,6 +407,7 @@ export function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('journal');
   const [graveyard, setGraveyard] = useState<CemeteryRecord[]>([]);
+  const [inscribeModalItem, setInscribeModalItem] = useState<InventoryItem | null>(null);
   const [showAmbitionsModal, setShowAmbitionsModal] = useState<boolean>(false);
   const [showInfectionModal, setShowInfectionModal] = useState<boolean>(false);
   const [codexData, setCodexData] = useState<CodexSaveData>(loadCodexData());
@@ -2866,6 +2868,7 @@ export function App() {
               gameState={gameState}
               onUseItem={handleUseItem}
               onEquipWeapon={handleEquipWeapon}
+              onInscribeItem={(item) => setInscribeModalItem(item)}
             />
           )}
           {activeTab === 'activities' && (
@@ -2957,6 +2960,23 @@ export function App() {
           <BabyNamingModal
             prompt={gameState.pendingBabyNaming}
             onConfirm={handleConfirmBabyNaming}
+          />
+        )}
+
+
+        {/* INSCRIBE HEIRLOOM FROM INVENTORY ITEM */}
+        {inscribeModalItem && (
+          <InscribeRelicModal
+            player={gameState.player}
+            inventory={gameState.inventory}
+            campMembers={gameState.campMembers}
+            currentDay={gameState.day}
+            initialSelectedItemId={inscribeModalItem.id}
+            onConfirmInscribe={(heirloom, consumedId) => {
+              handleInscribeRelic(heirloom, consumedId);
+              setInscribeModalItem(null);
+            }}
+            onClose={() => setInscribeModalItem(null)}
           />
         )}
 

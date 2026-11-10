@@ -311,6 +311,9 @@ export interface InventoryItem {
   description: string;
   effectDescription?: string;
   durability?: number;
+  origin?: 'day_0' | 'partner_gift' | 'builder_forged' | 'crafted' | 'scavenged';
+  giftedBy?: string;
+  forgedBy?: string;
 }
 
 export interface LogEntry {

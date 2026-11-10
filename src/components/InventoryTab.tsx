@@ -2,23 +2,26 @@ import React, { useState } from 'react';
 import { InventoryItem, GameState } from '../types/game';
 import { 
   Utensils, Droplets, HeartPulse, Wrench, Shield, 
-  Package, Sparkles, AlertCircle
+  Package, Sparkles, AlertCircle, Crown, X
 } from 'lucide-react';
 
 interface Props {
   gameState: GameState;
   onUseItem: (item: InventoryItem) => void;
   onEquipWeapon?: (item: InventoryItem) => void;
+  onInscribeItem?: (item: InventoryItem) => void;
 }
 
 export const InventoryTab: React.FC<Props> = ({ 
   gameState, 
   onUseItem,
-  onEquipWeapon
+  onEquipWeapon,
+  onInscribeItem
 }) => {
   const [consumableFilter, setConsumableFilter] = useState<'all' | 'food' | 'water' | 'medical'>('all');
   const [stockpileFilter, setStockpileFilter] = useState<'all' | 'weapon' | 'tool' | 'resource'>('all');
   const [recentAction, setRecentAction] = useState<string | null>(null);
+  const [inspectingItem, setInspectingItem] = useState<InventoryItem | null>(null);
 
   const { inventory, campMembers, player } = gameState;
   const equippedWeapon = player.equippedWeapon || inventory.find(i => i.id === player.equippedWeaponId);
@@ -333,36 +336,155 @@ export const InventoryTab: React.FC<Props> = ({
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredStockpile.map((item) => (
-              <div
-                key={item.id}
-                className="p-3 bg-white/[0.04] border border-white/5 rounded-2xl flex items-center justify-between gap-3 shadow-sm"
-              >
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <div className="p-2 rounded-xl bg-black/40 border border-white/5 shrink-0 mt-0.5">
-                    {getCategoryIcon(item.category)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white truncate">{item.name}</span>
-                      <span className="text-[10px] font-mono font-bold text-zinc-300 bg-white/10 px-1.5 py-0.2 rounded-full shrink-0">
-                        x{item.quantity}
-                      </span>
+            {filteredStockpile.map((item) => {
+              const isEquipped = player.equippedWeaponId === item.id || player.equippedWeapon?.id === item.id;
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setInspectingItem(item)}
+                  className="p-3 bg-white/[0.04] border border-white/5 hover:border-white/15 rounded-2xl flex items-center justify-between gap-3 shadow-sm cursor-pointer active:scale-[0.99] transition-all"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <div className="p-2 rounded-xl bg-black/40 border border-white/5 shrink-0 mt-0.5">
+                      {getCategoryIcon(item.category)}
                     </div>
-                    <p className="text-[11px] text-zinc-400 truncate mt-0.5">
-                      {item.description}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-white truncate">{item.name}</span>
+                        <span className="text-[10px] font-mono font-bold text-zinc-300 bg-white/10 px-1.5 py-0.2 rounded-full shrink-0">
+                          x{item.quantity}
+                        </span>
+                        {isEquipped && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                            Equipped
+                          </span>
+                        )}
+                        {item.origin === 'partner_gift' && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                            ������ Partner Gift
+                          </span>
+                        )}
+                        {item.origin === 'builder_forged' && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
+                            ������ Colony Forged
+                          </span>
+                        )}
+                        {item.origin === 'day_0' && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                            ������️ Day 0 Gear
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] font-mono text-zinc-500 hover:text-zinc-300">
+                      Interact →
+                    </span>
                   </div>
                 </div>
-
-                <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider bg-white/5 px-2 py-1 rounded-lg shrink-0">
-                  {item.category}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+      {/* ITEM DETAILS & HEIRLOOM CONSECRATION MODAL */}
+      {inspectingItem && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 animate-fade-in font-sans select-none">
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-sm w-full p-4 space-y-3.5 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-black/40 border border-white/5 text-amber-400">
+                  {getCategoryIcon(inspectingItem.category)}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">{inspectingItem.name}</h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">{inspectingItem.category}</span>
+                    <span className="text-zinc-600">•</span>
+                    <span className="text-[10px] font-mono text-zinc-300 font-bold">Qty: {inspectingItem.quantity}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingItem(null)}
+                className="p-1 rounded-full bg-white/10 text-zinc-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Description & Origin info */}
+            <div className="p-3 bg-black/40 rounded-2xl border border-white/5 space-y-2 text-xs">
+              <p className="text-zinc-300 leading-relaxed text-[11px]">
+                {inspectingItem.description}
+              </p>
+              
+              {/* Origin badge & lore */}
+              {inspectingItem.origin === 'partner_gift' && (
+                <div className="flex items-center gap-1.5 text-[10px] text-rose-300 font-mono bg-rose-500/10 p-2 rounded-xl border border-rose-500/20">
+                  <span>������ Gifted by {inspectingItem.giftedBy || 'your beloved partner'} as a token of devotion.</span>
+                </div>
+              )}
+              {inspectingItem.origin === 'builder_forged' && (
+                <div className="flex items-center gap-1.5 text-[10px] text-indigo-300 font-mono bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20">
+                  <span>������ Custom-forged by colony builder {inspectingItem.forgedBy || 'a skilled craftsman'}.</span>
+                </div>
+              )}
+              {inspectingItem.origin === 'day_0' && (
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-300 font-mono bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">
+                  <span>������️ Day 0 Veteran Artifact: Carried since the initial sirens without modification.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-1 space-y-2">
+              {inspectingItem.category === 'weapon' && onEquipWeapon && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onEquipWeapon(inspectingItem);
+                    setInspectingItem(null);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-2xl text-xs font-bold bg-white text-zinc-950 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>{player.equippedWeaponId === inspectingItem.id ? 'Unequip Weapon' : 'Equip as Primary Weapon'}</span>
+                </button>
+              )}
+
+              {onInscribeItem && (inspectingItem.category === 'weapon' || inspectingItem.category === 'tool' || inspectingItem.id.includes('ring') || inspectingItem.id.includes('watch') || inspectingItem.id.includes('compass') || inspectingItem.origin === 'partner_gift' || inspectingItem.origin === 'builder_forged') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const itemToInscribe = inspectingItem;
+                    setInspectingItem(null);
+                    onInscribeItem(itemToInscribe);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-2xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-zinc-950 flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/40 active:scale-95 transition-all"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  <span>Consecrate into Family Heirloom</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setInspectingItem(null)}
+                className="w-full py-2 px-3 rounded-2xl text-xs font-medium text-zinc-400 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

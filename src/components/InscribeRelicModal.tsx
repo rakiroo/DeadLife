@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Survivor, CampMember, InventoryItem, FamilyHeirloom } from '../types/game';
-import { Crown, Sparkles, X, Check, Swords, Heart, Hammer, Compass, Shield, Dices } from 'lucide-react';
+import { Crown, Sparkles, X, Dices } from 'lucide-react';
 
 interface Props {
   player: Survivor;
   inventory: InventoryItem[];
   campMembers: CampMember[];
   currentDay: number;
+  initialSelectedItemId?: string;
   onConfirmInscribe: (heirloom: FamilyHeirloom, consumedItemId?: string) => void;
   onClose: () => void;
 }
@@ -27,42 +28,95 @@ const MOTTO_SUGGESTIONS = [
 export const InscribeRelicModal: React.FC<Props> = ({
   player,
   inventory,
-  campMembers,
+  campMembers: _campMembers,
   currentDay,
+  initialSelectedItemId,
   onConfirmInscribe,
   onClose
 }) => {
   // Items eligible to be consecrated as a family relic
   const sourceItems = inventory.filter(i => 
-    i.category === 'weapon' || i.category === 'tool' || i.id.includes('ring') || i.id.includes('compass')
+    i.category === 'weapon' || i.category === 'tool' || i.id.includes('ring') || i.id.includes('compass') || i.origin === 'partner_gift' || i.origin === 'builder_forged'
   );
 
-  const [selectedSourceId, setSelectedSourceId] = useState<string>('');
-  const [relicName, setRelicName] = useState<string>("Founder's " + (player.name.split(' ').slice(-1)[0] || 'Sanctuary') + " Relic");
-  const [relicType, setRelicType] = useState<FamilyHeirloom['type']>('weapon');
-  const [maker, setMaker] = useState<string>(player.name);
-  const [originPreset, setOriginPreset] = useState<number>(0);
-  const [motto, setMotto] = useState<string>(MOTTO_SUGGESTIONS[0]);
-  const [bonusSkill, setBonusSkill] = useState<FamilyHeirloom['bonusSkill']>('combat');
+  const initialItem = sourceItems.find(i => i.id === initialSelectedItemId);
 
-  const ORIGIN_PRESETS = [
-    {
-      label: 'Crafted with Own Hands',
-      story: 'Hand-crafted by ' + player.name + ' by the haven forge during a freezing winter night. Its weight was balanced to defend the family bloodline.'
-    },
-    {
-      label: 'Gift from Beloved Partner',
-      story: 'Presented to ' + player.name + ' by ' + (player.spouseName || player.datingTargetName || 'a beloved companion') + ' as a sacred pledge of love and mutual survival amidst the ruins.'
-    },
-    {
-      label: 'Day 0 Veteran Heirloom',
-      story: 'Carried through the initial panic of Day 0; survived multiple close horde encounters and preserved as a talisman of resilience.'
-    },
-    {
-      label: 'Forged by Colony Builder',
-      story: 'Carefully shaped by the colony craftsmen from structural steel rebar and dedicated as a symbol of the haven\'s growing strength.'
+  const [selectedSourceId, setSelectedSourceId] = useState<string>(initialSelectedItemId || '');
+  const [relicName, setRelicName] = useState<string>(() => {
+    if (initialItem) {
+      if (initialItem.origin === 'partner_gift' || initialItem.giftedBy) {
+        return initialItem.name;
+      }
+      return (player.name.split(' ').slice(-1)[0] || 'Sanctuary') + "'s " + initialItem.name;
     }
-  ];
+    return "Founder's " + (player.name.split(' ').slice(-1)[0] || 'Sanctuary') + " Relic";
+  });
+  const [relicType, setRelicType] = useState<FamilyHeirloom['type']>(() => {
+    if (initialItem) {
+      if (initialItem.category === 'weapon') return 'weapon';
+      if (initialItem.id.includes('ring')) return 'ring';
+      if (initialItem.id.includes('watch')) return 'watch';
+      if (initialItem.id.includes('locket')) return 'locket';
+      return 'tool';
+    }
+    return 'weapon';
+  });
+  const [motto, setMotto] = useState<string>(MOTTO_SUGGESTIONS[0]);
+  const [bonusSkill, setBonusSkill] = useState<FamilyHeirloom['bonusSkill']>(() => {
+    if (initialItem) {
+      if (initialItem.category === 'weapon') return 'combat';
+      if (initialItem.origin === 'builder_forged') return 'crafting';
+      if (initialItem.id.includes('compass')) return 'stealth';
+      return 'fitness';
+    }
+    return 'combat';
+  });
+
+  const selectedItem = sourceItems.find(i => i.id === selectedSourceId);
+
+  // Automatically derive Origin Chronicle based on how the item was obtained!
+  // No manual radio buttons - crafting with own hands is the default when forging as the character.
+  const getDerivedOrigin = () => {
+    if (!selectedItem) {
+      return {
+        label: 'Crafted with Own Hands',
+        badgeColor: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        maker: player.name,
+        story: 'Hand-crafted by ' + player.name + ' at the sanctuary forge. Its balance and edge were shaped by their own hands to defend the family bloodline.'
+      };
+    }
+
+    if (selectedItem.origin === 'partner_gift' || selectedItem.giftedBy) {
+      const partnerName = selectedItem.giftedBy || player.spouseName || player.datingTargetName || 'a beloved companion';
+      return {
+        label: 'Gift from Beloved Partner',
+        badgeColor: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+        maker: partnerName,
+        story: 'Presented to ' + player.name + ' by ' + partnerName + ' as a sacred pledge of love and mutual survival amidst the ruins.'
+      };
+    }
+
+    if (selectedItem.origin === 'builder_forged' || selectedItem.forgedBy) {
+      const builderName = selectedItem.forgedBy || 'a colony craftsman';
+      return {
+        label: 'Forged by Colony Builder',
+        badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
+        maker: builderName,
+        story: 'Carefully shaped by colony builder ' + builderName + ' from structural steel and dedicated as a symbol of the haven\'s growing strength.'
+      };
+    }
+
+    // Default for Day 0 or unmodified wasteland gear:
+    // "For Day 0 heirloom i think it will be weapons character have without modification (not made by hands anymore) that player turned to heirloom."
+    return {
+      label: 'Day 0 Veteran Heirloom',
+      badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+      maker: 'Pre-Outbreak Survivor Artifact',
+      story: 'Carried through the initial panic of Day 0; survived multiple close horde encounters without modification and preserved as a talisman of resilience.'
+    };
+  };
+
+  const derivedOrigin = getDerivedOrigin();
 
   const handleRandomName = () => {
     const random = NAME_SUGGESTIONS[Math.floor(Math.random() * NAME_SUGGESTIONS.length)];
@@ -80,21 +134,33 @@ export const InscribeRelicModal: React.FC<Props> = ({
     if (item) {
       if (item.category === 'weapon') {
         setRelicType('weapon');
-        setRelicName(player.name.split(' ').slice(-1)[0] + "'s " + item.name);
+        setRelicName(item.origin === 'partner_gift' ? item.name : (player.name.split(' ').slice(-1)[0] + "'s " + item.name));
+        setBonusSkill('combat');
       } else if (item.id.includes('compass')) {
         setRelicType('tool');
         setBonusSkill('stealth');
         setRelicName("Pioneer's Weathered Compass");
+      } else if (item.id.includes('ring')) {
+        setRelicType('ring');
+        setBonusSkill('fitness');
+        setRelicName(item.name);
+      } else if (item.origin === 'builder_forged') {
+        setRelicType('tool');
+        setBonusSkill('crafting');
+        setRelicName(item.name);
       } else {
         setRelicType('tool');
       }
+    } else {
+      setRelicType('weapon');
+      setBonusSkill('combat');
+      setRelicName("Founder's " + (player.name.split(' ').slice(-1)[0] || 'Sanctuary') + " Relic");
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalName = relicName.trim() || "Founder's Dedicated Relic";
-    const selectedStory = ORIGIN_PRESETS[originPreset].story;
     const gen = player.generation || 1;
 
     const newHeirloom: FamilyHeirloom = {
@@ -105,8 +171,8 @@ export const InscribeRelicModal: React.FC<Props> = ({
       bonusValue: 1,
       description: 'Generational heirloom dedicated by founder ' + player.name + '.',
       passedFrom: player.name,
-      originalMaker: maker || player.name,
-      originStory: selectedStory,
+      originalMaker: derivedOrigin.maker,
+      originStory: derivedOrigin.story,
       engravedMotto: motto.trim(),
       generation: gen,
       durability: 100,
@@ -150,25 +216,23 @@ export const InscribeRelicModal: React.FC<Props> = ({
 
         <form onSubmit={handleSubmit} className="space-y-3 pt-1 text-xs">
           {/* Source Item (Optional) */}
-          {sourceItems.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
-                Consecrate from Gear (Optional)
-              </label>
-              <select
-                value={selectedSourceId}
-                onChange={(e) => handleSourceChange(e.target.value)}
-                className="w-full bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
-              >
-                <option value="">Forge New Relic (From Raw Materials)</option>
-                {sourceItems.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} ({item.category.toUpperCase()})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
+              Consecrate from Gear (Optional)
+            </label>
+            <select
+              value={selectedSourceId}
+              onChange={(e) => handleSourceChange(e.target.value)}
+              className="w-full bg-black/50 border border-white/20 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
+            >
+              <option value="">Forge New Relic (From Raw Materials)</option>
+              {sourceItems.map(item => (
+                <option key={item.id} value={item.id}>
+                  {item.name} {item.origin === 'partner_gift' ? '������ (Partner Gift)' : item.origin === 'builder_forged' ? '������ (Colony Forged)' : '������️ (Day 0 Gear)'}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Relic Name */}
           <div className="space-y-1">
@@ -232,30 +296,24 @@ export const InscribeRelicModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Origin Story Preset */}
+          {/* Origin Chronicle - Automatic Lore Card (NO CHOICE BUTTONS!) */}
           <div className="space-y-1">
             <label className="text-[10px] uppercase font-mono text-zinc-400 font-bold block pl-1">
               Origin Chronicle
             </label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {ORIGIN_PRESETS.map((p, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setOriginPreset(idx)}
-                  className={'p-2 rounded-xl text-left border text-[10px] transition-all ' + (
-                    originPreset === idx
-                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-200 font-bold'
-                      : 'bg-white/5 border-white/5 text-zinc-400 hover:text-white'
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
+            <div className="p-3 rounded-2xl bg-black/40 border border-white/10 space-y-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${derivedOrigin.badgeColor}`}>
+                  {derivedOrigin.label}
+                </span>
+                <span className="text-[10px] text-zinc-500 font-mono ml-auto">
+                  {selectedItem ? 'From Selected Gear' : 'Forged by Character'}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-300 italic leading-snug pt-0.5">
+                "{derivedOrigin.story}"
+              </p>
             </div>
-            <p className="text-[10px] text-zinc-400 bg-black/30 p-2 rounded-xl border border-white/5 italic mt-1 leading-snug">
-              "{ORIGIN_PRESETS[originPreset].story}"
-            </p>
           </div>
 
           {/* Engraved Motto */}
@@ -294,4 +352,3 @@ export const InscribeRelicModal: React.FC<Props> = ({
     </div>
   );
 };
-

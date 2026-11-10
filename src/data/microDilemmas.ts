@@ -399,5 +399,80 @@ export function getRandomMicroDilemma(state: GameState): EventDilemma | null {
     }
   ];
 
+
+  // 10. Partner Gift Event (Autonomous Keepsake from Beloved Companion)
+  const partnerName = state.player.spouseName || state.player.datingTargetName;
+  const partner = partnerName ? state.campMembers.find(m => m.name === partnerName || m.id === state.player.spouseId || m.id === state.player.datingTargetId) : undefined;
+  if (partner) {
+    dilemmas.push({
+      id: 'dilemma_partner_gift_' + Date.now(),
+      title: 'A Gift from ' + partner.name,
+      category: 'camp_drama',
+      dangerLevel: 'low',
+      description: partner.name + ' meets you by the sanctuary watchtower at sunset holding a wrapped cloth parcel: "I found this while sorting through the old depot lockers today. It reminded me of you, and why we fight to survive every single day. I want you to have it."',
+      choices: [
+        {
+          id: 'accept_partner_gift',
+          text: 'Accept the keepsake with a tender embrace (+15 Sanity, +10 Morale)',
+          consequenceSummary: 'Adds a cherished personal gift to your Equipment Locker that can be equipped or consecrated into a Family Heirloom.',
+          execute: (s: GameState) => {
+            const giftList = [
+              { id: 'gift_blade_' + Date.now(), name: partner.name + "'s Custom Trench Knife", category: 'weapon' as const, quantity: 1, origin: 'partner_gift' as const, giftedBy: partner.name, description: 'Hand-sharpened trench blade presented by your beloved ' + partner.name + ' as a pledge of devotion.' },
+              { id: 'gift_ring_' + Date.now(), name: partner.name + "'s Engraved Silver Band", category: 'tool' as const, quantity: 1, origin: 'partner_gift' as const, giftedBy: partner.name, description: 'Polished silver band inscribed with your initials, gifted by ' + partner.name + '.' },
+              { id: 'gift_watch_' + Date.now(), name: partner.name + "'s Vintage Pocket Watch", category: 'tool' as const, quantity: 1, origin: 'partner_gift' as const, giftedBy: partner.name, description: 'Accurate mechanical watch with a protective brass casing, presented by ' + partner.name + '.' }
+            ];
+            const chosenGift = giftList[Math.floor(Math.random() * giftList.length)];
+            return {
+              state: {
+                ...s,
+                inventory: [...s.inventory, chosenGift],
+                player: { ...s.player, sanity: Math.min(100, s.player.sanity + 15) },
+                shelter: { ...s.shelter, morale: Math.min(100, (s.shelter.morale ?? 75) + 10) }
+              },
+              log: 'I received a cherished keepsake from ' + partner.name + ': ' + chosenGift.name + '. Placed in equipment supplies (+15 Sanity, +10 Morale).',
+              outcomeTitle: 'Keepsake Received',
+              outcomeText: partner.name + ' held your hands warmly. "' + chosenGift.name + ' is yours now. Keep it close, or consecrate it into our family heirloom when the time is right."'
+            };
+          }
+        }
+      ]
+    });
+  }
+
+  // 11. Colony Builder Forged Event (Crafted by Colony Craftsman)
+  const builder = state.campMembers.find(m => m.role === 'craftsman');
+  if (builder && state.shelter.isEstablished) {
+    dilemmas.push({
+      id: 'dilemma_builder_forged_' + Date.now(),
+      title: "Craftsman Forged: " + builder.name,
+      category: 'camp_drama',
+      dangerLevel: 'low',
+      description: builder.name + ' wipes carbon soot from their brow and presents newly forged gear by the colony anvil: "Leader, I recycled high-carbon vehicle leaf springs and structural steel into a balanced piece of equipment for our sanctuary arsenal. Take it."',
+      choices: [
+        {
+          id: 'accept_builder_gear',
+          text: 'Accept the forged equipment for our colony arsenal (+Equipment)',
+          consequenceSummary: 'Adds a custom builder-forged item to your Equipment Locker that can be equipped or consecrated into a Family Heirloom.',
+          execute: (s: GameState) => {
+            const builderItems = [
+              { id: 'builder_machete_' + Date.now(), name: builder.name + "'s Tempered Rebar Machete", category: 'weapon' as const, quantity: 1, origin: 'builder_forged' as const, forgedBy: builder.name, description: 'Heavy, razor-sharp combat machete forged from recycled high-carbon steel by ' + builder.name + '.' },
+              { id: 'builder_crowbar_' + Date.now(), name: builder.name + "'s Hardened Breaching Bar", category: 'tool' as const, quantity: 1, origin: 'builder_forged' as const, forgedBy: builder.name, description: 'Reinforced demolition pry bar balanced for breaching doors, crafted by ' + builder.name + '.' }
+            ];
+            const chosenItem = builderItems[Math.floor(Math.random() * builderItems.length)];
+            return {
+              state: {
+                ...s,
+                inventory: [...s.inventory, chosenItem]
+              },
+              log: 'Builder ' + builder.name + ' presented me with custom-forged colony equipment: ' + chosenItem.name + '.',
+              outcomeTitle: 'Custom Gear Forged',
+              outcomeText: builder.name + ' handed over the heavy steel piece. "Tempered it myself over hardwood coals. You can wield it in battle or dedicate it as a permanent colony relic."'
+            };
+          }
+        }
+      ]
+    });
+  }
+
   return dilemmas[Math.floor(Math.random() * dilemmas.length)];
 }
